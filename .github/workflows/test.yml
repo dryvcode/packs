@@ -37,7 +37,9 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.x"
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
       - run: bun install --frozen-lockfile
       - name: Catalogue metadata is consistent
         run: bun scripts/catalog.ts --check
