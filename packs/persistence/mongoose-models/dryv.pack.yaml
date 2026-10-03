@@ -8,6 +8,7 @@ info:
   description: Generates @nestjs/mongoose schema classes with typed props, validation, references, indexes and invariants from entity-role schemas.
 catalog:
   purpose: persistence
+  layout: inject
   summary: "@nestjs/mongoose schema classes with typed props, references, indexes and invariants."
   languages: [typescript]
   frameworks: [mongoose, nestjs]

@@ -8,6 +8,7 @@ info:
   description: Generates a zod schema and its inferred type for every schema and enum.
 catalog:
   purpose: validation
+  layout: inject
   summary: zod schemas with field limits, formats and invariants.
   languages: [typescript]
   frameworks: [zod]

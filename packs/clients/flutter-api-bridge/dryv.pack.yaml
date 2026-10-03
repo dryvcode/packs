@@ -8,6 +8,7 @@ info:
   description: Generates a Dart package over flutter_api_bridge with typed feature clients per group, endpoint registries, json_serializable models and enums, and a configured package facade.
 catalog:
   purpose: clients
+  layout: standalone
   summary: A Dart/Flutter package over flutter_api_bridge with typed features, endpoints and models.
   languages: [dart]
   frameworks: [flutter, flutter-api-bridge, json-serializable]

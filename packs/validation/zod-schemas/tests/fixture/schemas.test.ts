@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { RegisterRequestSchema, type RegisterRequest } from "./out/src/index.ts";
+import { RegisterRequestSchema, type RegisterRequest } from "./out/index.ts";
 
 const valid = {
   firstName: "Ada",

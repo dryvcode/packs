@@ -8,6 +8,7 @@ info:
   description: Generates NestJS controllers, service contracts and feature modules over bound validation and persistence packs.
 catalog:
   purpose: backend
+  layout: inject
   summary: NestJS controllers, service contracts and modules, composed with validation and persistence packs.
   languages: [typescript]
   frameworks: [nestjs]

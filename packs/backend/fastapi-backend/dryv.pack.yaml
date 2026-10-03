@@ -9,6 +9,7 @@ info:
   description: Generates Pydantic models, abstract feature services and FastAPI routers that delegate to them.
 catalog:
   purpose: backend
+  layout: standalone
   summary: FastAPI routers and Pydantic models.
   languages: [python]
   frameworks: [fastapi, pydantic]

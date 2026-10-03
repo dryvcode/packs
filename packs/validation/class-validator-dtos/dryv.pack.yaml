@@ -8,6 +8,7 @@ info:
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
 catalog:
   purpose: validation
+  layout: inject
   summary: class-validator DTO classes with field limits, formats and invariants.
   languages: [typescript]
   frameworks: [class-validator, class-transformer]

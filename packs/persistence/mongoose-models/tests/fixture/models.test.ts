@@ -8,7 +8,7 @@ import {
   CartModel,
   CartModelSchema,
   CartStatus,
-} from "./out/src/index.ts";
+} from "./out/index.ts";
 
 const Cart = model(CartModel.name, CartModelSchema);
 const CartItem = model(CartItemModel.name, CartItemModelSchema);

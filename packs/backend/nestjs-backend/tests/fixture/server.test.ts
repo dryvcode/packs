@@ -6,11 +6,11 @@ import { Test } from "@nestjs/testing";
 import {
   CoreUserManagementController as ClassValidatorController,
   CoreUserManagementService as ClassValidatorService,
-} from "./out/server/src/index.ts";
+} from "./out/server/index.ts";
 import {
   CoreUserManagementModule as ZodModule,
   CoreUserManagementService as ZodService,
-} from "./out/server-zod/src/index.ts";
+} from "./out/server-zod/index.ts";
 
 const created = {
   id: "7f1c1f52-2f58-4a4e-9b43-0c1a3c1b0a11",

@@ -8,6 +8,7 @@ info:
   description: Generates Next.js server actions over next-api-bridge for every HTTP operation, with route maps, useActionState form actions and schema types.
 catalog:
   purpose: clients
+  layout: standalone
   summary: Next.js server actions over next-api-bridge, with routes, form actions and types.
   languages: [typescript]
   frameworks: [nextjs, next-api-bridge]

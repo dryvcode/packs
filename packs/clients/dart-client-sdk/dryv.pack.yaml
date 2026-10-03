@@ -9,6 +9,7 @@ info:
   description: Generates typed Dart models, enums, feature API clients, feature libraries, and a root SDK library.
 catalog:
   purpose: clients
+  layout: standalone
   summary: A typed Dart client SDK for the application's HTTP API.
   languages: [dart]
   frameworks: [http]

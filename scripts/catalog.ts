@@ -16,7 +16,7 @@ const REPOSITORY = "https://github.com/dryvcode/packs";
 type PackDocument = {
   key: string;
   info: { title: string; version: string; description?: string };
-  catalog?: { purpose: string; summary?: string; languages?: string[]; frameworks?: string[]; tags?: string[] };
+  catalog?: { purpose: string; layout?: "inject" | "standalone"; summary?: string; languages?: string[]; frameworks?: string[]; tags?: string[] };
   provides?: Record<string, unknown>;
   needs?: Record<string, unknown>;
 };
@@ -28,6 +28,7 @@ export type CatalogEntry = {
   version: string;
   summary: string | null;
   purpose: string;
+  layout: "inject" | "standalone";
   languages: string[];
   frameworks: string[];
   tags: string[];
@@ -68,6 +69,7 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
       version,
       summary: catalog.summary ?? null,
       purpose: catalog.purpose,
+      layout: catalog.layout ?? "inject",
       languages: catalog.languages ?? [],
       frameworks: catalog.frameworks ?? [],
       tags: catalog.tags ?? [],

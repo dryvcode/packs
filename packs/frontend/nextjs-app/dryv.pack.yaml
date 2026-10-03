@@ -8,6 +8,7 @@ info:
   description: Generates Next.js App Router pages from views, with typed API calls for HTTP operations and schema-driven forms and results.
 catalog:
   purpose: frontend
+  layout: standalone
   summary: Next.js App Router pages from views, typed API calls and schema-driven forms.
   languages: [typescript]
   frameworks: [nextjs, react]

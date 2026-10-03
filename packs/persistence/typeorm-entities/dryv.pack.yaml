@@ -8,6 +8,7 @@ info:
   description: Generates TypeORM entities with typed columns, indexes, checks and relations from entity-role schemas.
 catalog:
   purpose: persistence
+  layout: inject
   summary: TypeORM entities with typed columns, relations, checks and indexes.
   languages: [typescript]
   frameworks: [typeorm]

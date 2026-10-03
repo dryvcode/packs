@@ -8,6 +8,7 @@ info:
   description: Generates a Joi schema for every schema and enum.
 catalog:
   purpose: validation
+  layout: inject
   summary: Joi schemas with field limits, formats and invariants.
   languages: [typescript]
   frameworks: [joi]
