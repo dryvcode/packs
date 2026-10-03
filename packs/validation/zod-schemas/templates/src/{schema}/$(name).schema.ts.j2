@@ -1,0 +1,126 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- A zod string with the refinements of one string property. -#}
+{%- macro string_schema(primitive) -%}
+z.string()
+{%- set format = primitive.format -%}
+{%- if format == 'uuid' %}.uuid()
+{%- elif format == 'ulid' %}.ulid()
+{%- elif format == 'email' %}.email()
+{%- elif format == 'url' or format == 'uri' %}.url()
+{%- elif format == 'ipv4' %}.ip({ version: "v4" })
+{%- elif format == 'ipv6' %}.ip({ version: "v6" })
+{%- elif format == 'base64' %}.base64()
+{%- elif format == 'hostname' %}.regex(/^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/)
+{%- elif format == 'phone' %}.regex(/^\+?[0-9 ().-]{7,20}$/)
+{%- elif format == 'e164' %}.regex(/^\+[1-9][0-9]{1,14}$/)
+{%- elif format == 'slug' %}.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+{%- elif format == 'hex-color' %}.regex(/^#(?:[0-9a-fA-F]{3}){1,2}$/)
+{%- elif format == 'hex' %}.regex(/^[0-9a-fA-F]+$/)
+{%- elif format == 'jwt' %}.regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/)
+{%- elif format == 'semver' %}.regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/)
+{%- elif format == 'country-code' %}.regex(/^[A-Z]{2}$/)
+{%- elif format == 'currency-code' %}.regex(/^[A-Z]{3}$/)
+{%- endif -%}
+{%- set length = primitive.constraints.length -%}
+{%- if length is not none and length.exact is not none %}.length({{ length.exact }})
+{%- else -%}
+{%- if length is not none and length.min is not none %}.min({{ length.min }})
+{%- endif -%}
+{%- if length is not none and length.max is not none %}.max({{ length.max }})
+{%- endif -%}
+{%- endif -%}
+{%- if primitive.constraints.pattern is not none -%}
+{%- for expression in primitive.constraints.pattern.match %}.regex(new RegExp({{ expression | tojson }}))
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- The zod schema of one value, before array/optional wrapping. -#}
+{%- macro value_schema(value) -%}
+{%- if value.kind == 'schema' -%}z.lazy(() => {{ symbol_for(value.schema) }})
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}
+  {%- set primitive = value.property.primitive -%}
+  {%- if primitive.type == 'boolean' -%}z.boolean()
+  {%- elif primitive.type == 'number' -%}z.number()
+    {%- if primitive.kind == 'integer' %}.int(){% endif -%}
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none %}.min({{ primitive.constraints.range.min }}){% endif -%}
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}.max({{ primitive.constraints.range.max }}){% endif -%}
+    {%- if primitive.constraints.multipleOf is not none %}.multipleOf({{ primitive.constraints.multipleOf }}){% endif -%}
+  {%- else -%}{{ string_schema(primitive) }}
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}
+  {%- if value.property.temporal.kind == 'date' -%}z.string().date()
+  {%- elif value.property.temporal.kind == 'time' -%}z.string().time()
+  {%- else -%}z.string().datetime({ offset: true })
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'record' -%}z.record(z.string(), z.unknown())
+{%- else -%}z.unknown()
+{%- endif -%}
+{%- endmacro -%}
+
+{#- A whole field: element schema, array bounds, nullability, then default or optional. -#}
+{%- macro field_schema(field) -%}
+{%- if field.array is not none -%}z.array({{ value_schema(field.value) }})
+  {%- if field.array.min is not none %}.min({{ field.array.min }}){% endif -%}
+  {%- if field.array.max is not none %}.max({{ field.array.max }}){% endif -%}
+{%- else -%}{{ value_schema(field.value) }}
+{%- endif -%}
+{%- if field.nullable %}.nullable(){% endif -%}
+{%- if field.default is not none and field.default.kind == 'value' %}.default({{ field.default.value | tojson }})
+{%- elif field.optional %}.optional()
+{%- endif -%}
+{%- endmacro -%}
+
+{#- An invariant as a JavaScript predicate over the parsed value. -#}
+{%- macro js_operand(operand) -%}
+{%- if operand.kind == 'field' -%}value.{{ operand.field.camel }}
+{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}value.{{ term.field.camel }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro js_operator(operator) -%}
+{%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+import { z } from "zod";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ schema.description or schema.name.title }}{% if schema.role %} ({{ schema.role }}){% endif %}
+{%- if schema.source %}
+ *
+ * Derived from {{ schema.source.schema.name.pascal }} for {{ schema.source.purpose }}.
+{%- endif %}
+ */
+export const {{ file.symbol }} = z
+  .object({
+{%- for field in schema.fields %}
+    {{ field.name.camel }}: {{ field_schema(field) }},
+{%- endfor %}
+  })
+{%- for invariant in schema.invariants %}
+{%- if invariant.form.kind == 'opaque' %}
+  // Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't checked here.
+{%- else %}
+  .superRefine((value, context) => {
+    if (!({% for comparison in invariant.form.comparisons %}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} && {% else %} || {% endif %}{% endif %}{% endfor %})) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: {{ (invariant.message or invariant.name.title) | tojson }},
+        path: [{% for comparison in invariant.form.comparisons %}{% if loop.first and comparison.left.kind == 'field' %}{{ comparison.left.field.camel | tojson }}{% endif %}{% endfor %}],
+      });
+    }
+  })
+{%- endif %}
+{%- endfor %};
+
+export type {{ schema.name.pascal }} = z.infer<typeof {{ file.symbol }}>;
+

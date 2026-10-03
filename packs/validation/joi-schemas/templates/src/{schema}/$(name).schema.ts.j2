@@ -1,0 +1,137 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- A Joi string with the rules of one string property. -#}
+{%- macro string_schema(primitive) -%}
+Joi.string()
+{%- set format = primitive.format -%}
+{%- if format == 'uuid' %}.guid()
+{%- elif format == 'email' %}.email({ tlds: { allow: false } })
+{%- elif format == 'url' or format == 'uri' %}.uri()
+{%- elif format == 'hostname' %}.hostname()
+{%- elif format == 'ipv4' %}.ip({ version: ["ipv4"] })
+{%- elif format == 'ipv6' %}.ip({ version: ["ipv6"] })
+{%- elif format == 'base64' %}.base64()
+{%- elif format == 'hex' %}.hex()
+{%- elif format == 'ulid' %}.pattern(/^[0-9A-HJKMNP-TV-Z]{26}$/)
+{%- elif format == 'phone' %}.pattern(/^\+?[0-9 ().-]{7,20}$/)
+{%- elif format == 'e164' %}.pattern(/^\+[1-9][0-9]{1,14}$/)
+{%- elif format == 'slug' %}.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+{%- elif format == 'hex-color' %}.pattern(/^#(?:[0-9a-fA-F]{3}){1,2}$/)
+{%- elif format == 'jwt' %}.pattern(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/)
+{%- elif format == 'semver' %}.pattern(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/)
+{%- elif format == 'country-code' %}.pattern(/^[A-Z]{2}$/)
+{%- elif format == 'currency-code' %}.pattern(/^[A-Z]{3}$/)
+{%- endif -%}
+{%- set length = primitive.constraints.length -%}
+{%- if length is not none and length.exact is not none %}.length({{ length.exact }})
+{%- else -%}
+{%- if length is not none and length.min is not none %}.min({{ length.min }}){% elif primitive.format is none %}.allow(""){% endif -%}
+{%- if length is not none and length.max is not none %}.max({{ length.max }}){% endif -%}
+{%- endif -%}
+{%- if primitive.constraints.pattern is not none -%}
+{%- for expression in primitive.constraints.pattern.match %}.pattern(new RegExp({{ expression | tojson }}))
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- The Joi schema of one value, before array/presence rules. -#}
+{%- macro value_schema(value) -%}
+{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) }}
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}
+  {%- set primitive = value.property.primitive -%}
+  {%- if primitive.type == 'boolean' -%}Joi.boolean()
+  {%- elif primitive.type == 'number' -%}Joi.number()
+    {%- if primitive.kind == 'integer' %}.integer(){% endif -%}
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none %}.min({{ primitive.constraints.range.min }}){% endif -%}
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}.max({{ primitive.constraints.range.max }}){% endif -%}
+    {%- if primitive.constraints.multipleOf is not none %}.multiple({{ primitive.constraints.multipleOf }}){% endif -%}
+  {%- else -%}{{ string_schema(primitive) }}
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}
+  {%- if value.property.temporal.kind == 'date' -%}Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)
+  {%- else -%}Joi.string().isoDate()
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'record' -%}Joi.object().unknown(true)
+{%- else -%}Joi.any()
+{%- endif -%}
+{%- endmacro -%}
+
+{#- Field-vs-field equality attaches to the left field as a Joi reference. -#}
+{%- macro ref_rules(schema, field) -%}
+{%- for invariant in schema.invariants -%}
+{%- if invariant.form.kind == 'comparison' -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.operator == 'equal' and comparison.left.kind == 'field' and comparison.right.kind == 'field' and comparison.left.field.raw == field.name.raw -%}
+.valid(Joi.ref({{ comparison.right.field.camel | tojson }})).messages({ "any.only": {{ (invariant.message or invariant.name.title) | tojson }} })
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- True when an invariant is a field-vs-field equality handled by ref_rules. -#}
+{%- macro is_ref_rule(invariant) -%}
+{%- if invariant.form.kind == 'comparison' -%}{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.operator == 'equal' and comparison.left.kind == 'field' and comparison.right.kind == 'field' -%}yes{%- endif -%}
+{%- endfor -%}{%- endif -%}
+{%- endmacro -%}
+
+{#- A whole field: element schema, array bounds, rules from invariants, then presence. -#}
+{%- macro field_schema(schema, field) -%}
+{%- if field.array is not none -%}Joi.array().items({{ value_schema(field.value) }})
+  {%- if field.array.min is not none %}.min({{ field.array.min }}){% endif -%}
+  {%- if field.array.max is not none %}.max({{ field.array.max }}){% endif -%}
+{%- else -%}{{ value_schema(field.value) }}
+{%- endif -%}
+{{- ref_rules(schema, field) -}}
+{%- if field.nullable %}.allow(null){% endif -%}
+{%- if field.default is not none and field.default.kind == 'value' %}.default({{ field.default.value | tojson }})
+{%- elif not field.optional %}.required()
+{%- endif -%}
+{%- endmacro -%}
+
+{#- An invariant as a JavaScript predicate over the validated value. -#}
+{%- macro js_operand(operand) -%}
+{%- if operand.kind == 'field' -%}value.{{ operand.field.camel }}
+{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}value.{{ term.field.camel }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro js_operator(operator) -%}
+{%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+import Joi from "joi";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ schema.description or schema.name.title }}{% if schema.role %} ({{ schema.role }}){% endif %}
+{%- if schema.source %}
+ *
+ * Derived from {{ schema.source.schema.name.pascal }} for {{ schema.source.purpose }}.
+{%- endif %}
+ */
+export const {{ file.symbol }} = Joi.object({
+{%- for field in schema.fields %}
+  {{ field.name.camel }}: {{ field_schema(schema, field) }},
+{%- endfor %}
+})
+{%- for invariant in schema.invariants %}
+{%- if invariant.form.kind == 'opaque' %}
+  // Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't checked here.
+{%- elif is_ref_rule(invariant) != 'yes' %}
+  .custom((value, helpers) =>
+    {% for comparison in invariant.form.comparisons %}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} && {% else %} || {% endif %}{% endif %}{% endfor %}
+      ? value
+      : helpers.message({ custom: {{ (invariant.message or invariant.name.title) | tojson }} }),
+  )
+{%- endif %}
+{%- endfor %};
+

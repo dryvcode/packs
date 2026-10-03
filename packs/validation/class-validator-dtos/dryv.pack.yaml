@@ -1,0 +1,59 @@
+version: dryv.pack/v1alpha1
+key: validation.class-validator-dtos
+source: templates
+
+info:
+  title: class-validator DTOs
+  version: 0.1.0
+  description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
+catalog:
+  purpose: validation
+  summary: class-validator DTO classes with field limits, formats and invariants.
+  languages: [typescript]
+  frameworks: [class-validator, class-transformer]
+  tags: [dto, validation]
+
+requires:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  # Every schema gets a DTO, so request and response shapes are both covered.
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: '#/selections/enums'
+    output:
+      name: $(subject.name.kebab)
+      symbol: $(subject.name.pascal)
+
+  dto:
+    $ref: '#/selections/schemas'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)Dto
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/dto'
+
+  index:
+    exports:
+      - $ref: '#/templates/dto'
+      - $ref: '#/templates/enum'
+
+provides:
+  schema.validation:
+    $ref: '#/templates/dto'
+  schema.types:
+    $ref: '#/templates/dto'
+  property.enum.types:
+    $ref: '#/templates/enum'

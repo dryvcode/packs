@@ -1,0 +1,43 @@
+name: test packs
+
+# CI runs only for main: pushes to main and pull requests into main. Work happens on develop.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    services:
+      # The engine every fixture renders against. Pin a released tag (engine-vX.Y.Z
+      # publishes :X.Y.Z); :main is used until an engine release supports the pack `catalog` block.
+      engine:
+        image: ghcr.io/dryvcode/dryv-engine:main
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        ports: ["8750:8750"]
+        options: >-
+          --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8750/', timeout=4)\""
+          --health-interval 5s --health-retries 24
+    env:
+      DRYV_API_URL: http://127.0.0.1:8750
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.x"
+      - uses: dart-lang/setup-dart@v1
+      - run: bun install --frozen-lockfile
+      - name: Render and check every pack
+        run: bun scripts/test-pack.ts --all

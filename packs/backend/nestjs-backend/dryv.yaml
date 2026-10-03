@@ -1,0 +1,69 @@
+version: dryv/v1alpha1
+kind: pack
+
+tools:
+  jsPackages:
+    oneOf:
+      bun:
+        executable: [bun]
+        validate:
+          args: [--version]
+          version: ">=1.2"
+        packages:
+          run: [bun, x, $(executable)]
+          install: [bun, add, $(packageSpec)]
+          installDev: [bun, add, --dev, $(packageSpec)]
+
+      npm:
+        executable: [npm]
+        validate:
+          args: [--version]
+          version: ">=10"
+        packages:
+          run: [npm, exec, --, $(executable)]
+          install: [npm, install, $(packageSpec)]
+          installDev: [npm, install, --save-dev, $(packageSpec)]
+
+      pnpm:
+        executable: [pnpm]
+        validate:
+          args: [--version]
+          version: ">=9"
+        packages:
+          run: [pnpm, exec, $(executable)]
+          install: [pnpm, add, $(packageSpec)]
+          installDev: [pnpm, add, --save-dev, $(packageSpec)]
+
+      yarn:
+        executable: [yarn]
+        validate:
+          args: [--version]
+          version: ">=4"
+        packages:
+          run: [yarn, exec, $(executable)]
+          install: [yarn, add, $(packageSpec)]
+          installDev: [yarn, add, --dev, $(packageSpec)]
+
+packages:
+  prettier:
+    tool:
+      $ref: '#/tools/jsPackages'
+    version: ^3
+    scope: dev
+    for: pipeline
+    validate:
+      args: [--version]
+      version: constraint
+
+commands:
+  format:
+    executable:
+      $ref: '#/packages/prettier'
+    args: [--write]
+    cwd: project
+
+write:
+  format:
+    command:
+      $ref: '#/commands/format'
+    extensions: [.ts, .json]

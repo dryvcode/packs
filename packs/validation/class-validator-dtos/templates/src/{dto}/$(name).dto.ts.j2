@@ -1,0 +1,235 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- `, { each: true }` for array fields, so element validators apply to every item. -#}
+{%- macro each(field) -%}{% if field.array is not none %}{ each: true }{% endif %}{%- endmacro -%}
+{%- macro each_arg(field) -%}{% if field.array is not none %}, { each: true }{% endif %}{%- endmacro -%}
+{%- macro options_each(field) -%}{% if field.array is not none %}undefined, { each: true }{% endif %}{%- endmacro -%}
+
+{#- class-validator decorators for a string format. Formats without a validator stay plain strings. -#}
+{%- macro format_decorators(format, field) -%}
+{%- if format == 'uuid' %}
+  @IsUUID({{ options_each(field) }})
+{%- elif format == 'ulid' %}
+  @Matches(/^[0-9A-HJKMNP-TV-Z]{26}$/{{ each_arg(field) }})
+{%- elif format == 'email' %}
+  @IsEmail({{ options_each(field) }})
+{%- elif format == 'url' %}
+  @IsUrl({{ options_each(field) }})
+{%- elif format == 'uri' %}
+  @IsUrl({ require_tld: false }{{ each_arg(field) }})
+{%- elif format == 'hostname' %}
+  @IsFQDN({{ options_each(field) }})
+{%- elif format == 'ipv4' %}
+  @IsIP("4"{{ each_arg(field) }})
+{%- elif format == 'ipv6' %}
+  @IsIP("6"{{ each_arg(field) }})
+{%- elif format == 'phone' %}
+  @Matches(/^\+?[0-9 ().-]{7,20}$/{{ each_arg(field) }})
+{%- elif format == 'e164' %}
+  @Matches(/^\+[1-9][0-9]{1,14}$/{{ each_arg(field) }})
+{%- elif format == 'slug' %}
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/{{ each_arg(field) }})
+{%- elif format == 'hex-color' %}
+  @IsHexColor({{ each(field) }})
+{%- elif format == 'base64' %}
+  @IsBase64({{ options_each(field) }})
+{%- elif format == 'hex' %}
+  @IsHexadecimal({{ each(field) }})
+{%- elif format == 'jwt' %}
+  @IsJWT({{ each(field) }})
+{%- elif format == 'semver' %}
+  @IsSemVer({{ each(field) }})
+{%- elif format == 'mime-type' %}
+  @IsMimeType({{ each(field) }})
+{%- elif format == 'locale' or format == 'language-tag' %}
+  @IsLocale({{ each(field) }})
+{%- elif format == 'country-code' %}
+  @IsISO31661Alpha2({{ each(field) }})
+{%- elif format == 'currency-code' %}
+  @IsISO4217CurrencyCode({{ each(field) }})
+{%- elif format == 'json' %}
+  @IsJSON({{ each(field) }})
+{%- endif -%}
+{%- endmacro -%}
+
+{#- Every validator for one field, in the order a reader expects: presence, type, limits. -#}
+{%- macro decorators(field) -%}
+{%- set value = field.value -%}
+{%- if field.optional %}
+  @IsOptional()
+{%- endif %}
+{%- if field.nullable %}
+  @ValidateIf((object) => object.{{ field.name.camel }} !== null)
+{%- endif %}
+{%- if field.array is not none %}
+  @IsArray()
+{%- if field.array.min is not none %}
+  @ArrayMinSize({{ field.array.min }})
+{%- endif %}
+{%- if field.array.max is not none %}
+  @ArrayMaxSize({{ field.array.max }})
+{%- endif %}
+{%- endif %}
+{%- if value.kind == 'schema' %}
+  @ValidateNested({{ each(field) }})
+  @Type(() => {{ symbol_for(value.schema) }})
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' %}
+{%- set primitive = value.property.primitive %}
+{%- if primitive.type == 'boolean' %}
+  @IsBoolean({{ each(field) }})
+{%- elif primitive.type == 'number' %}
+{%- if primitive.kind == 'integer' %}
+  @IsInt({{ each(field) }})
+{%- else %}
+  @IsNumber({}{{ each_arg(field) }})
+{%- endif %}
+{%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none %}
+  @Min({{ primitive.constraints.range.min }}{{ each_arg(field) }})
+{%- endif %}
+{%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}
+  @Max({{ primitive.constraints.range.max }}{{ each_arg(field) }})
+{%- endif %}
+{%- if primitive.constraints.multipleOf is not none %}
+  @IsDivisibleBy({{ primitive.constraints.multipleOf }}{{ each_arg(field) }})
+{%- endif %}
+{%- else %}
+  @IsString({{ each(field) }})
+{{- format_decorators(primitive.format, field) }}
+{%- set length = primitive.constraints.length %}
+{%- if length is not none and length.exact is not none %}
+  @Length({{ length.exact }}, {{ length.exact }}{{ each_arg(field) }})
+{%- else %}
+{%- if length is not none and length.min is not none %}
+  @MinLength({{ length.min }}{{ each_arg(field) }})
+{%- endif %}
+{%- if length is not none and length.max is not none %}
+  @MaxLength({{ length.max }}{{ each_arg(field) }})
+{%- endif %}
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match %}
+  @Matches(new RegExp({{ expression | tojson }}){{ each_arg(field) }})
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' %}
+  @IsEnum({{ symbol_for(value.property.enum) }}{{ each_arg(field) }})
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' %}
+  @IsISO8601({% if value.property.temporal.kind == 'date' %}{ strict: true }{% else %}{}{% endif %}{{ each_arg(field) }})
+{%- elif value.kind == 'property' and value.property.kind == 'record' %}
+  @IsObject({{ each(field) }})
+{%- else %}
+  @Allow()
+{%- endif %}
+{%- endmacro -%}
+
+{#- The TypeScript type of one field. -#}
+{%- macro ts_type(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'schema' -%}{% set base = symbol_for(value.schema) %}
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{% set base = value.property.primitive.type %}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{% set base = symbol_for(value.property.enum) %}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}{% set base = 'string' %}
+{%- elif value.kind == 'property' and value.property.kind == 'record' -%}{% set base = 'Record<string, unknown>' %}
+{%- else -%}{% set base = 'unknown' %}
+{%- endif -%}
+{%- if field.array is not none %}{{ base }}[]{% else %}{{ base }}{% endif -%}
+{%- if field.nullable %} | null{% endif -%}
+{%- endmacro -%}
+
+{#- An invariant as a JavaScript predicate over the whole object. -#}
+{%- macro js_operand(operand) -%}
+{%- if operand.kind == 'field' -%}object.{{ operand.field.camel }}
+{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}object.{{ term.field.camel }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro js_operator(operator) -%}
+{%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+{%- macro predicate(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} && {% else %} || {% endif %}{% endif %}{%- endfor -%}
+{%- endmacro -%}
+
+{#- Invariants attach to the first field their first comparison reads. -#}
+{%- macro invariant_decorators(schema, field) -%}
+{%- for invariant in schema.invariants -%}
+{%- if invariant.form.kind != 'opaque' -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if loop.first and comparison.left.kind == 'field' and comparison.left.field.raw == field.name.raw %}
+  @Satisfies<{{ file.symbol }}>((object) => {{ predicate(invariant) }}, {
+    message: {{ (invariant.message or invariant.name.title) | tojson }},
+  })
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+import { Type } from "class-transformer";
+import {
+  Allow,
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsBase64,
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsFQDN,
+  IsHexadecimal,
+  IsHexColor,
+  IsInt,
+  IsIP,
+  IsISO31661Alpha2,
+  IsISO4217CurrencyCode,
+  IsISO8601,
+  IsJSON,
+  IsJWT,
+  IsLocale,
+  IsMimeType,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsSemVer,
+  IsString,
+  IsUrl,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  IsDivisibleBy,
+  ValidateIf,
+  ValidateNested,
+} from "class-validator";
+
+import { Satisfies } from "../validators/satisfies.ts";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ schema.description or schema.name.title }}{% if schema.role %} ({{ schema.role }}){% endif %}
+{%- if schema.source %}
+ *
+ * Derived from {{ schema.source.schema.name.pascal }} for {{ schema.source.purpose }}.
+{%- endif %}
+{%- for invariant in schema.invariants %}{% if invariant.form.kind == 'opaque' %}
+ *
+ * Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't validated here.
+{%- endif %}{% endfor %}
+ */
+export class {{ file.symbol }} {
+{%- for field in schema.fields %}
+{{ decorators(field) }}{{ invariant_decorators(schema, field) }}
+  {{ field.name.camel }}{% if field.optional %}?{% else %}!{% endif %}: {{ ts_type(field) }};
+{%- endfor %}
+}
+

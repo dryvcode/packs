@@ -1,0 +1,7 @@
+from enum import StrEnum
+
+
+class {{ property.enum.name.pascal }}(StrEnum):
+{% for item in property.enum.values %}
+    {{ item.name.constant }} = {{ item.value | tojson }}
+{% endfor %}

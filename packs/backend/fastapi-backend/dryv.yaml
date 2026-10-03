@@ -1,0 +1,52 @@
+version: dryv/v1alpha1
+kind: pack
+
+tools:
+  pythonPackages:
+    oneOf:
+      pip:
+        executable: [python, -m, pip]
+        requires:
+          env: [VIRTUAL_ENV]
+        validate:
+          args: [--version]
+        packages:
+          run: [$(executable)]
+          install: [python, -m, pip, install, $(packageSpec)]
+          installDev: [python, -m, pip, install, $(packageSpec)]
+
+      uv:
+        executable: [uv]
+        validate:
+          args: [--version]
+          version: ">=0.5"
+        packages:
+          run: [uv, run, $(executable)]
+          install: [uv, add, $(packageSpec)]
+          installDev: [uv, add, --dev, $(packageSpec)]
+
+packages:
+  ruff:
+    tool:
+      $ref: '#/tools/pythonPackages'
+    version: ">=0.5"
+    scope: dev
+    for: pipeline
+    validate:
+      args: [--version]
+      version:
+        constraint: ">=0.5"
+        extract: "[0-9]+\\.[0-9]+\\.[0-9]+"
+
+commands:
+  format:
+    executable:
+      $ref: '#/packages/ruff'
+    args: [format]
+    cwd: project
+
+write:
+  format:
+    command:
+      $ref: '#/commands/format'
+    extensions: [.py]

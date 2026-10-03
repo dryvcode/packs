@@ -1,0 +1,14 @@
+from pydantic import BaseModel as _BaseModel
+{% for item in file.exports %}
+from .{{ item.path.relative | replace('/', '.') | replace('.py', '') }} import {{ item.symbol }} as {{ item.symbol }}
+{%- endfor %}
+
+__all__ = [{% for item in file.exports %}"{{ item.symbol }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+
+# Resolve the postponed annotations now that every model is imported.
+_namespace = {name: globals()[name] for name in __all__}
+for _name in __all__:
+    _value = _namespace[_name]
+    if isinstance(_value, type) and issubclass(_value, _BaseModel):
+        _value.model_rebuild(_types_namespace=_namespace)
+

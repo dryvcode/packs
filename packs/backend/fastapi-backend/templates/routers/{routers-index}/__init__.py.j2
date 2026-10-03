@@ -1,0 +1,9 @@
+{%- for item in file.exports %}
+from .{{ item.path.relative | replace('/', '.') | replace('.py', '') }} import *  # noqa: F403
+{%- endfor %}
+{%- for item in file.exports %}
+from . import {{ item.path.relative | replace('/', '.') | replace('.py', '') }} as _{{ loop.index }}
+{%- endfor %}
+
+__all__ = [{% for item in file.exports %}*_{{ loop.index }}.__all__{% if not loop.last %}, {% endif %}{% endfor %}]
+

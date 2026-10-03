@@ -1,0 +1,147 @@
+{#- Column naming follows the pack input: snake (cart_id) or camel (cartId). -#}
+{%- macro column(name) -%}
+{%- if pack.inputs.namingStrategy == 'camel' -%}{{ name.camel }}{%- else -%}{{ name.snake }}{%- endif -%}
+{%- endmacro -%}
+
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- TypeORM column options for a field that is stored in a column. -#}
+{%- macro column_options(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'property' and value.property.kind == 'primitive' and field.array is none -%}
+  {%- set primitive = value.property.primitive -%}
+  {%- if primitive.type == 'string' and primitive.format == 'uuid' -%}type: "uuid"
+  {%- elif primitive.type == 'string' and primitive.constraints.length is not none and primitive.constraints.length.max is not none -%}type: "varchar", length: {{ primitive.constraints.length.max }}
+  {%- elif primitive.type == 'string' and primitive.constraints.length is not none and primitive.constraints.length.exact is not none -%}type: "char", length: {{ primitive.constraints.length.exact }}
+  {%- elif primitive.type == 'string' -%}type: "text"
+  {%- elif primitive.type == 'boolean' -%}type: "boolean"
+  {%- elif primitive.money is not none and primitive.money.minorUnits -%}type: "bigint", transformer: new ColumnNumericTransformer()
+  {%- elif primitive.kind == 'integer' and primitive.constraints.bits == 64 -%}type: "bigint", transformer: new ColumnNumericTransformer()
+  {%- elif primitive.kind == 'integer' -%}type: "integer"
+  {%- elif primitive.kind == 'decimal' -%}type: "numeric", precision: {{ primitive.constraints.precision }}, scale: {{ primitive.constraints.scale }}, transformer: new ColumnNumericTransformer()
+  {%- else -%}type: "double precision"
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' and field.array is none -%}type: "enum", enum: {{ symbol_for(value.property.enum) }}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' and field.array is none -%}
+  {%- set temporal = value.property.temporal -%}
+  {%- if temporal.kind == 'date' -%}type: "date"
+  {%- elif temporal.kind == 'time' -%}type: "time"
+  {%- elif temporal.kind == 'duration' or temporal.kind == 'interval' -%}type: "interval"
+  {%- else -%}type: "timestamptz"
+  {%- endif -%}
+{%- else -%}type: "jsonb"
+{%- endif -%}
+{%- endmacro -%}
+
+{#- The TypeScript type of a stored field. -#}
+{%- macro ts_type(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'property' and value.property.kind == 'primitive' -%}
+  {%- set base = value.property.primitive.type -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}
+  {%- set base = symbol_for(value.property.enum) -%}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' and value.property.temporal.kind != 'duration' and value.property.temporal.kind != 'interval' -%}
+  {%- set base = 'Date' -%}
+{%- elif value.kind == 'property' and value.property.kind == 'record' -%}
+  {%- set base = 'Record<string, unknown>' -%}
+{%- else -%}
+  {%- set base = 'unknown' -%}
+{%- endif -%}
+{%- if field.array is not none -%}{{ base }}[]{%- else -%}{{ base }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro is_primary(storage, field) -%}
+{%- if storage is not none -%}{%- for key in storage.primaryKey -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro on_delete(value) -%}
+{%- if value == 'cascade' -%}CASCADE{%- elif value == 'restrict' -%}RESTRICT{%- elif value == 'detach' -%}SET NULL{%- else -%}SET DEFAULT{%- endif -%}
+{%- endmacro -%}
+
+{#- One side of an invariant comparison, as SQL over column names. -#}
+{%- macro sql_operand(operand) -%}
+{%- if operand.kind == 'field' -%}{{ column(operand.field) }}
+{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson | replace('"', "'") }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}{{ column(term.field) }}{% else %}{{ term.value | tojson | replace('"', "'") }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro sql_operator(operator) -%}
+{%- if operator == 'equal' -%}={%- elif operator == 'not-equal' -%}<>{%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+
+{#- One class member: a column, a relation, or both. Each starts with a blank line. -#}
+{%- macro member(schema, storage, field) -%}
+{%- if field.related is not none %}
+
+  @OneToMany(() => {{ symbol_for(field.related.via.schema) }}, (item) => item.{{ schema.name.camel }})
+  {{ field.name.camel }}?: Relation<{{ symbol_for(field.related.via.schema) }}[]>;
+{%- elif field.value.kind == 'schema' and field.relation is none %}
+
+  @Column({ name: "{{ column(field.name) }}", type: "jsonb"{% if field.optional or field.nullable %}, nullable: true{% endif %} })
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: unknown{% if field.optional or field.nullable %} | null{% endif %};
+{%- else %}
+{%- set primary = is_primary(storage, field) == 'yes' %}
+
+  {% if primary and field.mutation == 'system' and field.value.kind == 'property' and field.value.property.kind == 'primitive' and field.value.property.primitive.format == 'uuid' %}@PrimaryGeneratedColumn("uuid", { name: "{{ column(field.name) }}" }){% elif primary %}@PrimaryColumn({ name: "{{ column(field.name) }}", {{ column_options(field) }} }){% else %}@Column({ name: "{{ column(field.name) }}", {{ column_options(field) }}{% if field.optional or field.nullable %}, nullable: true{% endif %}{% if field.default is not none and field.default.kind == 'value' %}, default: {{ field.default.value | tojson }}{% endif %}{{ comment(field) }} }){% endif %}
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
+{%- if field.relation is not none %}
+
+  @{% if field.relation.cardinality == 'one-to-one' %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.onDelete is not none %}, { onDelete: "{{ on_delete(field.relation.onDelete) }}" }{% endif %})
+  @JoinColumn({ name: "{{ column(field.name) }}" })
+  {{ field.relation.target.schema.name.camel }}?: Relation<{{ symbol_for(field.relation.target.schema) }}>;
+{%- endif %}
+{%- endif %}
+{%- endmacro -%}
+
+{#- A column comment from the property's description, when it has one. -#}
+{%- macro comment(field) -%}
+{%- if field.value.kind == 'property' and field.value.property.kind == 'primitive' and field.value.property.primitive.description is not none -%}, comment: {{ field.value.property.primitive.description | tojson }}{%- endif -%}
+{%- endmacro -%}
+
+{%- set storage = schema.facets.storage -%}
+import {
+  Check,
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+  type Relation,
+} from "typeorm";
+
+import { ColumnNumericTransformer } from "../base/column-numeric.transformer.ts";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ schema.description or schema.name.title }}
+ */
+@Entity({ {% if storage is not none and storage.namespace is not none %}schema: "{{ storage.namespace }}", {% endif %}name: "{% if storage is not none and storage.name is not none %}{{ storage.name }}{% else %}{{ schema.name.snake }}{% endif %}" })
+{%- if storage is not none %}
+{%- for index in storage.indexes %}
+@Index({% if index.name is not none %}"{{ index.name }}", {% endif %}[{% for item in index.fields %}"{{ item.camel }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% if index.unique %}, { unique: true }{% endif %})
+{%- endfor %}
+{%- endif %}
+{%- for invariant in schema.invariants %}
+{%- if invariant.form.kind == 'opaque' %}
+// Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't enforced as a database check.
+{%- else %}
+@Check("chk_{{ schema.name.snake }}_{{ invariant.name.snake }}", `{% for comparison in invariant.form.comparisons %}{{ sql_operand(comparison.left) }} {{ sql_operator(comparison.operator) }} {{ sql_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} AND {% else %} OR {% endif %}{% endif %}{% endfor %}`)
+{%- endif %}
+{%- endfor %}
+export class {{ file.symbol }} {
+{%- for field in schema.fields %}{% if is_primary(storage, field) == 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
+{%- for field in schema.fields %}{% if is_primary(storage, field) != 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
+}
+

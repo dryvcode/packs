@@ -1,0 +1,58 @@
+{%- macro dart_type(value) -%}
+{%- if value.kind == 'schema' -%}{{ value.schema.name.pascal }}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ value.property.enum.name.pascal }}
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}bool
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}int
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}double
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}String
+{%- else -%}Object?
+{%- endif -%}
+{%- endmacro -%}
+import 'package:dryv_client/src/transport.dart';
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+import '{{ dependency.path.relative }}';
+{%- endif %}{% endfor %}
+
+/// HTTP client for {{ feature.name.title }}.
+class {{ file.symbol }} {
+  const {{ file.symbol }}(this._transport);
+
+  final DryvTransport _transport;
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+
+  /// {{ operation.description or operation.name.title }}{% if operation.role %} ({{ operation.role }}){% endif %}.
+  Future<{% for output in operation.outputs %}{{ dart_type(output.value) }}{% else %}void{% endfor %}> {{ operation.name.camel }}({% if http.inputs %}{
+{%- for binding in http.inputs %}
+    required {{ dart_type(binding.port.value) }} {{ binding.port.name.camel }},
+{%- endfor %}
+  }{% endif %}) async {
+    final path = '{{ http.path.local }}'
+{%- for binding in http.inputs %}{% if binding.kind == 'path' %}
+        .replaceAll('{{ '{' }}{{ binding.name }}{{ '}' }}', Uri.encodeComponent({{ binding.port.name.camel }}.toString()))
+{%- endif %}{% endfor %};
+    final response = await _transport.send(
+      '{{ http.method }}',
+      path,
+{%- for binding in http.inputs %}{% if binding.kind == 'body' %}
+      body: {{ binding.port.name.camel }}{% if binding.port.value.kind == 'schema' %}.toJson(){% endif %},
+{%- endif %}{% endfor %}
+      query: <String, String>{
+{%- for binding in http.inputs %}{% if binding.kind == 'query' %}
+        '{{ binding.name }}': {{ binding.port.name.camel }}.toString(),
+{%- endif %}{% endfor %}
+      },
+    );
+{%- for output in operation.outputs %}
+{%- if output.value.kind == 'schema' %}
+    return {{ output.value.schema.name.pascal }}.fromJson(response! as Map<String, Object?>);
+{%- else %}
+    return response;
+{%- endif %}
+{%- else %}
+    return;
+{%- endfor %}
+  }
+{%- endfor %}
+}
+

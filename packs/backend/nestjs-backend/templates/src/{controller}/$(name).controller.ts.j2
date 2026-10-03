@@ -1,0 +1,130 @@
+{#- The dependency a subject resolves to through one slot. -#}
+{%- macro symbol_for(link, slot) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro pack_for(link, slot) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.pack }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- Non-empty when some dependency comes through the slot (and, optionally, from the pack). -#}
+{%- macro has_slot(slot) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- macro uses_pack(key) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == 'schema.validation' and dependency.pack == key -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ts_type(value) -%}
+{%- if value.kind == 'schema' -%}
+  {%- set pack = pack_for(value.schema, 'schema.validation') -%}
+  {%- if pack == 'validation.zod-schemas' -%}z.infer<typeof {{ symbol_for(value.schema, 'schema.validation') }}>
+  {%- elif pack == 'validation.joi-schemas' -%}Record<string, unknown>
+  {%- else -%}{{ symbol_for(value.schema, 'schema.validation') }}
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ value.property.primitive.type }}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}string
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{#- class-validator DTOs rely on Nest's global ValidationPipe; zod and Joi schemas get a pipe. -#}
+{%- macro body_pipe(value) -%}
+{%- if value.kind == 'schema' -%}
+  {%- set pack = pack_for(value.schema, 'schema.validation') -%}
+  {%- if pack == 'validation.zod-schemas' or pack == 'validation.joi-schemas' -%}new SchemaValidationPipe({{ symbol_for(value.schema, 'schema.validation') }})
+  {%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro signature(operation) -%}
+{%- for port in operation.inputs %}{{ port.name.camel }}: {{ ts_type(port.value) }}{% if not loop.last %}, {% endif %}{% endfor -%}
+{%- endmacro -%}
+{%- macro result(operation) -%}
+Promise<{% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %}>
+{%- endmacro -%}
+
+{%- set zod = uses_pack('validation.zod-schemas') != '' -%}
+{%- set joi = uses_pack('validation.joi-schemas') != '' -%}
+{%- set persistence = has_slot('schema.persistence') != '' -%}
+import {
+  Body,
+  Controller,
+  Delete,
+  type DynamicModule,
+  Get,
+  HttpCode,
+  Module,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  type Type,
+} from "@nestjs/common";
+{%- if persistence %}
+import { TypeOrmModule } from "@nestjs/typeorm";
+{%- endif %}
+{%- if zod %}
+import type { z } from "zod";
+{%- endif %}
+{%- if zod or joi %}
+
+import { SchemaValidationPipe } from "../../validation/schema-validation.pipe.ts";
+{%- endif %}
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/** What {{ feature.name.title }} needs from handwritten code. */
+export abstract class {{ file.symbols.service }} {
+{%- for operation in operations %}
+  /** {{ operation.description or operation.name.title }}{% if operation.role %} ({{ operation.role }}){% endif %}. */
+  abstract {{ operation.name.camel }}({{ signature(operation) }}): {{ result(operation) }};
+{%- endfor %}
+}
+
+@Controller()
+export class {{ file.symbols.controller }} {
+  constructor(private readonly service: {{ file.symbols.service }}) {}
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+
+  @{{ http.method | lower | capitalize }}("{{ http.path.local | replace('{', ':') | replace('}', '') }}")
+{%- for binding in http.outputs %}
+  @HttpCode({{ binding.status }})
+{%- endfor %}
+  {{ operation.name.camel }}(
+{%- for binding in http.inputs %}
+    {% if binding.kind == 'path' %}@Param("{{ binding.name }}"){% elif binding.kind == 'query' %}@Query("{{ binding.name }}"{% if body_pipe(binding.port.value) %}, {{ body_pipe(binding.port.value) }}{% endif %}){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
+{%- endfor %}
+  ): {{ result(operation) }} {
+    return this.service.{{ operation.name.camel }}({% for port in operation.inputs %}{{ port.name.camel }}{% if not loop.last %}, {% endif %}{% endfor %});
+  }
+{%- endfor %}
+}
+
+/** Registers {{ feature.name.title }}: pass the class that implements {{ file.symbols.service }}. */
+@Module({})
+export class {{ file.symbols.module }} {
+  static register(implementation: Type<{{ file.symbols.service }}>): DynamicModule {
+    return {
+      module: {{ file.symbols.module }},
+{%- if persistence %}
+      imports: [
+        TypeOrmModule.forFeature([
+{%- for entity in file.dependencies %}{% if entity.slot == 'schema.persistence' %}
+          {{ entity.symbol }},
+{%- endif %}{% endfor %}
+        ]),
+      ],
+{%- endif %}
+      controllers: [{{ file.symbols.controller }}],
+      providers: [{ provide: {{ file.symbols.service }}, useClass: implementation }],
+    };
+  }
+}
+
