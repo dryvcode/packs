@@ -1,0 +1,142 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro is_primary(storage, field) -%}
+{%- if storage is not none -%}{%- for key in storage.primaryKey -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
+{%- endmacro -%}
+
+{#- The Mongoose type and validators of a field stored as a scalar. -#}
+{%- macro scalar_options(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'property' and value.property.kind == 'primitive' -%}
+  {%- set primitive = value.property.primitive -%}
+  {%- if primitive.type == 'string' -%}type: String
+    {%- set length = primitive.constraints.length -%}
+    {%- if length is not none and length.exact is not none -%}, minlength: {{ length.exact }}, maxlength: {{ length.exact }}
+    {%- else -%}
+      {%- if length is not none and length.min is not none -%}, minlength: {{ length.min }}{%- endif -%}
+      {%- if length is not none and length.max is not none -%}, maxlength: {{ length.max }}{%- endif -%}
+    {%- endif -%}
+    {%- if primitive.constraints.pattern is not none -%}
+      {%- for expression in primitive.constraints.pattern.match -%}{%- if loop.first -%}, match: new RegExp({{ expression | tojson }}){%- endif -%}{%- endfor -%}
+    {%- endif -%}
+  {%- elif primitive.type == 'boolean' -%}type: Boolean
+  {%- else -%}type: Number
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none -%}, min: {{ primitive.constraints.range.min }}{%- endif -%}
+    {%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none -%}, max: {{ primitive.constraints.range.max }}{%- endif -%}
+    {%- if primitive.kind == 'integer' -%}, validate: { validator: Number.isInteger, message: "{PATH} must be an integer" }{%- endif -%}
+  {%- endif -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}type: String, enum: Object.values({{ symbol_for(value.property.enum) }})
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' and value.property.temporal.kind != 'duration' and value.property.temporal.kind != 'interval' -%}type: Date
+{%- else -%}type: MongooseSchema.Types.Mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{#- The TypeScript type of a stored field. -#}
+{%- macro ts_type(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'property' and value.property.kind == 'primitive' -%}
+  {%- set base = value.property.primitive.type -%}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}
+  {%- set base = symbol_for(value.property.enum) -%}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' and value.property.temporal.kind != 'duration' and value.property.temporal.kind != 'interval' -%}
+  {%- set base = 'Date' -%}
+{%- elif value.kind == 'property' and value.property.kind == 'record' -%}
+  {%- set base = 'Record<string, unknown>' -%}
+{%- else -%}
+  {%- set base = 'unknown' -%}
+{%- endif -%}
+{%- if field.array is not none -%}{{ base }}[]{%- else -%}{{ base }}{%- endif -%}
+{%- endmacro -%}
+
+{#- @Prop options shared by every stored field. -#}
+{%- macro presence(field) -%}
+{%- if not field.optional and not field.nullable -%}, required: true{%- endif -%}
+{%- if field.default is not none and field.default.kind == 'value' -%}, default: {{ field.default.value | tojson }}{%- elif field.nullable -%}, default: null{%- endif -%}
+{%- endmacro -%}
+
+{#- One class member. Primary keys become _id; references store the target's id. -#}
+{%- macro member(schema, storage, field) -%}
+{%- if field.related is not none -%}
+{#- The other side of a relation lives on the referencing model; Mongoose stores only one side. -#}
+{%- elif is_primary(storage, field) == 'yes' %}
+
+  @Prop({ {% if field.mutation == 'system' and field.value.kind == 'property' and field.value.property.kind == 'primitive' and field.value.property.primitive.format == 'uuid' %}type: String, default: () => randomUUID(){% else %}{{ scalar_options(field) }}{% endif %} })
+  _id!: {{ ts_type(field) }};
+{%- elif field.relation is not none %}
+
+  @Prop({ type: String, ref: "{{ symbol_for(field.relation.target.schema) }}"{{ presence(field) }} })
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: string{% if field.optional or field.nullable %} | null{% endif %};
+{%- elif field.value.kind == 'schema' %}
+
+  @Prop({ type: MongooseSchema.Types.Mixed{{ presence(field) }} })
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: unknown{% if field.optional or field.nullable %} | null{% endif %};
+{%- elif field.array is not none %}
+
+  @Prop({ type: [{ {{ scalar_options(field) }} }]{{ presence(field) }} })
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
+{%- else %}
+
+  @Prop({ {{ scalar_options(field) }}{{ presence(field) }} })
+  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
+{%- endif -%}
+{%- endmacro -%}
+
+{#- An invariant as a JavaScript predicate over the document. -#}
+{%- macro js_operand(operand) -%}
+{%- if operand.kind == 'field' -%}doc.{{ operand.field.camel }}
+{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}doc.{{ term.field.camel }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro js_operator(operator) -%}
+{%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+
+{%- set storage = schema.facets.storage -%}
+{%- set collection = storage.name if storage is not none and storage.name is not none else schema.name.snake -%}
+import { randomUUID } from "node:crypto";
+
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { type HydratedDocument, Schema as MongooseSchema } from "mongoose";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ schema.description or schema.name.title }}
+{%- for invariant in schema.invariants %}{% if invariant.form.kind == 'opaque' %}
+ *
+ * Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't validated here.
+{%- endif %}{% endfor %}
+ */
+@Schema({ collection: "{{ collection }}" })
+export class {{ file.symbol }} {
+{%- for field in schema.fields %}{% if is_primary(storage, field) == 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
+{%- for field in schema.fields %}{% if is_primary(storage, field) != 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
+}
+
+export type {{ file.symbol }}Document = HydratedDocument<{{ file.symbol }}>;
+
+export const {{ file.symbol }}Schema = SchemaFactory.createForClass({{ file.symbol }});
+{%- if storage is not none %}
+{%- for index in storage.indexes %}
+{{ file.symbol }}Schema.index({ {% for item in index.fields %}{{ item.camel }}: 1{% if not loop.last %}, {% endif %}{% endfor %} }{% if index.unique or index.name is not none %}, { {% if index.name is not none %}name: "{{ index.name }}"{% endif %}{% if index.unique %}{% if index.name is not none %}, {% endif %}unique: true{% endif %} }{% endif %});
+{%- endfor %}
+{%- endif %}
+{%- for invariant in schema.invariants %}
+{%- if invariant.form.kind != 'opaque' %}
+
+{{ file.symbol }}Schema.pre("validate", function (next) {
+  const doc = this as unknown as Record<string, number>;
+  if (!({% for comparison in invariant.form.comparisons %}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} && {% else %} || {% endif %}{% endif %}{% endfor %})) {
+    this.invalidate("{{ invariant.name.camel }}", {{ (invariant.message or invariant.name.title) | tojson }});
+  }
+  next();
+});
+{%- endif %}
+{%- endfor %}
