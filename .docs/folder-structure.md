@@ -53,7 +53,7 @@ Every pack states its layout in `catalog.layout`:
 | `inject` | Start at the module, group or feature (e.g. `analytics/alias-suggestion.dto.ts`). The pack never adds a project root such as `src/`; the project's destination supplies it (e.g. `src/modules/dto`). | nestjs-backend, typeorm-entities, mongoose-models, class-validator-dtos, zod-schemas, joi-schemas |
 | `standalone` | The pack defines a complete unit from its own root: a package, an SDK, an app tree. | flutter-api-bridge, dart-client-sdk, next-api-bridge, nextjs-app, fastapi-backend |
 
-
+## Rejected structures
 
 - `packs/<language>/<template-language>/<name>`: made the template implementation part of a pack's public identity.
 - `packs/<name>` (flat): hard to browse once the repo holds many packs.
