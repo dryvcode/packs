@@ -77,7 +77,9 @@
 
 {#- One class member: a column, a relation, or both. Each starts with a blank line. -#}
 {%- macro member(schema, storage, field) -%}
-{%- if field.related is not none %}
+{%- if field.related is not none and symbol_for(field.related.via.schema) == '' %}
+{#- The other side isn't a generated entity, so there's no navigation to declare. -#}
+{%- elif field.related is not none %}
 
   @OneToMany(() => {{ symbol_for(field.related.via.schema) }}, (item) => item.{{ schema.name.camel }})
   {{ field.name.camel }}?: Relation<{{ symbol_for(field.related.via.schema) }}[]>;
@@ -90,7 +92,7 @@
 
   {% if primary and field.mutation == 'system' and field.value.kind == 'property' and field.value.property.kind == 'primitive' and field.value.property.primitive.format == 'uuid' %}@PrimaryGeneratedColumn("uuid", { name: "{{ column(field.name) }}" }){% elif primary %}@PrimaryColumn({ name: "{{ column(field.name) }}", {{ column_options(field) }} }){% else %}@Column({ name: "{{ column(field.name) }}", {{ column_options(field) }}{% if field.optional or field.nullable %}, nullable: true{% endif %}{% if field.default is not none and field.default.kind == 'value' %}, default: {{ field.default.value | tojson }}{% endif %}{{ comment(field) }} }){% endif %}
   {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
-{%- if field.relation is not none %}
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
 
   @{% if field.relation.cardinality == 'one-to-one' %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.onDelete is not none %}, { onDelete: "{{ on_delete(field.relation.onDelete) }}" }{% endif %})
   @JoinColumn({ name: "{{ column(field.name) }}" })

@@ -69,7 +69,7 @@
   _id!: {{ ts_type(field) }};
 {%- elif field.relation is not none %}
 
-  @Prop({ type: String, ref: "{{ symbol_for(field.relation.target.schema) }}"{{ presence(field) }} })
+  @Prop({ type: String{% if symbol_for(field.relation.target.schema) %}, ref: "{{ symbol_for(field.relation.target.schema) }}"{% endif %}{{ presence(field) }} })
   {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: string{% if field.optional or field.nullable %} | null{% endif %};
 {%- elif field.value.kind == 'schema' %}
 
