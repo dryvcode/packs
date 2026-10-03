@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 
-import { RegisterRequestDto } from "./out/index.ts";
+import { RegisterRequestDto } from "./out/common/dto/index.ts";
 
 const valid = {
   firstName: "Ada",

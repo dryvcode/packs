@@ -73,7 +73,7 @@ import type { z } from "zod";
 {%- endif %}
 {%- if zod or joi %}
 
-import { SchemaValidationPipe } from "../../validation/schema-validation.pipe.ts";
+import { SchemaValidationPipe } from "../../common/server/validation/schema-validation.pipe.ts";
 {%- endif %}
 {%- for dependency in file.dependencies %}{% if dependency.symbol %}
 import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
