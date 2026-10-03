@@ -1,0 +1,68 @@
+name: release pack
+
+# A pack is released by a tag made of its path and version:
+#   persistence/typeorm-entities/v0.1.0
+# The tag's version must equal the pack's info.version. The release carries the pack as a
+# tarball and the full catalogue (catalog.json), generated from every pack's metadata.
+on:
+  push:
+    tags: ["*/*/v*"]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    services:
+      # Pin a released engine tag once one supports the pack `catalog` block.
+      engine:
+        image: ghcr.io/dryvcode/dryv-engine:main
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        ports: ["8750:8750"]
+        options: >-
+          --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8750/', timeout=4)\""
+          --health-interval 5s --health-retries 24
+    env:
+      DRYV_API_URL: http://127.0.0.1:8750
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack and version from the tag
+        id: tag
+        run: |
+          tag="$GITHUB_REF_NAME"
+          pack="${tag%/v*}"
+          version="${tag##*/v}"
+          test -f "packs/$pack/dryv.pack.yaml" || { echo "no pack at packs/$pack"; exit 1; }
+          echo "pack=$pack" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "name=${pack//\//-}" >> "$GITHUB_OUTPUT"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.x"
+      - uses: dart-lang/setup-dart@v1
+      - run: bun install --frozen-lockfile
+      - name: Tag matches info.version
+        run: |
+          actual=$(bun -e "console.log(Bun.YAML.parse(await Bun.file('packs/${{ steps.tag.outputs.pack }}/dryv.pack.yaml').text()).info.version)")
+          test "$actual" = "${{ steps.tag.outputs.version }}" || { echo "tag ${{ steps.tag.outputs.version }} != info.version $actual"; exit 1; }
+      - name: Render and check the pack
+        run: bun scripts/test-pack.ts ${{ steps.tag.outputs.pack }}
+      - name: Catalogue and tarball
+        run: |
+          bun scripts/catalog.ts catalog.json
+          git archive --format=tar.gz --prefix="${{ steps.tag.outputs.name }}/" \
+            -o "${{ steps.tag.outputs.name }}-${{ steps.tag.outputs.version }}.tar.gz" HEAD "packs/${{ steps.tag.outputs.pack }}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.tag.outputs.pack }} v${{ steps.tag.outputs.version }}
+          files: |
+            catalog.json
+            ${{ steps.tag.outputs.name }}-${{ steps.tag.outputs.version }}.tar.gz
+          generate_release_notes: true

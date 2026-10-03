@@ -39,5 +39,7 @@ jobs:
           version: "0.8.x"
       - uses: dart-lang/setup-dart@v1
       - run: bun install --frozen-lockfile
+      - name: Catalogue metadata is consistent
+        run: bun scripts/catalog.ts --check
       - name: Render and check every pack
         run: bun scripts/test-pack.ts --all
