@@ -72,5 +72,11 @@ templates:
         - $(subject.name.kebab)
       symbol: $(subject.name.pascal)Page
     imports:
+      - $ref: '#/needs/operation.client'
       - $ref: '#/templates/operation'
       - $ref: '#/templates/model'
+
+# Pages call operations through whichever pack the project binds here (for example
+# clients/next-api-bridge). Unbound, they use this pack's own fetch-based calls.
+needs:
+  operation.client: { required: false }

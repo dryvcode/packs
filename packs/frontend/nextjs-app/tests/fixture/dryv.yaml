@@ -5,14 +5,23 @@ source:
   path: dryv.ir.yaml
 
 packs:
+  # The same pages twice: with their own fetch calls, and bound to next-api-bridge.
   web:
-    source:
-      type: local
-      path: packs/frontend/nextjs-app
+    source: { type: local, path: packs/frontend/nextjs-app }
     destinations:
-      source:
-        $ref: "#/destinations/out"
+      source: { $ref: "#/destinations/web" }
+  client:
+    source: { type: local, path: packs/clients/next-api-bridge }
+    destinations:
+      source: { $ref: "#/destinations/client" }
+  web-bridge:
+    source: { type: local, path: packs/frontend/nextjs-app }
+    bind:
+      operation.client: { $ref: "#/packs/client" }
+    destinations:
+      source: { $ref: "#/destinations/webBridge" }
 
 destinations:
-  out:
-    path: out
+  web: { path: out/web }
+  client: { path: out/client }
+  webBridge: { path: out/web-bridge }

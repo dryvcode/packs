@@ -14,7 +14,7 @@
 {%- endif -%}
 {%- endmacro -%}
 {%- set http = operation.facets.http -%}
-import { type FieldMeta, send } from "../../dryv/transport.ts";
+import { type ClientInput, type ClientResponse, type FieldMeta, send } from "../../dryv/transport.ts";
 {%- for dependency in file.dependencies %}{% if dependency.symbol %}
 {%- if dependency.template == 'model' %}
 import { type {{ dependency.symbol }}, {{ dependency.symbol }}Fields } from "./{{ dependency.path.relative }}";
@@ -35,32 +35,43 @@ export const {{ file.symbol }}OutputFields: Readonly<Record<string, readonly Fie
 {%- endif %}{% endfor %}
 };
 
-/** Arguments of {{ operation.name.title }}, one per input port. */
-export type {{ operation.name.pascal }}Args = {
+/** Values for each input port of {{ operation.name.title }}. */
+export type {{ operation.name.pascal }}Ports = {
 {%- for binding in http.inputs %}
   {{ binding.port.name.camel }}?: {{ ts_type(binding.port.value) }};
 {%- endfor %}
 };
 
-/**
- * {{ operation.description or operation.name.title }}
- *
- * {{ http.method }} {{ http.path.local }}
- */
-export async function {{ file.symbol }}(args: {{ operation.name.pascal }}Args = {}): Promise<{% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %}> {
-  const path = "{{ http.path.local }}"
+/** Maps port values to the HTTP request parts of the operation.client convention. */
+export function {{ file.symbol }}Request(ports: {{ operation.name.pascal }}Ports = {}): ClientInput {
+  return {
+    params: {
 {%- for binding in http.inputs %}{% if binding.kind == 'path' %}
-    .replace("{{ '{' }}{{ binding.name }}{{ '}' }}", encodeURIComponent(String(args.{{ binding.port.name.camel }})))
-{%- endif %}{% endfor %};
-  const result = await send("{{ http.method }}", path, {
+      "{{ binding.name }}": String(ports.{{ binding.port.name.camel }}),
+{%- endif %}{% endfor %}
+    },
     query: {
 {%- for binding in http.inputs %}{% if binding.kind == 'query' %}
-      "{{ binding.name }}": args.{{ binding.port.name.camel }},
+      "{{ binding.name }}": ports.{{ binding.port.name.camel }},
+{%- elif binding.kind == 'query-object' %}
+      ...(ports.{{ binding.port.name.camel }} as Record<string, unknown> | undefined),
 {%- endif %}{% endfor %}
     },
 {%- for binding in http.inputs %}{% if binding.kind == 'body' %}
-    body: args.{{ binding.port.name.camel }},
+    body: ports.{{ binding.port.name.camel }},
 {%- endif %}{% endfor %}
-  });
-  return result as {% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %};
+  };
+}
+
+/**
+ * {{ operation.description or operation.name.title }}
+ *
+ * {{ http.method }} {{ http.path.local }}. Used when no operation.client pack is bound.
+ */
+export async function {{ file.symbol }}(input: ClientInput = {}): Promise<ClientResponse<{% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %}>> {
+  const path = "{{ http.path.local }}"
+{%- for binding in http.inputs %}{% if binding.kind == 'path' %}
+    .replace("{{ '{' }}{{ binding.name }}{{ '}' }}", encodeURIComponent(input.params?.["{{ binding.name }}"] ?? ""))
+{%- endif %}{% endfor %};
+  return send("{{ http.method }}", path, input);
 }

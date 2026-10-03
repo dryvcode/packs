@@ -1,21 +1,18 @@
 {
-  "name": "nextjs-app-fixture",
+  "name": "next-api-bridge-fixture",
   "private": true,
   "type": "module",
   "dependencies": {
     "next": "^16",
+    "next-api-bridge": "^0.1.10",
     "react": "^19",
     "react-dom": "^19",
-    "next-api-bridge": "^0.1.10",
     "server-only": "^0.0.1",
     "sonner": "^2"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20",
-    "@testing-library/react": "^16",
     "@types/bun": "^1",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
     "typescript": "^5.8"
   }
 }

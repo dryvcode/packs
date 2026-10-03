@@ -1,21 +1,24 @@
 "use client";
 
-import type { FieldMeta } from "../../lib/dryv/transport.ts";
+import type { ClientResponse, FieldMeta } from "../../lib/dryv/transport.ts";
 
 /**
- * Presents an operation result. With field metadata it shows those fields (optionally only the
+ * Presents an operation response: its message when it failed, otherwise its body. With field metadata it shows those fields (optionally only the
  * selected ones); without it, the raw value. Arrays and `items` pages become tables.
  */
 export function DryvResult({
-  value,
+  response,
   fields,
   select,
 }: {
-  value: unknown;
+  response: ClientResponse<unknown> | undefined;
   fields?: readonly FieldMeta[];
   select?: readonly string[];
 }) {
-  if (value === undefined) return <p className="dryv-empty">Nothing to show yet.</p>;
+  if (response === undefined) return <p className="dryv-empty">Nothing to show yet.</p>;
+  if (!response.success) return <p role="alert">{response.message || `Request failed (${response.status})`}</p>;
+  const value = response.body;
+  if (value === null) return <p className="dryv-empty">No content.</p>;
   const shown = fields?.filter((field) => select === undefined || select.includes(field.name));
   const rows = Array.isArray(value)
     ? value
