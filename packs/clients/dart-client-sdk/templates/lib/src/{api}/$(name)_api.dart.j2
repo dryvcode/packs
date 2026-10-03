@@ -22,7 +22,7 @@ class {{ file.symbol }} {
 {%- set http = operation.facets.http %}
 
   /// {{ operation.description or operation.name.title }}{% if operation.role %} ({{ operation.role }}){% endif %}.
-  Future<{% for output in operation.outputs %}{{ dart_type(output.value) }}{% else %}void{% endfor %}> {{ operation.name.camel }}({% if http.inputs %}{
+  Future<{% if operation.output %}{{ dart_type(operation.output.value) }}{% else %}void{% endif %}> {{ operation.name.camel }}({% if http.inputs %}{
 {%- for binding in http.inputs %}
     required {{ dart_type(binding.port.value) }} {{ binding.port.name.camel }},
 {%- endfor %}
@@ -43,15 +43,15 @@ class {{ file.symbol }} {
 {%- endif %}{% endfor %}
       },
     );
-{%- for output in operation.outputs %}
-{%- if output.value.kind == 'schema' %}
-    return {{ output.value.schema.name.pascal }}.fromJson(response! as Map<String, Object?>);
+{%- if operation.output %}
+{%- if operation.output.value.kind == 'schema' %}
+    return {{ operation.output.value.schema.name.pascal }}.fromJson(response! as Map<String, Object?>);
 {%- else %}
     return response;
 {%- endif %}
 {%- else %}
     return;
-{%- endfor %}
+{%- endif %}
   }
 {%- endfor %}
 }

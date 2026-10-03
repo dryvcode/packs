@@ -51,13 +51,13 @@ describe("own calls (no operation.client bound)", () => {
       required: true,
       options: Object.values(UserStatus),
     });
-    expect(createUserInputFields.request?.length).toBeGreaterThan(0);
+    expect(createUserInputFields.input?.length).toBeGreaterThan(0);
   });
 
   test("requests map ports to HTTP parts and calls follow the client convention", async () => {
     serve({ "POST /users": { id: "u1" } });
     process.env.NEXT_PUBLIC_API_URL = "https://api.example.test";
-    const response = await createUser(createUserRequest({ request: { displayName: "Ada" } as never }));
+    const response = await createUser(createUserRequest({ input: { displayName: "Ada" } as never }));
     expect(response).toMatchObject({ success: true, status: 200, body: { id: "u1" } });
     expect(fetchCalls[0]).toMatchObject({ method: "POST", url: "https://api.example.test/users", body: { displayName: "Ada" } });
   });

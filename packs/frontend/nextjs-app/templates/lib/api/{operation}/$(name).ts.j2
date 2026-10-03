@@ -23,17 +23,20 @@ import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
 {%- endif %}
 {%- endif %}{% endfor %}
 
-/** Field metadata of each input and output port whose value is a schema, by port name. */
+/** Field metadata of the input fields whose value is a schema, by field name. A schema
+ * input is listed whole under "input". */
 export const {{ file.symbol }}InputFields: Readonly<Record<string, readonly FieldMeta[]>> = {
-{%- for input in operation.inputs %}{% if input.value.kind == 'schema' and symbol_for(input.value.schema) %}
-  {{ input.name.camel }}: {{ symbol_for(input.value.schema) }}Fields,
-{%- endif %}{% endfor %}
+{%- if operation.input and operation.input.kind == 'schema' and symbol_for(operation.input.value.schema) %}
+  input: {{ symbol_for(operation.input.value.schema) }}Fields,
+{%- elif operation.input and operation.input.kind == 'fields' %}{% for field in operation.input.fields %}{% if field.value.kind == 'schema' and symbol_for(field.value.schema) %}
+  {{ field.name.camel }}: {{ symbol_for(field.value.schema) }}Fields,
+{%- endif %}{% endfor %}{% endif %}
 };
-export const {{ file.symbol }}OutputFields: Readonly<Record<string, readonly FieldMeta[]>> = {
-{%- for output in operation.outputs %}{% if output.value.kind == 'schema' and symbol_for(output.value.schema) %}
-  {{ output.name.camel }}: {{ symbol_for(output.value.schema) }}Fields,
-{%- endif %}{% endfor %}
-};
+/** Field metadata of the output, when it is a schema. */
+export const {{ file.symbol }}OutputFields: readonly FieldMeta[] | undefined =
+{%- if operation.output and operation.output.value.kind == 'schema' and symbol_for(operation.output.value.schema) %} {{ symbol_for(operation.output.value.schema) }}Fields;
+{%- else %} undefined;
+{%- endif %}
 
 /** Values for each input port of {{ operation.name.title }}. */
 export type {{ operation.name.pascal }}Ports = {
@@ -68,7 +71,7 @@ export function {{ file.symbol }}Request(ports: {{ operation.name.pascal }}Ports
  *
  * {{ http.method }} {{ http.path.local }}. Used when no operation.client pack is bound.
  */
-export async function {{ file.symbol }}(input: ClientInput = {}): Promise<ClientResponse<{% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %}>> {
+export async function {{ file.symbol }}(input: ClientInput = {}): Promise<ClientResponse<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}void{% endif %}>> {
   const path = "{{ http.path.local }}"
 {%- for binding in http.inputs %}{% if binding.kind == 'path' %}
     .replace("{{ '{' }}{{ binding.name }}{{ '}' }}", encodeURIComponent(input.params?.["{{ binding.name }}"] ?? ""))

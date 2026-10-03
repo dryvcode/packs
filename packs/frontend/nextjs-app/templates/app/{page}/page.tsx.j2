@@ -24,7 +24,7 @@
 
 {#- Field metadata of an operation port, exported by the operation's module. -#}
 {%- macro fields_for(port) -%}
-{{ own(port.operation) }}{% if port.direction == 'input' %}Input{% else %}Output{% endif %}Fields[{{ port.name.camel | tojson }}]
+{%- if port.direction == 'input' %}{{ own(port.operation) }}InputFields[{{ port.name.camel | tojson }}]{% else %}{{ own(port.operation) }}OutputFields{% endif -%}
 {%- endmacro -%}
 
 {#- "yes" when a collect part of this view feeds the operation: its result comes from the form. -#}

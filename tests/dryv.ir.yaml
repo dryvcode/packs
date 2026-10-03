@@ -3,12 +3,9 @@ key: canonical-users
 info:
   title: Canonical Users Example
   version: 1.0.0
-  description: >-
-    End-to-end Runtime IR example demonstrating canonical Dryv naming, declarations that
-    name their owning Group and Feature, direct behavior value ports, explicit workflow flow, Operation-owned
-    facets, and View-owned interaction meaning while preserving user-authored
-    identifiers exactly.
-
+  description: End-to-end Runtime IR example demonstrating canonical Dryv naming, declarations that name their owning Group
+    and Feature, direct behavior value ports, explicit workflow flow, Operation-owned facets, and View-owned interaction meaning
+    while preserving user-authored identifiers exactly.
 groups:
   core:
     description: Core user-management semantics
@@ -19,7 +16,6 @@ groups:
     parent:
       $ref: '#/groups/core'
     description: Administrative operations
-
 properties:
   primitives:
     UserId:
@@ -48,7 +44,6 @@ properties:
       format: non-negative-integer
       range:
         min: 0
-
   enums:
     UserStatus:
       group:
@@ -60,7 +55,6 @@ properties:
           value: suspended
         AdminUser:
           value: admin_user
-
   composites:
     NamePair:
       group:
@@ -72,13 +66,11 @@ properties:
         lastName:
           kind: property
           $ref: '#/properties/primitives/DisplayName'
-
   literals:
     ActiveStatus:
       group:
         $ref: '#/groups/core'
       value: active
-
   unions:
     UserLookup:
       group:
@@ -91,7 +83,6 @@ properties:
         byDisplayName:
           kind: reference
           $ref: '#/properties/primitives/DisplayName'
-
   records:
     Labels:
       group:
@@ -102,7 +93,6 @@ properties:
       values:
         kind: primitive
         name: string
-
   tuples:
     UserCoordinate:
       group:
@@ -112,7 +102,6 @@ properties:
           name: number
         - kind: primitive
           name: number
-
   generics:
     Page:
       kind: definition
@@ -145,7 +134,6 @@ properties:
       arguments:
         - kind: reference
           $ref: '#/schemas/UserProfile'
-
   temporal:
     CreatedAt:
       group:
@@ -161,7 +149,6 @@ properties:
       range:
         min: PT5M
         max: PT2H
-
 expressions:
   core.ExternalIdIsDistinct:
     group:
@@ -173,11 +160,12 @@ expressions:
       operator: not-equal
       left:
         context: value
-        path: [externalCustomerId]
+        path:
+          - externalCustomerId
       right:
         context: value
-        path: [id]
-
+        path:
+          - id
 schemas:
   UserProfile:
     group:
@@ -250,7 +238,6 @@ schemas:
         rule:
           $ref: '#/expressions/core.ExternalIdIsDistinct'
         message: The external customer ID must differ from the user ID.
-
   CreateUserRequest:
     group:
       $ref: '#/groups/core'
@@ -270,7 +257,6 @@ schemas:
         status:
           from: status
           optional: true
-
   UserEnvelope:
     group:
       $ref: '#/groups/core'
@@ -281,7 +267,6 @@ schemas:
       user:
         kind: schema
         $ref: '#/schemas/UserProfile'
-
 policies:
   core.Authenticated:
     group:
@@ -297,7 +282,6 @@ policies:
       $ref: '#/features/administration.UserAdministration'
     role: authorization
     description: Requires administrative access
-
 failures:
   UserNotFound:
     group:
@@ -308,7 +292,6 @@ failures:
     payload:
       kind: reference
       $ref: '#/properties/primitives/UserId'
-
 events:
   UserCreated:
     group:
@@ -328,7 +311,6 @@ events:
     role: integration
     payload:
       $ref: '#/properties/primitives/Count'
-
 operations:
   ListUsers:
     group:
@@ -338,10 +320,6 @@ operations:
     role: list
     tags:
       - public
-    outputs:
-      - name: page
-        value:
-          $ref: '#/properties/generics/UserPage'
     access:
       authenticated: true
       policies:
@@ -363,13 +341,14 @@ operations:
           - port:
               $ref: '#/operations/ListUsers'
               direction: output
-              index: 0
             response:
               status: 200
               representations:
                 - kind: json
                   media_type: application/json
-
+    output:
+      value:
+        $ref: '#/properties/generics/UserPage'
   CreateUser:
     group:
       $ref: '#/groups/core'
@@ -378,14 +357,6 @@ operations:
     role: create
     tags:
       - public
-    inputs:
-      - name: request
-        value:
-          $ref: '#/schemas/CreateUserRequest'
-    outputs:
-      - name: user
-        value:
-          $ref: '#/schemas/UserProfile'
     failures:
       - $ref: '#/failures/UserNotFound'
     emits:
@@ -416,7 +387,6 @@ operations:
           - port:
               $ref: '#/operations/CreateUser'
               direction: input
-              index: 0
             source:
               kind: body
               representation:
@@ -426,7 +396,6 @@ operations:
           - port:
               $ref: '#/operations/CreateUser'
               direction: output
-              index: 0
             response:
               status: 201
               representations:
@@ -438,7 +407,12 @@ operations:
             status: 404
       websocket:
         path: /users/socket
-
+    input:
+      schema:
+        $ref: '#/schemas/CreateUserRequest'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
   GetUser:
     group:
       $ref: '#/groups/core'
@@ -447,14 +421,6 @@ operations:
     role: detail
     tags:
       - public
-    inputs:
-      - name: id
-        value:
-          $ref: '#/properties/primitives/UserId'
-    outputs:
-      - name: user
-        value:
-          $ref: '#/schemas/UserProfile'
     failures:
       - $ref: '#/failures/UserNotFound'
     access:
@@ -471,7 +437,7 @@ operations:
           - port:
               $ref: '#/operations/GetUser'
               direction: input
-              index: 0
+              field: id
             source:
               kind: path
               name: id
@@ -479,7 +445,6 @@ operations:
           - port:
               $ref: '#/operations/GetUser'
               direction: output
-              index: 0
             response:
               status: 200
               representations:
@@ -489,7 +454,14 @@ operations:
           - failure:
               $ref: '#/failures/UserNotFound'
             status: 404
-
+    input:
+      fields:
+        - name: id
+          value:
+            $ref: '#/properties/primitives/UserId'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
   PruneUsers:
     group:
       $ref: '#/groups/administration'
@@ -498,10 +470,6 @@ operations:
     role: action
     tags:
       - internal
-    outputs:
-      - name: removed
-        value:
-          $ref: '#/properties/primitives/Count'
     emits:
       - $ref: '#/events/UsersPruned'
     execution:
@@ -515,7 +483,9 @@ operations:
           hour: 2
           minute: 30
           time_zone: Africa/Nairobi
-
+    output:
+      value:
+        $ref: '#/properties/primitives/Count'
 views:
   UsersView:
     group:
@@ -534,7 +504,6 @@ views:
           port:
             $ref: '#/operations/ListUsers'
             direction: output
-            index: 0
       createUser:
         kind: collect
         description: Collect the complete CreateUser input and invoke the Operation.
@@ -542,7 +511,6 @@ views:
           port:
             $ref: '#/operations/CreateUser'
             direction: input
-            index: 0
       createdUser:
         kind: present
         description: Present selected fields from the created user result.
@@ -550,16 +518,14 @@ views:
           port:
             $ref: '#/operations/CreateUser'
             direction: output
-            index: 0
           select:
-            - [id]
-            - [displayName]
-            - [status]
+            - - id
+            - - displayName
+            - - status
     presentations:
       adminWeb:
         surface:
           $ref: '#/surfaces/AdminWeb'
-
 workflows:
   CreateUserFlow:
     group:
@@ -615,7 +581,6 @@ workflows:
         to:
           $ref: '#/workflows/CreateUserFlow'
           step: created
-
 surfaces:
   AdminWeb:
     kind: web
@@ -624,18 +589,15 @@ surfaces:
     group:
       $ref: '#/groups/administration'
     description: Administrative web application
-
 features:
   core.UserManagement:
     group:
       $ref: '#/groups/core'
     description: Browse and create users
-
   administration.UserAdministration:
     group:
       $ref: '#/groups/administration'
     description: Administrative user maintenance
-
 applications:
   AdminConsole:
     description: User administration console

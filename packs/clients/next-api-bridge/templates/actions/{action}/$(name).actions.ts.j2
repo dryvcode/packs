@@ -40,7 +40,7 @@
 {%- endmacro -%}
 
 {%- macro response_type(operation) -%}
-{%- for output in operation.outputs -%}{%- if loop.first -%}{{ ts_type(output.value) }}{%- endif -%}{%- else -%}void{%- endfor -%}
+{%- if operation.output -%}{{ ts_type(operation.output.value) }}{%- else -%}void{%- endif -%}
 {%- endmacro -%}
 
 {%- set http = operation.facets.http -%}
