@@ -1,84 +1,86 @@
 # Packs repository plan
 
-Status: **draft**. Items marked *open* need the owner's decision before work starts.
+Status: **final, ready to build** (2026-10-03).
 
-## Goal
+[pack-design-decisions.md](pack-design-decisions.md) is the authority. If this plan and that document ever disagree, that document wins, and the conflict is raised with the owner.
 
-`dryvcode/packs` is Dryv's public home for **global packs**: packs that generate code for well-known packages and frameworks such as TypeORM, Mongoose, NestJS, Next.js and zod. Dryv owns the repo, and it's licensed under the GNU GPL v3.
-
-Projects use three kinds of packs:
-
-| Kind | Where it lives | Use |
-| --- | --- | --- |
-| **Global packs** | This repo | Well-known packages and frameworks. Always preferred over local copies. |
-| **Local packs** | A project's own `dryv/packs/` | Designs the project invented, which no global pack could know |
-| **Private git packs** | Any private git repo the user can access | Shared packs that must not be public |
-
-## Decisions taken
+## Decisions
 
 | Topic | Decision |
 | --- | --- |
-| Repository | `dryvcode/packs`, public, GNU GPL v3 |
-| Pinning | **Per-pack tags** named after the pack's path: `typescript/jinja/mongoose/v0.1.0` |
-| Starter packs | The packs in the Dryv repo's `_examples/packs` |
-| Folder structure | `packs/<language>/<template-language>/<name>`; multi-language packs in `packs/multi/`. See [folder-structure.md](folder-structure.md). |
-| Catalogue | A JSON catalogue with each pack's tags, generated in CI from pack metadata and published with releases (not committed) |
-| Global before local | Packs for well-known packages and frameworks are **never** local. They come from this repo. This is Dryv best practice. |
-| Local packs | Only for a project's own designs, such as a custom type-file layout or a use-case design |
+| Repository | `dryvcode/packs`, public. Work on `develop`; CI runs for `main` only. |
+| Folder structure | `packs/<purpose>/<pack-name>`. Folders carry no runtime meaning. |
+| First purposes | `persistence`, `validation`, `backend`, `clients`, `frontend`. A new purpose is added only when a real pack needs it. |
+| Licenses | `LICENSE` (Apache-2.0) covers the repo, pack definitions, tooling and tests. `LICENSE-0BSD` covers code-emitting template material under `packs/*/*/templates/`. Generated code is under the consuming project's license. |
+| Tags | `<purpose>/<pack-name>/v<version>`, starting at `0.1.0`, e.g. `persistence/typeorm-entities/v0.1.0` |
+| Catalogue metadata | An optional `catalog` block in `dryv.pack.yaml` (`purpose`, `summary`, `languages`, `frameworks`, `tags`), added to Dryv's pack contract. The engine accepts it and ignores it at runtime. |
+| Catalogue | Generated in CI from every pack's `catalog` block and published with releases. Not committed. Discovery only. |
+| Composition | Explicit `provides`, `needs` and project bindings only |
+| Collisions | One output path, one owner. Collisions fail planning. |
+| Reproducibility | A readable tag in `dryv.yaml`, resolved by the client to a commit SHA and content digest stored in `dryv.lock.yaml` (the existing Dryv lock schema) |
+| Source type | No `source: { type: dryv }`. Projects use explicit `git` sources; `dryv packs add` will write them. |
+| Starter packs | **Copied** from the Dryv repo's `_examples/packs`. Dryv keeps its own copies for its examples and tests. |
+| Fixture testing | Every pack has a fixture rendered through the Dryv CLI and checked with its real toolchain. CI runs the engine image (`ghcr.io/dryvcode/dryv-engine`, pinned tag) as a service container. |
+| Generated-file ownership | Managed (Dryv owns it) and scaffold (created once, then owned by the project). Scaffold mode is built in Dryv **after** the first packs. Line-level ownership is not an approved design. |
 
-## What deserves a local pack
+## Pack layout
 
-A local pack captures a design the project invented. Two examples come from the first real project using Dryv (`alidantech-api`, in its `_archives/`):
-
-- **Custom type files:** `src/types/schema/auth/challenge/` with `config.ts`, `index.ts` and `types.ts`. Each schema gets a folder of typed config, keys, relations and sortable fields, built on shared helpers.
-- **Use cases:** `src/modules/auth/resource/auth/use-cases/refresh-session.usecase.ts`. An injectable class per use case, implementing its interface, with repositories and providers injected.
-
-## Generated file ownership (desired Dryv behaviour)
-
-| Mode | Behaviour |
-| --- | --- |
-| **Regenerated** (default) | Dryv owns the file. Every generate may rewrite or delete it. |
-| **Generated once** (custom) | Dryv writes the file the first time only. After that it belongs to the developer, and Dryv never edits or deletes it. |
-
-- A pack decides the mode per template.
-- Later goal: **diffing**, where Dryv knows the exact lines it produced and updates only those.
-- Not implemented yet. The design and its open questions are in the Dryv repo: `.docs/planning/roadmap/generated-file-ownership.md`.
-
-## Using packs from a project
-
-Dryv already supports git packs. The client fetches them with the user's own `git`, so private repos work with the user's existing credentials.
-
-```yaml
-packs:
-  entities:                       # a global pack, pinned to its tag
-    source:
-      type: git
-      repository: https://github.com/dryvcode/packs
-      revision: typescript/jinja/typeorm-entities/v0.1.0
-      path: packs/typescript/jinja/typeorm-entities
-  billing:                        # a local pack
-    source:
-      type: local
-      path: dryv/packs/billing
-  internal:                       # a private git pack
-    source:
-      type: git
-      repository: git@github.com:<org>/<private-repo>.git
-      revision: <tag or commit>
-      path: <pack folder>
+```text
+packs/
+├── persistence/
+│   ├── typeorm-entities/        starter
+│   └── mongoose-models/         new
+├── validation/
+│   ├── class-validator-dtos/    starter
+│   ├── zod-schemas/             starter
+│   └── joi-schemas/             starter
+├── backend/
+│   ├── nestjs-backend/          starter
+│   └── fastapi-backend/         starter
+├── clients/
+│   └── dart-client-sdk/         starter
+└── frontend/
+    └── nextjs-app/              new
 ```
 
-### Ideas for making global packs easier (*open*)
+Each pack folder:
 
-- **A `dryv` source type:** Dryv already knows this repo, so a project could write only the pack's name and version, for example `source: { type: dryv, pack: typescript/jinja/typeorm-entities, version: 0.1.0 }`. Dryv works out the repository, tag and path.
-- **A pack tool:** a CLI command such as `dryv packs search` / `dryv packs add <name>`, which lists the catalogue, picks a version and writes the `dryv.yaml` entry.
+```text
+<pack-name>/
+├── dryv.pack.yaml               includes the catalog block
+├── README.md                    what it emits, slots it provides and needs, an example dryv.yaml entry
+├── CHANGELOG.md
+├── templates/                   0BSD
+└── tests/fixture/               dryv.yaml, IR, toolchain project, tests
+```
+
+Repository files:
+
+```text
+README.md  LICENSE  LICENSE-0BSD
+.docs/                           decisions, plan, folder structure
+scripts/test-pack.ts             fixture harness, adapted from the Dryv repo
+scripts/catalog.ts               catalogue generator
+.github/workflows/               test every pack on PRs to main; release a pack from its tag
+```
+
+## Build order
+
+Each step ends with every fixture passing.
+
+1. **Dryv: `catalog` block.** Add the optional `catalog` field to the pack contract in the engine and to `dryv.pack.schema.json`, with tests.
+2. **Repository scaffolding:** licenses, README, `scripts/test-pack.ts` adapted to `packs/<purpose>/<name>`, and the CI workflow with the engine service container.
+3. **Starter packs:** copy the seven into their purpose folders, add `catalog` blocks, READMEs and changelogs, and make every fixture pass.
+4. **Catalogue generator** and the release workflow (per-pack tags, GitHub Release, published catalogue).
+5. **New pack:** `persistence/mongoose-models`.
+6. **New pack:** `frontend/nextjs-app`.
+7. **First releases:** tag every pack at `v0.1.0`.
+8. **alidantech-api:** use the released packs from git sources pinned to their tags.
+9. **Dryv: lock state.** The client resolves each tag to a commit SHA and digest and writes `dryv.lock.yaml`.
+10. **Dryv: scaffold mode**, designed and built (Dryv roadmap: generated file ownership).
+11. **Dryv: `dryv packs search` / `dryv packs add`**, reading the published catalogue.
 
 ## Open questions
 
-1. Do the starter packs move out of the Dryv repo, or get copied while the Dryv examples keep their own copies?
-2. Which global packs come first? The alidantech-api project needs TypeORM, Mongoose, NestJS and Next.js. Mongoose and Next.js packs don't exist yet.
-3. How should pack tags start: `0.1.0`, or `0.0.1` to match the other Dryv packages?
-4. The `dryv` source type: wanted? If so, what does it look like?
-5. A pack tool (`dryv packs add`): wanted? If so, in the CLI, the VS Code extension, or both?
-6. The design of generated-once mode (tracked in the Dryv repo).
-7. The pack metadata for the catalogue: which fields (tags, frameworks, description…) and where they sit in `dryv.pack.yaml`.
+1. The example in `pack-design-decisions.md` §1 writes `provides` as a list (`- schema.persistence`). Dryv's contract makes it a map from slot to template (`schema.persistence: { $ref: '#/templates/entity' }`). Should the example be corrected? The document is locked.
+2. The designs of `mongoose-models` and `nextjs-app`: what they emit, and which slots they provide and need. To be decided before steps 5 and 6.
