@@ -1,0 +1,66 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ts_type(value) -%}
+{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) or 'unknown' }}
+{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ value.property.primitive.type }}
+{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}string
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+{%- set http = operation.facets.http -%}
+import { type FieldMeta, send } from "../../dryv/transport.ts";
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+{%- if dependency.template == 'model' %}
+import { type {{ dependency.symbol }}, {{ dependency.symbol }}Fields } from "./{{ dependency.path.relative }}";
+{%- else %}
+import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}
+{%- endif %}{% endfor %}
+
+/** Field metadata of each input and output port whose value is a schema, by port name. */
+export const {{ file.symbol }}InputFields: Readonly<Record<string, readonly FieldMeta[]>> = {
+{%- for input in operation.inputs %}{% if input.value.kind == 'schema' and symbol_for(input.value.schema) %}
+  {{ input.name.camel }}: {{ symbol_for(input.value.schema) }}Fields,
+{%- endif %}{% endfor %}
+};
+export const {{ file.symbol }}OutputFields: Readonly<Record<string, readonly FieldMeta[]>> = {
+{%- for output in operation.outputs %}{% if output.value.kind == 'schema' and symbol_for(output.value.schema) %}
+  {{ output.name.camel }}: {{ symbol_for(output.value.schema) }}Fields,
+{%- endif %}{% endfor %}
+};
+
+/** Arguments of {{ operation.name.title }}, one per input port. */
+export type {{ operation.name.pascal }}Args = {
+{%- for binding in http.inputs %}
+  {{ binding.port.name.camel }}?: {{ ts_type(binding.port.value) }};
+{%- endfor %}
+};
+
+/**
+ * {{ operation.description or operation.name.title }}
+ *
+ * {{ http.method }} {{ http.path.local }}
+ */
+export async function {{ file.symbol }}(args: {{ operation.name.pascal }}Args = {}): Promise<{% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %}> {
+  const path = "{{ http.path.local }}"
+{%- for binding in http.inputs %}{% if binding.kind == 'path' %}
+    .replace("{{ '{' }}{{ binding.name }}{{ '}' }}", encodeURIComponent(String(args.{{ binding.port.name.camel }})))
+{%- endif %}{% endfor %};
+  const result = await send("{{ http.method }}", path, {
+    query: {
+{%- for binding in http.inputs %}{% if binding.kind == 'query' %}
+      "{{ binding.name }}": args.{{ binding.port.name.camel }},
+{%- endif %}{% endfor %}
+    },
+{%- for binding in http.inputs %}{% if binding.kind == 'body' %}
+    body: args.{{ binding.port.name.camel }},
+{%- endif %}{% endfor %}
+  });
+  return result as {% for output in operation.outputs %}{{ ts_type(output.value) }}{% else %}void{% endfor %};
+}

@@ -1,0 +1,89 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- Field metadata of an operation port, exported by the operation's module. -#}
+{%- macro fields_for(port) -%}
+{{ symbol_for(port.operation) }}{% if port.direction == 'input' %}Input{% else %}Output{% endif %}Fields[{{ port.name.camel | tojson }}]
+{%- endmacro -%}
+
+{#- "yes" when a collect part of this view feeds the operation: its result comes from the form. -#}
+{%- macro collected(operation) -%}
+{%- for part in view.parts -%}
+{%- if part.kind == 'collect' and part.collect.target.port is not none and part.collect.target.port.operation.id == operation.id -%}yes{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- "yes" when an earlier present part already shows the operation, so each operation loads once. -#}
+{%- macro shown_earlier(operation, position) -%}
+{%- for part in view.parts -%}
+{%- if loop.index < position and part.kind == 'present' and part.present.source.port is not none and part.present.source.port.operation.id == operation.id -%}yes{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { DryvForm } from "../../../components/dryv/dryv-form.tsx";
+import { DryvResult } from "../../../components/dryv/dryv-result.tsx";
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+import { {{ dependency.symbol }}{% if dependency.template == 'operation' %}, {{ dependency.symbol }}InputFields, {{ dependency.symbol }}OutputFields{% endif %} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ view.description or view.name.title }}
+ */
+export default function {{ file.symbol }}() {
+  const [results, setResults] = useState<Record<string, unknown>>({});
+  const keep = (operation: string) => (value: unknown) =>
+    setResults((current) => ({ ...current, [operation]: value }));
+
+  useEffect(() => {
+{%- for part in view.parts %}
+{%- if part.kind == 'present' and part.present.source.port is not none %}
+{%- set operation = part.present.source.port.operation %}
+{%- if collected(operation) == '' and shown_earlier(operation, loop.index) == '' %}
+    void {{ symbol_for(operation) }}().then(keep("{{ symbol_for(operation) }}"));
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+  }, []);
+
+  return (
+    <main className="dryv-page">
+      <h1>{{ view.name.title }}</h1>
+{%- for part in view.parts %}
+
+      <section className="dryv-part" data-part="{{ part.name.kebab }}">
+        <h2>{{ part.name.title }}</h2>
+{%- if part.kind == 'collect' and part.collect.target.port is not none %}
+{%- set port = part.collect.target.port %}
+        <DryvForm
+          fields={ {{- fields_for(port) }} ?? []}
+          submitLabel={{ port.operation.name.title | tojson }}
+          onSubmit={async (values) =>
+            keep("{{ symbol_for(port.operation) }}")(await {{ symbol_for(port.operation) }}({ {{ port.name.camel }}: values as never }))
+          }
+        />
+{%- elif part.kind == 'present' and part.present.source.port is not none %}
+{%- set port = part.present.source.port %}
+        <DryvResult
+          value={results["{{ symbol_for(port.operation) }}"]}
+          fields={ {{- fields_for(port) -}} }
+{%- if part.present.source.select %}
+          select={[{% for path in part.present.source.select %}"{{ path.dotted }}"{% if not loop.last %}, {% endif %}{% endfor %}]}
+{%- endif %}
+        />
+{%- elif part.kind == 'invoke' and part.invoke.operation is not none %}
+        <button type="button" onClick={() => void {{ symbol_for(part.invoke.operation) }}().then(keep("{{ symbol_for(part.invoke.operation) }}"))}>
+          {{ part.invoke.operation.name.title }}
+        </button>
+{%- endif %}
+      </section>
+{%- endfor %}
+    </main>
+  );
+}
