@@ -48,7 +48,9 @@ export function {{file.symbol}}({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (name: keyof FormInput, value: unknown) => {
+  const values = form as Record<string, unknown>;
+
+  const setField = (name: string, value: unknown) => {
     setForm((current) => ({ ...current, [name]: value }) as Partial<FormInput>);
   };
 
@@ -80,18 +82,18 @@ export function {{file.symbol}}({
 {{#if value.is.boolean}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
+          name="{{name.raw}}"
           type="checkbox"
-          checked={Boolean(form.{{name.camel}})}
+          checked={Boolean(values["{{name.raw}}"])}
           disabled={disabled || submitting}
-          onChange={(event) => setField("{{name.camel}}", event.currentTarget.checked)}
+          onChange={(event) => setField("{{name.raw}}", event.currentTarget.checked)}
         />
 {{else}}
 {{#if value.is.enum}}
         <select
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
-          value={String(form.{{name.camel}} ?? "")}
+          name="{{name.raw}}"
+          value={String(values["{{name.raw}}"] ?? "")}
           disabled={disabled || submitting}
 {{#unless optional}}
           required
@@ -116,9 +118,9 @@ export function {{file.symbol}}({
 {{#if value.is.number}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
+          name="{{name.raw}}"
           type="number"
-          value={form.{{name.camel}} == null ? "" : String(form.{{name.camel}})}
+          value={values["{{name.raw}}"] == null ? "" : String(values["{{name.raw}}"])}
           disabled={disabled || submitting}
 {{#unless optional}}
           required
@@ -142,7 +144,7 @@ export function {{file.symbol}}({
 {{#if value.is.temporal}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
+          name="{{name.raw}}"
 {{#if value.is.date}}
           type="date"
 {{else}}
@@ -152,17 +154,17 @@ export function {{file.symbol}}({
           type="datetime-local"
 {{/if}}
 {{/if}}
-          value={String(form.{{name.camel}} ?? "")}
+          value={String(values["{{name.raw}}"] ?? "")}
           disabled={disabled || submitting}
 {{#unless optional}}
           required
 {{/unless}}
-          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+          onChange={(event) => setField("{{name.raw}}", event.currentTarget.value)}
         />
 {{else}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
+          name="{{name.raw}}"
 {{#if value.is.email}}
           type="email"
 {{else}}
@@ -176,7 +178,7 @@ export function {{file.symbol}}({
 {{/if}}
 {{/if}}
 {{/if}}
-          value={String(form.{{name.camel}} ?? "")}
+          value={String(values["{{name.raw}}"] ?? "")}
           disabled={disabled || submitting}
 {{#unless optional}}
           required
@@ -189,7 +191,7 @@ export function {{file.symbol}}({
           maxLength={{{max}}}
 {{/if}}
 {{/with}}
-          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+          onChange={(event) => setField("{{name.raw}}", event.currentTarget.value)}
         />
 {{/if}}
 {{/if}}
@@ -198,14 +200,14 @@ export function {{file.symbol}}({
 {{else}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
-          name="{{name.camel}}"
+          name="{{name.raw}}"
           type="text"
-          value={String(form.{{name.camel}} ?? "")}
+          value={String(values["{{name.raw}}"] ?? "")}
           disabled={disabled || submitting}
 {{#unless optional}}
           required
 {{/unless}}
-          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+          onChange={(event) => setField("{{name.raw}}", event.currentTarget.value)}
         />
 {{/if}}
 {{/each}}
