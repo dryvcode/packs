@@ -1,0 +1,193 @@
+"use client";
+
+import { type FormEvent, useState } from "react";
+{{#with operation.input.value.generated.schema_types}}
+import type { {{symbol}} } from "{{path.relative}}";
+{{/with}}
+{{#each file.dependency_groups.operation_client}}
+import { {{symbol}} } from "{{path.relative}}";
+{{/each}}
+
+{{#with operation.input.value.generated.schema_types}}
+type FormInput = {{symbol}};
+{{else}}
+type FormInput = Record<string, unknown>;
+{{/with}}
+
+export interface {{file.symbol}}Props {
+  initial?: Partial<FormInput>;
+  disabled?: boolean;
+  onSuccess?: (result: unknown) => void;
+  onError?: (error: unknown) => void;
+}
+
+/**
+ * {{operation.description}}
+ *
+ * Generated from the {{operation.name.title}} operation.
+ */
+export function {{file.symbol}}({
+  initial,
+  disabled = false,
+  onSuccess,
+  onError,
+}: {{file.symbol}}Props) {
+  const [form, setForm] = useState<Partial<FormInput>>(initial ?? {});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setField = (name: keyof FormInput, value: unknown) => {
+    setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      let result: unknown;
+{{#each file.dependency_groups.operation_client}}
+      result = await {{symbol}}(form as FormInput);
+{{/each}}
+      onSuccess?.(result);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to submit the form.");
+      onError?.(caught);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} data-operation="{{operation.name.kebab}}">
+{{#each operation.input.fields}}
+      <div data-field="{{name.kebab}}">
+        <label htmlFor="{{../operation.name.kebab}}-{{name.kebab}}">{{name.title}}</label>
+{{#if value.is.boolean}}
+        <input
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+          type="checkbox"
+          checked={Boolean(form.{{name.camel}})}
+          disabled={disabled || submitting}
+          onChange={(event) => setField("{{name.camel}}", event.currentTarget.checked)}
+        />
+{{else}}
+{{#if value.is.enum}}
+        <select
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+          value={String(form.{{name.camel}} ?? "")}
+          disabled={disabled || submitting}
+{{#unless optional}}
+          required
+{{/unless}}
+          onChange={(event) => {
+            const next = event.currentTarget.value;
+            setField(
+              "{{name.camel}}",
+{{#each value.property.enum.values}}
+              next === String({{{value_json}}}) ? {{{value_json}}} :
+{{/each}}
+              next,
+            );
+          }}
+        >
+          <option value="">Select {{name.title}}</option>
+{{#each value.property.enum.values}}
+          <option value={String({{{value_json}}})}>{{#if title}}{{title}}{{else}}{{name.title}}{{/if}}</option>
+{{/each}}
+        </select>
+{{else}}
+{{#if value.is.number}}
+        <input
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+          type="number"
+          value={form.{{name.camel}} == null ? "" : String(form.{{name.camel}})}
+          disabled={disabled || submitting}
+{{#unless optional}}
+          required
+{{/unless}}
+{{#with value.property.primitive.constraints.range}}
+{{#if has_min}}
+          min={{{min}}}
+{{/if}}
+{{#if has_max}}
+          max={{{max}}}
+{{/if}}
+{{/with}}
+          onChange={(event) =>
+            setField(
+              "{{name.camel}}",
+              event.currentTarget.value === "" ? undefined : Number(event.currentTarget.value),
+            )
+          }
+        />
+{{else}}
+{{#if value.is.temporal}}
+        <input
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+{{#if value.is.date}}
+          type="date"
+{{else}}
+{{#if value.is.time}}
+          type="time"
+{{else}}
+          type="datetime-local"
+{{/if}}
+{{/if}}
+          value={String(form.{{name.camel}} ?? "")}
+          disabled={disabled || submitting}
+{{#unless optional}}
+          required
+{{/unless}}
+          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+        />
+{{else}}
+        <input
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+{{#if value.is.email}}
+          type="email"
+{{else}}
+{{#if value.is.url}}
+          type="url"
+{{else}}
+{{#if value.is.phone}}
+          type="tel"
+{{else}}
+          type="text"
+{{/if}}
+{{/if}}
+{{/if}}
+          value={String(form.{{name.camel}} ?? "")}
+          disabled={disabled || submitting}
+{{#unless optional}}
+          required
+{{/unless}}
+{{#with value.property.primitive.constraints.length}}
+{{#if has_min}}
+          minLength={{{min}}}
+{{/if}}
+{{#if has_max}}
+          maxLength={{{max}}}
+{{/if}}
+{{/with}}
+          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+        />
+{{/if}}
+{{/if}}
+{{/if}}
+{{/each}}
+
+      {error ? <p role="alert">{error}</p> : null}
+
+      <button type="submit" disabled={disabled || submitting}>
+        {submitting ? "Submitting…" : "{{operation.name.title}}"}
+      </button>
+    </form>
+  );
+}
