@@ -36,3 +36,5 @@ Code that Dryv generates from these packs is yours, under your project's own lic
 ## Contributing
 
 The design decisions are in [.docs/pack-design-decisions.md](.docs/pack-design-decisions.md) and the plan in [.docs/plan.md](.docs/plan.md).
+
+Template naming and derived-context conventions: [.docs/template-context.md](.docs/template-context.md).
