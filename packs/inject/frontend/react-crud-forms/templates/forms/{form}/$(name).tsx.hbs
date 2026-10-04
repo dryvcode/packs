@@ -2,10 +2,10 @@
 
 import { type FormEvent, useState } from "react";
 {{#with operation.input.value.generated.schema_types}}
-import type { {{symbol}} } from "{{path.relative}}";
+import type { {{symbol}} } from "./{{path.relative}}";
 {{/with}}
 {{#each file.dependency_groups.operation_client}}
-import { {{symbol}} } from "{{path.relative}}";
+import { {{symbol}} } from "./{{path.relative}}";
 {{/each}}
 
 {{#with operation.input.value.generated.schema_types}}
