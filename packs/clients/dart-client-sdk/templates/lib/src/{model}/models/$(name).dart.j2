@@ -1,37 +1,37 @@
 {%- macro dart_type(value) -%}
-{%- if value.kind == 'schema' -%}{{ value.schema.name.pascal }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ value.property.enum.name.pascal }}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}bool
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}int
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}double
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}String
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}DateTime
+{%- if value.is.schema -%}{{ value.schema.name.pascal }}
+{%- elif value.is.property and value.is.enum -%}{{ value.property.enum.name.pascal }}
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.boolean -%}bool
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number and value.property.primitive.is.integer -%}int
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number -%}double
+{%- elif value.is.property and value.is.primitive -%}String
+{%- elif value.is.property and value.is.temporal -%}DateTime
 {%- else -%}Object
 {%- endif -%}
 {%- endmacro -%}
 {%- macro raw(key, item) -%}{% if item %}item{% else %}json['{{ key }}']{% endif %}{%- endmacro -%}
 {%- macro decode(value, key, item) -%}
-{%- if value.kind == 'schema' -%}{{ value.schema.name.pascal }}.fromJson({{ raw(key, item) }} as Map<String, Object?>)
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ value.property.enum.name.pascal }}.fromJson({{ raw(key, item) }} as String)
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}{{ raw(key, item) }} as bool
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}({{ raw(key, item) }} as num).toInt()
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}({{ raw(key, item) }} as num).toDouble()
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ raw(key, item) }} as String
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}DateTime.parse({{ raw(key, item) }} as String)
+{%- if value.is.schema -%}{{ value.schema.name.pascal }}.fromJson({{ raw(key, item) }} as Map<String, Object?>)
+{%- elif value.is.property and value.is.enum -%}{{ value.property.enum.name.pascal }}.fromJson({{ raw(key, item) }} as String)
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.boolean -%}{{ raw(key, item) }} as bool
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number and value.property.primitive.is.integer -%}({{ raw(key, item) }} as num).toInt()
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number -%}({{ raw(key, item) }} as num).toDouble()
+{%- elif value.is.property and value.is.primitive -%}{{ raw(key, item) }} as String
+{%- elif value.is.property and value.is.temporal -%}DateTime.parse({{ raw(key, item) }} as String)
 {%- else -%}{{ raw(key, item) }} as Object
 {%- endif -%}
 {%- endmacro -%}
 {%- macro encode(value, name, nullable) -%}
-{%- if value.kind == 'schema' or (value.kind == 'property' and value.property.kind == 'enum') -%}{{ name }}{% if nullable %}?{% endif %}.toJson()
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}{{ name }}{% if nullable %}?{% endif %}.toIso8601String()
+{%- if value.is.schema or (value.is.property and value.is.enum) -%}{{ name }}{% if nullable %}?{% endif %}.toJson()
+{%- elif value.is.property and value.is.temporal -%}{{ name }}{% if nullable %}?{% endif %}.toIso8601String()
 {%- else -%}{{ name }}
 {%- endif -%}
 {%- endmacro -%}
 {#- Non-empty when a field's type is the dependency's subject (relations only reference ids). -#}
 {%- macro used(dependency) -%}
 {%- for field in schema.fields -%}
-{%- if field.value.kind == 'schema' and field.value.schema.id == dependency.target.id -%}x{%- endif -%}
-{%- if field.value.kind == 'property' and field.value.property.kind == 'enum' and field.value.property.enum.id == dependency.target.id -%}x{%- endif -%}
+{%- if field.value.is.schema and field.value.schema.id == dependency.target.id -%}x{%- endif -%}
+{%- if field.value.is.property and field.value.is.enum and field.value.property.enum.id == dependency.target.id -%}x{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 {%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol and used(dependency) %}

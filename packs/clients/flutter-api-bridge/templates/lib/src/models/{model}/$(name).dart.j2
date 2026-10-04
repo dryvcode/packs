@@ -6,15 +6,15 @@
 {%- endmacro -%}
 
 {%- macro dart_type(value) -%}
-{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) or 'Object?' }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}bool
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}int
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}double
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}String
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' and value.property.temporal.kind in ['instant', 'date', 'date-time', 'datetime'] -%}DateTime
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}String
-{%- elif value.kind == 'property' and value.property.kind == 'record' -%}Map<String, dynamic>
+{%- if value.is.schema -%}{{ symbol_for(value.schema) or 'Object?' }}
+{%- elif value.is.property and value.is.enum -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.boolean -%}bool
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number and value.property.primitive.is.integer -%}int
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number -%}double
+{%- elif value.is.property and value.is.primitive -%}String
+{%- elif value.is.property and value.is.temporal and value.property.temporal.kind in ['instant', 'date', 'date-time', 'datetime'] -%}DateTime
+{%- elif value.is.property and value.is.temporal -%}String
+{%- elif value.is.property and value.is.record -%}Map<String, dynamic>
 {%- else -%}Object?
 {%- endif -%}
 {%- endmacro -%}

@@ -6,21 +6,21 @@
 {%- endmacro -%}
 
 {%- macro ts_type(value) -%}
-{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) or 'unknown' }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ value.property.primitive.type }}
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}string
-{%- elif value.kind == 'property' and value.property.kind == 'record' -%}Record<string, unknown>
+{%- if value.is.schema -%}{{ symbol_for(value.schema) or 'unknown' }}
+{%- elif value.is.property and value.is.enum -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.is.property and value.is.primitive -%}{{ value.property.primitive.type }}
+{%- elif value.is.property and value.is.temporal -%}string
+{%- elif value.is.property and value.is.record -%}Record<string, unknown>
 {%- else -%}unknown
 {%- endif -%}
 {%- endmacro -%}
 
 {%- macro kind(value) -%}
-{%- if value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'string' -%}string
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}number
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}boolean
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}enum
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}date
+{%- if value.is.property and value.is.primitive and value.property.primitive.is.string -%}string
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number -%}number
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.boolean -%}boolean
+{%- elif value.is.property and value.is.enum -%}enum
+{%- elif value.is.property and value.is.temporal -%}date
 {%- else -%}other
 {%- endif -%}
 {%- endmacro -%}
@@ -39,6 +39,6 @@ export interface {{ file.symbol }} {
 /** Field metadata for forms and results. */
 export const {{ file.symbol }}Fields: readonly FieldMeta[] = [
 {%- for field in schema.fields %}
-  { name: "{{ field.name.camel }}", label: {{ field.name.title | tojson }}, kind: "{{ kind(field.value) }}", required: {{ 'false' if field.optional or field.nullable else 'true' }}{% if field.value.kind == 'property' and field.value.property.kind == 'enum' %}, options: Object.values({{ symbol_for(field.value.property.enum) }}){% endif %} },
+  { name: "{{ field.name.camel }}", label: {{ field.name.title | tojson }}, kind: "{{ kind(field.value) }}", required: {{ 'false' if field.optional or field.nullable else 'true' }}{% if field.value.is.property and field.value.is.enum %}, options: Object.values({{ symbol_for(field.value.property.enum) }}){% endif %} },
 {%- endfor %}
 ];

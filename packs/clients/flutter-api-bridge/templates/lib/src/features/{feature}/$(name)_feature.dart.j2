@@ -6,15 +6,15 @@
 {%- endmacro -%}
 
 {%- macro dart_type(value) -%}
-{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) or 'Object?' }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'boolean' -%}bool
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}int
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' and value.property.primitive.type == 'number' -%}double
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}String
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' and value.property.temporal.kind in ['instant', 'date', 'date-time', 'datetime'] -%}DateTime
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}String
-{%- elif value.kind == 'property' and value.property.kind == 'record' -%}Map<String, dynamic>
+{%- if value.is.schema -%}{{ symbol_for(value.schema) or 'Object?' }}
+{%- elif value.is.property and value.is.enum -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.boolean -%}bool
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number and value.property.primitive.is.integer -%}int
+{%- elif value.is.property and value.is.primitive and value.property.primitive.is.number -%}double
+{%- elif value.is.property and value.is.primitive -%}String
+{%- elif value.is.property and value.is.temporal and value.property.temporal.kind in ['instant', 'date', 'date-time', 'datetime'] -%}DateTime
+{%- elif value.is.property and value.is.temporal -%}String
+{%- elif value.is.property and value.is.record -%}Map<String, dynamic>
 {%- else -%}Object?
 {%- endif -%}
 {%- endmacro -%}
@@ -24,7 +24,7 @@
 
 {#- "yes" when the operation's first output is a generated model. -#}
 {%- macro returns_model(operation) -%}
-{%- if operation.output and operation.output.value.kind == 'schema' and symbol_for(operation.output.value.schema) -%}yes{%- endif -%}
+{%- if operation.output and operation.output.value.is.schema and symbol_for(operation.output.value.schema) -%}yes{%- endif -%}
 {%- endmacro -%}
 
 {%- macro request_class(method) -%}
@@ -32,7 +32,7 @@
 {%- endmacro -%}
 
 {%- macro to_json(binding) -%}
-{%- if binding.port.value.kind == 'schema' and symbol_for(binding.port.value.schema) -%}{{ binding.port.name.camel }}.toJson(){%- else -%}{{ binding.port.name.camel }}{%- endif -%}
+{%- if binding.port.value.is.schema and symbol_for(binding.port.value.schema) -%}{{ binding.port.name.camel }}.toJson(){%- else -%}{{ binding.port.name.camel }}{%- endif -%}
 {%- endmacro -%}
 
 {%- macro has(http, kind) -%}
@@ -60,11 +60,11 @@ class {{ file.symbol }} {
   /// {{ http.method }} {{ http.path.local }}
   Future<ApiResult<{{ response_type(operation) }}>> {{ operation.name.camel }}({
 {%- for binding in http.inputs %}
-{%- if binding.kind == 'path' %}
+{%- if binding.is.path %}
     required String {{ binding.port.name.camel }},
-{%- elif binding.kind == 'body' %}
+{%- elif binding.is.body %}
     required {{ dart_type(binding.port.value) }} {{ binding.port.name.camel }},
-{%- elif binding.kind == 'query' or binding.kind == 'query-object' %}
+{%- elif binding.is.query or binding.is.query_object %}
     {{ dart_type(binding.port.value) }}{% if dart_type(binding.port.value) != 'Object?' %}?{% endif %} {{ binding.port.name.camel }},
 {%- endif %}
 {%- endfor %}
@@ -72,21 +72,21 @@ class {{ file.symbol }} {
   }) {
     return _connection.execute(
       {{ request_class(http.method) }}<{{ response_type(operation) }}>(
-        endpoint: {% if has(http, 'path') %}_routes.{{ operation.name.camel }}({% for binding in http.inputs %}{% if binding.kind == 'path' %}{{ binding.name }}: {{ binding.port.name.camel }}, {% endif %}{% endfor %}){% else %}_routes.{{ operation.name.camel }}{% endif %},
+        endpoint: {% if has(http, 'path') %}_routes.{{ operation.name.camel }}({% for binding in http.inputs %}{% if binding.is.path %}{{ binding.name }}: {{ binding.port.name.camel }}, {% endif %}{% endfor %}){% else %}_routes.{{ operation.name.camel }}{% endif %},
         options: (options ?? const {{ options_type }}()).copyWith(operationId: '{{ group.name.snake }}.{{ operation.name.camel }}'),
 {%- if has(http, 'query-object') %}
-{%- for binding in http.inputs %}{% if binding.kind == 'query-object' %}
-        query: {{ binding.port.name.camel }}{% if binding.port.value.kind == 'schema' %}?.toJson(){% endif %},
+{%- for binding in http.inputs %}{% if binding.is.query_object %}
+        query: {{ binding.port.name.camel }}{% if binding.port.value.is.schema %}?.toJson(){% endif %},
 {%- endif %}{% endfor %}
 {%- elif has(http, 'query') %}
         query: <String, Object?>{
-{%- for binding in http.inputs %}{% if binding.kind == 'query' %}
+{%- for binding in http.inputs %}{% if binding.is.query %}
           if ({{ binding.port.name.camel }} != null) '{{ binding.name }}': {{ binding.port.name.camel }},
 {%- endif %}{% endfor %}
         },
 {%- endif %}
 {%- if http.method != 'GET' and has(http, 'body') %}
-{%- for binding in http.inputs %}{% if binding.kind == 'body' %}
+{%- for binding in http.inputs %}{% if binding.is.body %}
         body: {{ to_json(binding) }},
 {%- endif %}{% endfor %}
 {%- endif %}

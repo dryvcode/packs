@@ -15,27 +15,27 @@ if TYPE_CHECKING:
     pass
 
 {% macro value_type(value) -%}
-{%- if value.kind == 'unknown' -%}object
-{%- elif value.kind == 'dynamic' -%}Any
-{%- elif value.kind == 'schema' -%}{{ value.schema.name.pascal }}
-{%- elif value.property.kind == 'primitive' -%}
-  {%- if value.property.primitive.type == 'boolean' -%}bool
-  {%- elif value.property.primitive.type == 'number' and value.property.primitive.kind == 'integer' -%}int
-  {%- elif value.property.primitive.type == 'number' -%}float
-  {%- elif value.property.primitive.format == 'uuid' -%}UUID
+{%- if value.is.unknown -%}object
+{%- elif value.is.dynamic -%}Any
+{%- elif value.is.schema -%}{{ value.schema.name.pascal }}
+{%- elif value.is.primitive -%}
+  {%- if value.property.primitive.is.boolean -%}bool
+  {%- elif value.property.primitive.is.number and value.property.primitive.is.integer -%}int
+  {%- elif value.property.primitive.is.number -%}float
+  {%- elif value.property.primitive.is.uuid -%}UUID
   {%- else -%}str
   {%- endif -%}
-{%- elif value.property.kind == 'enum' -%}{{ value.property.enum.name.pascal }}
-{%- elif value.property.kind == 'literal' -%}Literal[{{ value.property.literal.value | tojson }}]
-{%- elif value.property.kind == 'temporal' -%}
-  {%- if value.property.temporal.kind == 'date' -%}date
-  {%- elif value.property.temporal.kind == 'time' -%}time
-  {%- elif value.property.temporal.kind == 'duration' or value.property.temporal.kind == 'interval' -%}timedelta
+{%- elif value.is.enum -%}{{ value.property.enum.name.pascal }}
+{%- elif value.is.literal -%}Literal[{{ value.property.literal.value | tojson }}]
+{%- elif value.is.temporal -%}
+  {%- if value.property.temporal.is.date -%}date
+  {%- elif value.property.temporal.is.time -%}time
+  {%- elif value.property.temporal.is.duration or value.property.temporal.is.interval -%}timedelta
   {%- else -%}datetime
   {%- endif -%}
-{%- elif value.property.kind == 'record' -%}dict[str, Any]
-{%- elif value.property.kind == 'tuple' -%}tuple[Any, ...]
-{%- elif value.property.kind == 'generic' -%}{{ value.property.generic.name.pascal }}
+{%- elif value.is.record -%}dict[str, Any]
+{%- elif value.is.tuple -%}tuple[Any, ...]
+{%- elif value.is.generic -%}{{ value.property.generic.name.pascal }}
 {%- else -%}Any
 {%- endif -%}
 {%- endmacro %}
@@ -56,15 +56,15 @@ if TYPE_CHECKING:
 
 {#- Field(...) arguments for a primitive's constraints, each ending in ", ". -#}
 {%- macro field_args(value) -%}
-{%- if value.kind == 'property' and value.property.kind == 'primitive' -%}
+{%- if value.is.property and value.is.primitive -%}
   {%- set primitive = value.property.primitive -%}
   {%- set c = primitive.constraints -%}
-  {%- if c.length is not none and c.length.exact is not none %}min_length={{ c.length.exact }}, max_length={{ c.length.exact }}, {% endif -%}
-  {%- if c.length is not none and c.length.min is not none %}min_length={{ c.length.min }}, {% endif -%}
-  {%- if c.length is not none and c.length.max is not none %}max_length={{ c.length.max }}, {% endif -%}
-  {%- if c.range is not none and c.range.min is not none %}ge={{ c.range.min }}, {% endif -%}
-  {%- if c.range is not none and c.range.max is not none %}le={{ c.range.max }}, {% endif -%}
-  {%- if c.multiple_of is not none %}multiple_of={{ c.multiple_of }}, {% endif -%}
+  {%- if c.length is not none and c.length.has_exact %}min_length={{ c.length.exact }}, max_length={{ c.length.exact }}, {% endif -%}
+  {%- if c.length is not none and c.length.has_min %}min_length={{ c.length.min }}, {% endif -%}
+  {%- if c.length is not none and c.length.has_max %}max_length={{ c.length.max }}, {% endif -%}
+  {%- if c.range is not none and c.range.has_min %}ge={{ c.range.min }}, {% endif -%}
+  {%- if c.range is not none and c.range.has_max %}le={{ c.range.max }}, {% endif -%}
+  {%- if c.has_multiple_of %}multiple_of={{ c.multiple_of }}, {% endif -%}
   {%- if format_pattern(primitive.format) %}pattern={{ format_pattern(primitive.format) | tojson }}, {% elif c.pattern is not none %}{% for expression in c.pattern.match %}{% if loop.first %}pattern={{ expression | tojson }}, {% endif %}{% endfor %}{% endif -%}
 {%- endif -%}
 {%- endmacro -%}
@@ -76,15 +76,15 @@ if TYPE_CHECKING:
 {%- endmacro -%}
 
 {%- macro field_type(field) -%}
-{%- if field.array is not none -%}Annotated[list[{{ constrained_type(field.value) }}], Field({% if field.array.min is not none %}min_length={{ field.array.min }}, {% endif %}{% if field.array.max is not none %}max_length={{ field.array.max }}, {% endif %})]
+{%- if field.array is not none -%}Annotated[list[{{ constrained_type(field.value) }}], Field({% if field.array.has_min %}min_length={{ field.array.min }}, {% endif %}{% if field.array.has_max %}max_length={{ field.array.max }}, {% endif %})]
 {%- else -%}{{ constrained_type(field.value) }}
 {%- endif -%}
 {%- endmacro -%}
 
 {#- An invariant as a Python predicate over the model. -#}
 {%- macro py_operand(operand) -%}
-{%- if operand.kind == 'field' -%}self.{{ operand.field.snake }}
-{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- if operand.is.field -%}self.{{ operand.field.snake }}
+{%- elif operand.is.literal -%}{{ operand.value | tojson }}
 {%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}self.{{ term.field.snake }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
 {%- endif -%}
 {%- endmacro -%}
@@ -102,14 +102,14 @@ class {{ file.symbol }}(BaseModel):
     pass
 {% endfor %}
 {%- for invariant in schema.invariants %}
-{%- if invariant.form.kind == 'opaque' %}
+{%- if invariant.form.is.opaque %}
 
     # Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't checked here.
 {%- else %}
 
     @model_validator(mode="after")
     def _check_{{ invariant.name.snake }}(self) -> Self:
-        if not ({% for comparison in invariant.form.comparisons %}{{ py_operand(comparison.left) }} {{ py_operator(comparison.operator) }} {{ py_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} and {% else %} or {% endif %}{% endif %}{% endfor %}):
+        if not ({% for comparison in invariant.form.comparisons %}{{ py_operand(comparison.left) }} {{ py_operator(comparison.operator) }} {{ py_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.is.all %} and {% else %} or {% endif %}{% endif %}{% endfor %}):
             raise ValueError({{ (invariant.message or invariant.name.title) | tojson }})
         return self
 {%- endif %}

@@ -6,10 +6,10 @@
 {%- endmacro -%}
 
 {%- macro ts_type(value) -%}
-{%- if value.kind == 'schema' -%}{{ symbol_for(value.schema) or 'unknown' }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ value.property.primitive.type }}
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}string
+{%- if value.is.schema -%}{{ symbol_for(value.schema) or 'unknown' }}
+{%- elif value.is.property and value.is.enum -%}{{ symbol_for(value.property.enum) }}
+{%- elif value.is.property and value.is.primitive -%}{{ value.property.primitive.type }}
+{%- elif value.is.property and value.is.temporal -%}string
 {%- else -%}unknown
 {%- endif -%}
 {%- endmacro -%}
@@ -20,12 +20,12 @@
 {%- endmacro -%}
 
 {%- macro params_type(http) -%}
-{%- if has(http, 'path') -%}{ {% for binding in http.inputs %}{% if binding.kind == 'path' %}{{ binding.name }}: string; {% endif %}{% endfor %}}{%- else -%}never{%- endif -%}
+{%- if has(http, 'path') -%}{ {% for binding in http.inputs %}{% if binding.is.path %}{{ binding.name }}: string; {% endif %}{% endfor %}}{%- else -%}never{%- endif -%}
 {%- endmacro -%}
 
 {%- macro query_type(http) -%}
-{%- if has(http, 'query-object') -%}{% for binding in http.inputs %}{% if binding.kind == 'query-object' %}{{ ts_type(binding.port.value) }}{% endif %}{% endfor %}
-{%- elif has(http, 'query') -%}{ {% for binding in http.inputs %}{% if binding.kind == 'query' %}{{ binding.name }}?: {{ ts_type(binding.port.value) }}; {% endif %}{% endfor %}}
+{%- if has(http, 'query-object') -%}{% for binding in http.inputs %}{% if binding.is.query_object %}{{ ts_type(binding.port.value) }}{% endif %}{% endfor %}
+{%- elif has(http, 'query') -%}{ {% for binding in http.inputs %}{% if binding.is.query %}{{ binding.name }}?: {{ ts_type(binding.port.value) }}; {% endif %}{% endfor %}}
 {%- else -%}never
 {%- endif -%}
 {%- endmacro -%}
@@ -34,7 +34,7 @@
 
 {%- macro body_type(http) -%}
 {%- if multipart(http) -%}FormData
-{%- elif has(http, 'body') -%}{% for binding in http.inputs %}{% if binding.kind == 'body' %}{{ ts_type(binding.port.value) }}{% endif %}{% endfor %}
+{%- elif has(http, 'body') -%}{% for binding in http.inputs %}{% if binding.is.body %}{{ ts_type(binding.port.value) }}{% endif %}{% endfor %}
 {%- else -%}never
 {%- endif -%}
 {%- endmacro -%}
@@ -108,7 +108,7 @@ export async function {{ name }}Action(
   const response = await {{ name }}({
 {%- if has(http, 'path') %}
     params: {
-{%- for binding in http.inputs %}{% if binding.kind == 'path' %}
+{%- for binding in http.inputs %}{% if binding.is.path %}
       {{ binding.name }}: actionFormDataValue(data, '__path:{{ binding.name }}'),
 {%- endif %}{% endfor %}
     },

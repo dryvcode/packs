@@ -1,6 +1,6 @@
 {#- "yes" when the operation's path has parameters. -#}
 {%- macro has_params(http) -%}
-{%- for binding in http.inputs -%}{%- if binding.kind == 'path' -%}yes{%- endif -%}{%- endfor -%}
+{%- for binding in http.inputs -%}{%- if binding.is.path -%}yes{%- endif -%}{%- endfor -%}
 {%- endmacro -%}
 /// Typed route registry for the {{ group.name.title }} group. Static paths are getters;
 /// parameterised paths are methods that interpolate their segments.
@@ -11,7 +11,7 @@ class {{ file.symbol }} {
 
   /// {{ http.method }} {{ http.path.local }}
 {%- if has_params(http) %}
-  String {{ operation.name.camel }}({ {% for binding in http.inputs %}{% if binding.kind == 'path' %}required String {{ binding.name }}, {% endif %}{% endfor %}}) =>
+  String {{ operation.name.camel }}({ {% for binding in http.inputs %}{% if binding.is.path %}required String {{ binding.name }}, {% endif %}{% endfor %}}) =>
       '{{ http.path.local | replace('{', '$') | replace('}', '') }}';
 {%- else %}
   String get {{ operation.name.camel }} => '{{ http.path.local }}';

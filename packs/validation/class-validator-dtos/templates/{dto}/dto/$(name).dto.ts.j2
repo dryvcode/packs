@@ -68,46 +68,46 @@
 {%- endif %}
 {%- if field.array is not none %}
   @IsArray()
-{%- if field.array.min is not none %}
+{%- if field.array.has_min %}
   @ArrayMinSize({{ field.array.min }})
 {%- endif %}
-{%- if field.array.max is not none %}
+{%- if field.array.has_max %}
   @ArrayMaxSize({{ field.array.max }})
 {%- endif %}
 {%- endif %}
-{%- if value.kind == 'schema' %}
+{%- if value.is.schema %}
   @ValidateNested({{ each(field) }})
   @Type(() => {{ symbol_for(value.schema) }})
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' %}
+{%- elif value.is.property and value.is.primitive %}
 {%- set primitive = value.property.primitive %}
-{%- if primitive.type == 'boolean' %}
+{%- if primitive.is.boolean %}
   @IsBoolean({{ each(field) }})
-{%- elif primitive.type == 'number' %}
-{%- if primitive.kind == 'integer' %}
+{%- elif primitive.is.number %}
+{%- if primitive.is.integer %}
   @IsInt({{ each(field) }})
 {%- else %}
   @IsNumber({}{{ each_arg(field) }})
 {%- endif %}
-{%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none %}
+{%- if primitive.constraints.range is not none and primitive.constraints.range.has_min %}
   @Min({{ primitive.constraints.range.min }}{{ each_arg(field) }})
 {%- endif %}
-{%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}
+{%- if primitive.constraints.range is not none and primitive.constraints.range.has_max %}
   @Max({{ primitive.constraints.range.max }}{{ each_arg(field) }})
 {%- endif %}
-{%- if primitive.constraints.multiple_of is not none %}
+{%- if primitive.constraints.has_multiple_of %}
   @IsDivisibleBy({{ primitive.constraints.multiple_of }}{{ each_arg(field) }})
 {%- endif %}
 {%- else %}
   @IsString({{ each(field) }})
 {{- format_decorators(primitive.format, field) }}
 {%- set length = primitive.constraints.length %}
-{%- if length is not none and length.exact is not none %}
+{%- if length is not none and length.has_exact %}
   @Length({{ length.exact }}, {{ length.exact }}{{ each_arg(field) }})
 {%- else %}
-{%- if length is not none and length.min is not none %}
+{%- if length is not none and length.has_min %}
   @MinLength({{ length.min }}{{ each_arg(field) }})
 {%- endif %}
-{%- if length is not none and length.max is not none %}
+{%- if length is not none and length.has_max %}
   @MaxLength({{ length.max }}{{ each_arg(field) }})
 {%- endif %}
 {%- endif %}
@@ -117,11 +117,11 @@
 {%- endfor %}
 {%- endif %}
 {%- endif %}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' %}
+{%- elif value.is.property and value.is.enum %}
   @IsEnum({{ symbol_for(value.property.enum) }}{{ each_arg(field) }})
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' %}
-  @IsISO8601({% if value.property.temporal.kind == 'date' %}{ strict: true }{% else %}{}{% endif %}{{ each_arg(field) }})
-{%- elif value.kind == 'property' and value.property.kind == 'record' %}
+{%- elif value.is.property and value.is.temporal %}
+  @IsISO8601({% if value.property.temporal.is.date %}{ strict: true }{% else %}{}{% endif %}{{ each_arg(field) }})
+{%- elif value.is.property and value.is.record %}
   @IsObject({{ each(field) }})
 {%- else %}
   @Allow()
@@ -131,11 +131,11 @@
 {#- The TypeScript type of one field. -#}
 {%- macro ts_type(field) -%}
 {%- set value = field.value -%}
-{%- if value.kind == 'schema' -%}{% set base = symbol_for(value.schema) %}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{% set base = value.property.primitive.type %}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{% set base = symbol_for(value.property.enum) %}
-{%- elif value.kind == 'property' and value.property.kind == 'temporal' -%}{% set base = 'string' %}
-{%- elif value.kind == 'property' and value.property.kind == 'record' -%}{% set base = 'Record<string, unknown>' %}
+{%- if value.is.schema -%}{% set base = symbol_for(value.schema) %}
+{%- elif value.is.property and value.is.primitive -%}{% set base = value.property.primitive.type %}
+{%- elif value.is.property and value.is.enum -%}{% set base = symbol_for(value.property.enum) %}
+{%- elif value.is.property and value.is.temporal -%}{% set base = 'string' %}
+{%- elif value.is.property and value.is.record -%}{% set base = 'Record<string, unknown>' %}
 {%- else -%}{% set base = 'unknown' %}
 {%- endif -%}
 {%- if field.array is not none %}{{ base }}[]{% else %}{{ base }}{% endif -%}
@@ -144,8 +144,8 @@
 
 {#- An invariant as a JavaScript predicate over the whole object. -#}
 {%- macro js_operand(operand) -%}
-{%- if operand.kind == 'field' -%}object.{{ operand.field.camel }}
-{%- elif operand.kind == 'literal' -%}{{ operand.value | tojson }}
+{%- if operand.is.field -%}object.{{ operand.field.camel }}
+{%- elif operand.is.literal -%}{{ operand.value | tojson }}
 {%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}object.{{ term.field.camel }}{% else %}{{ term.value | tojson }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
 {%- endif -%}
 {%- endmacro -%}
@@ -153,15 +153,15 @@
 {%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
 {%- endmacro -%}
 {%- macro predicate(invariant) -%}
-{%- for comparison in invariant.form.comparisons -%}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.kind == 'all' %} && {% else %} || {% endif %}{% endif %}{%- endfor -%}
+{%- for comparison in invariant.form.comparisons -%}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}{%- endfor -%}
 {%- endmacro -%}
 
 {#- Invariants attach to the first field their first comparison reads. -#}
 {%- macro invariant_decorators(schema, field) -%}
 {%- for invariant in schema.invariants -%}
-{%- if invariant.form.kind != 'opaque' -%}
+{%- if not invariant.form.is.opaque -%}
 {%- for comparison in invariant.form.comparisons -%}
-{%- if loop.first and comparison.left.kind == 'field' and comparison.left.field.raw == field.name.raw %}
+{%- if loop.first and comparison.left.is.field and comparison.left.field.raw == field.name.raw %}
   @Satisfies<{{ file.symbol }}>((object) => {{ predicate(invariant) }}, {
     message: {{ (invariant.message or invariant.name.title) | tojson }},
   })
@@ -221,7 +221,7 @@ import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
  *
  * Derived from {{ schema.source.schema.name.pascal }} for {{ schema.source.purpose }}.
 {%- endif %}
-{%- for invariant in schema.invariants %}{% if invariant.form.kind == 'opaque' %}
+{%- for invariant in schema.invariants %}{% if invariant.form.is.opaque %}
  *
  * Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't validated here.
 {%- endif %}{% endfor %}

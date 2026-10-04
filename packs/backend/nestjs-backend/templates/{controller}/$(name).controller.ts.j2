@@ -19,21 +19,21 @@
 {%- endmacro -%}
 
 {%- macro ts_type(value) -%}
-{%- if value.kind == 'schema' -%}
+{%- if value.is.schema -%}
   {%- set pack = pack_for(value.schema, 'schema.validation') -%}
   {%- if pack == 'validation.zod-schemas' -%}z.infer<typeof {{ symbol_for(value.schema, 'schema.validation') }}>
   {%- elif pack == 'validation.joi-schemas' -%}Record<string, unknown>
   {%- else -%}{{ symbol_for(value.schema, 'schema.validation') }}
   {%- endif -%}
-{%- elif value.kind == 'property' and value.property.kind == 'primitive' -%}{{ value.property.primitive.type }}
-{%- elif value.kind == 'property' and value.property.kind == 'enum' -%}string
+{%- elif value.is.property and value.is.primitive -%}{{ value.property.primitive.type }}
+{%- elif value.is.property and value.is.enum -%}string
 {%- else -%}unknown
 {%- endif -%}
 {%- endmacro -%}
 
 {#- class-validator DTOs rely on Nest's global ValidationPipe; zod and Joi schemas get a pipe. -#}
 {%- macro body_pipe(value) -%}
-{%- if value.kind == 'schema' -%}
+{%- if value.is.schema -%}
   {%- set pack = pack_for(value.schema, 'schema.validation') -%}
   {%- if pack == 'validation.zod-schemas' or pack == 'validation.joi-schemas' -%}new SchemaValidationPipe({{ symbol_for(value.schema, 'schema.validation') }})
   {%- endif -%}
@@ -117,7 +117,7 @@ export class {{ file.symbols.controller }} {
 {%- endfor %}
   {{ operation.name.camel }}(
 {%- for binding in http.inputs %}
-    {% if binding.kind == 'path' %}@Param("{{ binding.name }}"){% elif binding.kind == 'query' %}@Query("{{ binding.name }}"){% elif binding.kind == 'query-object' %}@Query({{ body_pipe(binding.port.value) }}){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
+    {% if binding.is.path %}@Param("{{ binding.name }}"){% elif binding.is.query %}@Query("{{ binding.name }}"){% elif binding.is.query_object %}@Query({{ body_pipe(binding.port.value) }}){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
 {%- endfor %}
   ): {{ result(operation) }} {
     return this.service.{{ operation.name.camel }}({{ call_input(operation, http) }});
