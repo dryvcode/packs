@@ -1,15 +1,27 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-{{#with operation.input.value.generated.schema_types}}
+{{#with operation.input}}
+{{#with value}}
+{{#with generated.schema_types}}
 import type { {{symbol}} } from "./{{path.relative}}";
+{{/with}}
+{{/with}}
 {{/with}}
 {{#each file.dependency_groups.operation_client}}
 import { {{symbol}} } from "./{{path.relative}}";
 {{/each}}
 
-{{#with operation.input.value.generated.schema_types}}
+{{#with operation.input}}
+{{#with value}}
+{{#with generated.schema_types}}
 type FormInput = {{symbol}};
+{{else}}
+type FormInput = Record<string, unknown>;
+{{/with}}
+{{else}}
+type FormInput = Record<string, unknown>;
+{{/with}}
 {{else}}
 type FormInput = Record<string, unknown>;
 {{/with}}
@@ -37,7 +49,7 @@ export function {{file.symbol}}({
   const [error, setError] = useState<string | null>(null);
 
   const setField = (name: keyof FormInput, value: unknown) => {
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => ({ ...current, [name]: value }) as Partial<FormInput>);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -64,6 +76,7 @@ export function {{file.symbol}}({
 {{#each operation.input.fields}}
       <div data-field="{{name.kebab}}">
         <label htmlFor="{{../operation.name.kebab}}-{{name.kebab}}">{{name.title}}</label>
+{{#if value}}
 {{#if value.is.boolean}}
         <input
           id="{{../operation.name.kebab}}-{{name.kebab}}"
@@ -180,6 +193,19 @@ export function {{file.symbol}}({
         />
 {{/if}}
 {{/if}}
+{{/if}}
+{{else}}
+        <input
+          id="{{../operation.name.kebab}}-{{name.kebab}}"
+          name="{{name.camel}}"
+          type="text"
+          value={String(form.{{name.camel}} ?? "")}
+          disabled={disabled || submitting}
+{{#unless optional}}
+          required
+{{/unless}}
+          onChange={(event) => setField("{{name.camel}}", event.currentTarget.value)}
+        />
 {{/if}}
 {{/each}}
 
