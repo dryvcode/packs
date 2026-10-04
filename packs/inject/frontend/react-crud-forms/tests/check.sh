@@ -7,6 +7,9 @@ bunx tsc -p tsconfig.json
 test -f out/forms/create-user-form.tsx
 test -f out/forms/update-user-form.tsx
 test ! -f out/forms/get-user-form.tsx
+test -f out/forms/index.ts
+grep -q 'CreateUserForm' out/forms/index.ts
+grep -q 'UpdateUserForm' out/forms/index.ts
 
 grep -q 'type="email"' out/forms/create-user-form.tsx
 grep -q 'minLength={2}' out/forms/create-user-form.tsx
