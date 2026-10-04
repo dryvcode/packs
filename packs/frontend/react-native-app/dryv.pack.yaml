@@ -14,7 +14,7 @@ catalog:
   frameworks: [react-native, expo, expo-router, tanstack-query]
   tags: [frontend, mobile, screens, routing]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 
@@ -39,13 +39,10 @@ selections:
 
 templates:
   package:
-    ownership: scaffold
 
   appjson:
-    ownership: scaffold
 
   config:
-    ownership: scaffold
 
   index:
     $ref: '#/selections/app_views'
@@ -75,7 +72,6 @@ templates:
 
   screen:
     $ref: '#/selections/screens'
-    ownership: scaffold
     output:
       name: $(subject.name.kebab)
       path:

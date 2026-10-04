@@ -14,7 +14,7 @@ catalog:
   frameworks: [mongoose, nestjs]
   tags: [models, database, odm, mongodb]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

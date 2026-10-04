@@ -14,7 +14,7 @@ catalog:
   frameworks: [flutter, go-router, riverpod, flutter-api-bridge]
   tags: [frontend, mobile, screens, routing]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 
@@ -40,13 +40,10 @@ selections:
 
 templates:
   package:
-    ownership: scaffold
 
   main:
-    ownership: scaffold
 
   config:
-    ownership: scaffold
 
   # Same-pack files of the same views import each other by this pack's own naming (a planner
   # dependency only links referenced subjects, not the subjects a file represents).
@@ -79,7 +76,6 @@ templates:
 
   screen:
     $ref: '#/selections/screens'
-    ownership: scaffold
     output:
       name: $(subject.name.snake)
       path:

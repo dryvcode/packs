@@ -14,7 +14,7 @@ catalog:
   frameworks: [nextjs, next-api-bridge]
   tags: [client, server-actions, forms, sdk]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

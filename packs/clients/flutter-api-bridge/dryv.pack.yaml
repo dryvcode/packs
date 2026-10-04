@@ -14,7 +14,7 @@ catalog:
   frameworks: [flutter, flutter-api-bridge, json-serializable]
   tags: [client, sdk, mobile]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

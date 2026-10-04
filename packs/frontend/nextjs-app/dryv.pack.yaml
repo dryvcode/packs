@@ -14,7 +14,7 @@ catalog:
   frameworks: [nextjs, react]
   tags: [frontend, pages, app-router, forms]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

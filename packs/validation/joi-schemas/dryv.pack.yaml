@@ -14,7 +14,7 @@ catalog:
   frameworks: [joi]
   tags: [schemas, validation]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

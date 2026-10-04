@@ -14,7 +14,7 @@ catalog:
   frameworks: [fetch]
   tags: [client, sdk, typescript, react-native, web]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

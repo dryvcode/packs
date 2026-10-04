@@ -14,7 +14,7 @@ catalog:
   frameworks: [class-validator, class-transformer]
   tags: [dto, validation]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

@@ -14,7 +14,7 @@ catalog:
   frameworks: [typeorm]
   tags: [entities, database, orm]
 
-requires:
+plugins:
   - name: jinja
     extensions: [.j2]
 

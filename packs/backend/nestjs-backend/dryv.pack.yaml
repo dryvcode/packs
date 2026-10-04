@@ -16,7 +16,7 @@ catalog:
 
 # Handlebars renders the barrels. Jinja renders controllers, which reshape HTTP paths
 # ({id} → :id) and method names (GET → Get).
-requires:
+plugins:
   - name: handlebars
     extensions: [.hbs]
   - name: jinja
