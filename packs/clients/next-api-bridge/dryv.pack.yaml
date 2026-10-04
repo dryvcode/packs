@@ -42,45 +42,45 @@ selections:
 
 templates:
   enum:
-    $ref: '#/selections/enums'
+    $ref: "#/selections/enums"
     output:
       name: $(subject.name.kebab)
       symbol: $(subject.name.pascal)
 
   model:
-    $ref: '#/selections/models'
+    $ref: "#/selections/models"
     output:
       name: $(subject.name.kebab)
       symbol: $(subject.name.pascal)
     imports:
-      - $ref: '#/templates/enum'
-      - $ref: '#/templates/model'
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
 
   action:
-    $ref: '#/selections/actions'
+    $ref: "#/selections/actions"
     output:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
       symbol: $(subject.name.camel)
     imports:
-      - $ref: '#/templates/model'
-      - $ref: '#/templates/enum'
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
 
   routes:
-    $ref: '#/selections/routes'
+    $ref: "#/selections/routes"
     output:
       name: $(group.name.kebab)
       symbol: $(group.name.camel)Routes
 
   routes-index:
     exports:
-      - $ref: '#/templates/routes'
+      - $ref: "#/templates/routes"
 
 provides:
   operation.client:
-    $ref: '#/templates/action'
+    $ref: "#/templates/action"
   schema.types:
-    $ref: '#/templates/model'
+    $ref: "#/templates/model"
   property.enum.types:
-    $ref: '#/templates/enum'
+    $ref: "#/templates/enum"
