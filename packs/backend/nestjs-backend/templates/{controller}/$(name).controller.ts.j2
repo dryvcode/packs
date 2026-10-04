@@ -100,7 +100,7 @@ import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
 /** What {{ feature.name.title }} needs from handwritten code. */
 export abstract class {{ file.symbols.service }} {
 {%- for operation in operations %}
-  /** {{ operation.description or operation.name.title }}{% if operation.role %} ({{ operation.role }}){% endif %}. */
+  /** {{ ((operation.description or operation.name.title) ~ '.') | replace('..', '.') }}{% if operation.role %} Role: {{ operation.role }}.{% endif %} */
   abstract {{ operation.name.camel }}({{ signature(operation) }}): {{ result(operation) }};
 {%- endfor %}
 }
