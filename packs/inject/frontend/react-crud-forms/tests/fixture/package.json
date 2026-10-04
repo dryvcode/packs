@@ -1,0 +1,12 @@
+{
+  "name": "react-crud-forms-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5.8"
+  }
+}
