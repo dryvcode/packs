@@ -13,6 +13,8 @@
  *   3. run tests/check.sh inside the project; a non-zero exit fails the pack.
  *
  * DRYV_API_URL defaults to http://127.0.0.1:8750 (CI runs the engine image there).
+ * DRYV_CLI overrides the CLI command, e.g. `bun ../dryv/source/apps/cli/bin/dryv.ts` to test
+ * against a local Dryv checkout instead of the pinned @dryvcode/cli.
  */
 import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,7 +22,9 @@ import { join, relative, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 const PACKS = join(REPO, "packs");
-const CLI = join(REPO, "node_modules", ".bin", "dryv");
+const CLI = process.env.DRYV_CLI?.trim()
+  ? process.env.DRYV_CLI.trim().split(/\s+/)
+  : [join(REPO, "node_modules", ".bin", "dryv")];
 const API_URL = process.env.DRYV_API_URL ?? "http://127.0.0.1:8750";
 
 function allPacks(): string[] {
@@ -79,7 +83,7 @@ async function main(): Promise<number> {
     }
     console.log(`\n▶ ${pack}`);
     const project = prepare(pack);
-    const generated = run([CLI, "generate", "--yes", "--api", API_URL], project);
+    const generated = run([...CLI, "generate", "--yes", "--api", API_URL], project);
     const checked = generated === 0 ? run(["bash", checks], project) : generated;
     if (checked === 0) {
       console.log(`✓ ${pack}${keep ? ` (project kept at ${project})` : ""}`);

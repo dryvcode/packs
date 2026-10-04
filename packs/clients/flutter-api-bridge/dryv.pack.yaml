@@ -86,3 +86,13 @@ templates:
       - $ref: '#/templates/endpoints'
       - $ref: '#/templates/model'
       - $ref: '#/templates/enum'
+
+# Apps bind these: frontend.flutter-app calls operations through the group feature clients and
+# builds request models from the generated models.
+provides:
+  operation.client:
+    $ref: '#/templates/feature'
+  schema.types:
+    $ref: '#/templates/model'
+  property.enum.types:
+    $ref: '#/templates/enum'
