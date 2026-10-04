@@ -1,0 +1,61 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies %}{% if dependency.target.id == link.id %}{{ dependency.symbol }}{% endif %}{% endfor -%}
+{%- endmacro -%}
+{%- macro ts_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'unknown' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'string' }}
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.number -%}number
+{%- elif value.is.string or value.is.temporal -%}string
+{%- elif value.is.record -%}Record<string, unknown>
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+{#- One input object, like props: a schema input is its model, named fields an object type. -#}
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ ts_type(operation.input.value) }}
+{%- else -%}{ {% for field in operation.input.fields %}{{ field.name.camel }}{% if field.optional %}?{% endif %}: {{ ts_type(field.value) }}{% if not loop.last %}; {% endif %}{% endfor %} }
+{%- endif -%}
+{%- endmacro -%}
+{#- The value a binding sends: the whole input or one of its fields. -#}
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none %}input{% else %}input.{{ binding.port.field.camel }}{% endif -%}
+{%- endmacro -%}
+{%- set http = operation.facets.http %}
+import { type ApiResult, type RequestOptions, request } from "../../transport.ts";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.template == 'model' %}
+import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- elif dependency.symbol and dependency.template == 'enum' %}
+import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * {{ operation.description or operation.name.title }}
+ *
+ * {{ http.method }} {{ http.path.local }}
+ */
+export function {{ file.symbol }}(
+{%- if operation.input %}
+  input: {{ input_type(operation) }},
+{%- endif %}
+  options?: RequestOptions,
+): Promise<ApiResult<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}void{% endif %}>> {
+  return request(
+    "{{ http.method }}",
+    `{% for segment in http.path.segments %}{% if segment.is.parameter %}${encodeURIComponent(String({% for binding in http.input_groups.path %}{% if binding.name == segment.parameter.raw %}{{ bound(binding) }}{% endif %}{% endfor %}))}{% else %}{{ segment.literal }}{% endif %}{% endfor %}`,
+    {
+{%- if http.input_groups.query_object %}
+{%- for binding in http.input_groups.query_object %}
+      query: {{ bound(binding) }} as Record<string, unknown> | undefined,
+{%- endfor %}
+{%- elif http.input_groups.query %}
+      query: { {% for binding in http.input_groups.query %}{{ binding.name | tojson }}: {{ bound(binding) }}{% if not loop.last %}, {% endif %}{% endfor %} },
+{%- endif %}
+{%- for binding in http.input_groups.body %}
+      body: {{ bound(binding) }},
+{%- endfor %}
+    },
+    options,
+  );
+}

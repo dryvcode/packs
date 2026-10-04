@@ -1,0 +1,35 @@
+import { ScrollView } from "react-native";
+
+{%- macro has_part(kind) -%}{% for part in view.parts %}{% if part.kind == kind %}yes{% endif %}{% endfor %}{%- endmacro %}
+{%- if has_part('collect') %}
+import { DryvForm } from "../../widgets/dryv-form";
+{%- endif %}
+{%- if has_part('present') %}
+import { DryvResult } from "../../widgets/dryv-result";
+{%- endif %}
+import { use{{ view.name.pascal }}{% for part in view.parts %}{% if part.kind == 'collect' %}, {{ view.name.camel }}{{ part.name.pascal }}Fields{% endif %}{% endfor %} } from "./{{ view.name.kebab }}-hooks";
+
+/**
+ * {{ view.description or view.name.title }}
+ *
+ * Scaffolded by Dryv once; this screen belongs to the app. Design it here — state and calls stay
+ * in the generated {{ view.name.kebab }}-hooks.ts.
+ */
+export default function {{ file.symbol }}() {
+  const view = use{{ view.name.pascal }}();
+  return (
+    <ScrollView contentContainerStyle={{ '{{' }} padding: 16, gap: 16 {{ '}}' }}>
+{%- for part in view.parts %}
+{%- if part.kind == 'present' and part.present.source.port is not none %}
+      <DryvResult result={view.{{ part.name.camel }}} select={[{% for path in part.present.source.select %}"{{ path.dotted }}"{% if not loop.last %}, {% endif %}{% endfor %}]} />
+{%- elif part.kind == 'collect' and part.collect.target.port is not none %}
+      <DryvForm
+        fields={ {{- view.name.camel }}{{ part.name.pascal }}Fields}
+        submitLabel={{ part.collect.target.port.operation.name.title | tojson }}
+        onSubmit={(values) => view.{{ part.name.camel }}.mutateAsync(values)}
+      />
+{%- endif %}
+{%- endfor %}
+    </ScrollView>
+  );
+}

@@ -1,0 +1,6 @@
+/** Route paths of the {{ feature.name.title }} screens. */
+export const {{ file.symbol }} = {
+{%- for view in views %}
+  {{ view.name.camel }}: "/{{ view.group.name.kebab }}/{{ view.name.kebab }}",
+{%- endfor %}
+} as const;

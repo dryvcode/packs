@@ -1,0 +1,6 @@
+import { Redirect } from "expo-router";
+
+/** Opens the first generated screen. */
+export default function Index() {
+  return <Redirect href="{% for view in views %}{% if loop.first %}/{{ view.group.name.kebab }}/{{ view.name.kebab }}{% endif %}{% endfor %}" />;
+}
