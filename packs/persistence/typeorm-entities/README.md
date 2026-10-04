@@ -16,7 +16,7 @@ Generates TypeORM entities from schemas with the `entity` role.
 | `relation` (many-to-one / one-to-one) | the FK column plus `@ManyToOne`/`@OneToOne` + `@JoinColumn`, with `onDelete` |
 | `related` | `@OneToMany(() => Other, (item) => item.<thisSchema>)` |
 
-Column names follow the `namingStrategy` input (`snake`, the default, or `camel`). Descriptions on primitive properties become column comments.
+Column names follow the `naming_strategy` input (`snake`, the default, or `camel`). Descriptions on primitive properties become column comments.
 
 **Provides:** `schema.persistence` (entities) and `property.enum.types` (enums).
 

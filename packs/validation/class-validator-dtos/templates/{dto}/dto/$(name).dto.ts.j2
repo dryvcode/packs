@@ -94,8 +94,8 @@
 {%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}
   @Max({{ primitive.constraints.range.max }}{{ each_arg(field) }})
 {%- endif %}
-{%- if primitive.constraints.multipleOf is not none %}
-  @IsDivisibleBy({{ primitive.constraints.multipleOf }}{{ each_arg(field) }})
+{%- if primitive.constraints.multiple_of is not none %}
+  @IsDivisibleBy({{ primitive.constraints.multiple_of }}{{ each_arg(field) }})
 {%- endif %}
 {%- else %}
   @IsString({{ each(field) }})
@@ -232,4 +232,3 @@ export class {{ file.symbol }} {
   {{ field.name.camel }}{% if field.optional %}?{% else %}!{% endif %}: {{ ts_type(field) }};
 {%- endfor %}
 }
-

@@ -1,6 +1,6 @@
 {#- Column naming follows the pack input: snake (cart_id) or camel (cartId). -#}
 {%- macro column(name) -%}
-{%- if pack.inputs.namingStrategy == 'camel' -%}{{ name.camel }}{%- else -%}{{ name.snake }}{%- endif -%}
+{%- if pack.inputs.naming_strategy == 'camel' -%}{{ name.camel }}{%- else -%}{{ name.snake }}{%- endif -%}
 {%- endmacro -%}
 
 {#- The generated symbol of another planned file, found by the subject it represents. -#}
@@ -20,7 +20,7 @@
   {%- elif primitive.type == 'string' and primitive.constraints.length is not none and primitive.constraints.length.exact is not none -%}type: "char", length: {{ primitive.constraints.length.exact }}
   {%- elif primitive.type == 'string' -%}type: "text"
   {%- elif primitive.type == 'boolean' -%}type: "boolean"
-  {%- elif primitive.money is not none and primitive.money.minorUnits -%}type: "bigint", transformer: new ColumnNumericTransformer()
+  {%- elif primitive.money is not none and primitive.money.minor_units -%}type: "bigint", transformer: new ColumnNumericTransformer()
   {%- elif primitive.kind == 'integer' and primitive.constraints.bits == 64 -%}type: "bigint", transformer: new ColumnNumericTransformer()
   {%- elif primitive.kind == 'integer' -%}type: "integer"
   {%- elif primitive.kind == 'decimal' -%}type: "numeric", precision: {{ primitive.constraints.precision }}, scale: {{ primitive.constraints.scale }}, transformer: new ColumnNumericTransformer()
@@ -56,7 +56,7 @@
 {%- endmacro -%}
 
 {%- macro is_primary(storage, field) -%}
-{%- if storage is not none -%}{%- for key in storage.primaryKey -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
+{%- if storage is not none -%}{%- for key in storage.primary_key -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
 {%- endmacro -%}
 
 {%- macro on_delete(value) -%}
@@ -94,7 +94,7 @@
   {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
 {%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
 
-  @{% if field.relation.cardinality == 'one-to-one' %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.onDelete is not none %}, { onDelete: "{{ on_delete(field.relation.onDelete) }}" }{% endif %})
+  @{% if field.relation.cardinality == 'one-to-one' %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.on_delete is not none %}, { onDelete: "{{ on_delete(field.relation.on_delete) }}" }{% endif %})
   @JoinColumn({ name: "{{ column(field.name) }}" })
   {{ field.relation.target.schema.name.camel }}?: Relation<{{ symbol_for(field.relation.target.schema) }}>;
 {%- endif %}
@@ -146,4 +146,3 @@ export class {{ file.symbol }} {
 {%- for field in schema.fields %}{% if is_primary(storage, field) == 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
 {%- for field in schema.fields %}{% if is_primary(storage, field) != 'yes' %}{{ member(schema, storage, field) }}{% endif %}{% endfor %}
 }
-

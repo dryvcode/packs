@@ -51,7 +51,7 @@ z.string()
     {%- if primitive.kind == 'integer' %}.int(){% endif -%}
     {%- if primitive.constraints.range is not none and primitive.constraints.range.min is not none %}.min({{ primitive.constraints.range.min }}){% endif -%}
     {%- if primitive.constraints.range is not none and primitive.constraints.range.max is not none %}.max({{ primitive.constraints.range.max }}){% endif -%}
-    {%- if primitive.constraints.multipleOf is not none %}.multipleOf({{ primitive.constraints.multipleOf }}){% endif -%}
+    {%- if primitive.constraints.multiple_of is not none %}.multipleOf({{ primitive.constraints.multiple_of }}){% endif -%}
   {%- else -%}{{ string_schema(primitive) }}
   {%- endif -%}
 {%- elif value.kind == 'property' and value.property.kind == 'enum' -%}{{ symbol_for(value.property.enum) }}
@@ -123,4 +123,3 @@ export const {{ file.symbol }} = z
 {%- endfor %};
 
 export type {{ schema.name.pascal }} = z.infer<typeof {{ file.symbol }}>;
-

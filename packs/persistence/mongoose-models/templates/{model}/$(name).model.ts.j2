@@ -6,7 +6,7 @@
 {%- endmacro -%}
 
 {%- macro is_primary(storage, field) -%}
-{%- if storage is not none -%}{%- for key in storage.primaryKey -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
+{%- if storage is not none -%}{%- for key in storage.primary_key -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
 {%- endmacro -%}
 
 {#- The Mongoose type and validators of a field stored as a scalar. -#}

@@ -19,7 +19,7 @@ requires:
     extensions: [.j2]
 
 inputs:
-  namingStrategy:
+  naming_strategy:
     type: string
     default: snake
     description: Column naming, `snake` (cart_id) or `camel` (cartId).
