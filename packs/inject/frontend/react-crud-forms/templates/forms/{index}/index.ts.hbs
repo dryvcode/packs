@@ -1,5 +1,5 @@
 {{#each file.exports}}
 {{#if symbol}}
-export { {{symbol}} } from "{{path.relative}}";
+export { {{symbol}} } from "./{{path.relative}}";
 {{/if}}
 {{/each}}
