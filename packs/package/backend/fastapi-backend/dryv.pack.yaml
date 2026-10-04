@@ -1,0 +1,98 @@
+version: dryv.pack/v1alpha1
+key: backend.fastapi-backend
+layout: package
+package:
+  name: { $ref: "#/inputs/package_name" }
+
+source: templates
+
+info:
+  title: FastAPI Backend
+  version: 0.1.0
+  description: Generates Pydantic models, abstract feature services and FastAPI routers that delegate to them.
+catalog:
+  purpose: backend
+  summary: FastAPI routers and Pydantic models.
+  languages: [python]
+  frameworks: [fastapi, pydantic]
+  tags: [backend, rest, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name: { type: string, default: generated_api }
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  generics:
+    subject: property.generic
+    scope: each
+
+  # Only operations reachable over HTTP get a route.
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: '#/selections/enums'
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+
+  model:
+    $ref: '#/selections/models'
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/generic'
+
+  generic:
+    $ref: '#/selections/generics'
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/generic'
+
+  router:
+    $ref: '#/selections/routes'
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        router: build_$(group.name.snake)_$(feature.name.snake)_router
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/generic'
+
+  models-index:
+    exports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/generic'
+
+  routers-index:
+    exports:
+      - $ref: '#/templates/router'
+
+  package-index:
+    exports:
+      - $ref: '#/templates/models-index'
+      - $ref: '#/templates/routers-index'

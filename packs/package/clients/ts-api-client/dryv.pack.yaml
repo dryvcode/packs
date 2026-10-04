@@ -1,0 +1,81 @@
+version: dryv.pack/v1alpha1
+key: clients.ts-api-client
+layout: package
+package:
+  name: { $ref: "#/inputs/package_name" }
+  import_root: src
+source: templates
+
+info:
+  title: TypeScript API Client
+  version: 0.1.0
+  description: Generates a framework-free TypeScript client package — models, enums and one typed fetch call per HTTP operation.
+catalog:
+  purpose: clients
+  summary: A framework-free TypeScript API client over fetch, with typed models and one call per operation.
+  languages: [typescript]
+  frameworks: [fetch]
+  tags: [client, sdk, typescript, react-native, web]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name: { type: string, default: admin-console-api }
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: '#/selections/enums'
+    output:
+      name: $(subject.name.kebab)
+      symbol: $(subject.name.pascal)
+
+  model:
+    $ref: '#/selections/models'
+    output:
+      name: $(subject.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/model'
+
+  operation:
+    $ref: '#/selections/operations'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.camel)
+    imports:
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/enum'
+
+  index:
+    exports:
+      - $ref: '#/templates/operation'
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/enum'
+
+provides:
+  operation.client:
+    $ref: '#/templates/operation'
+  schema.types:
+    $ref: '#/templates/model'
+  property.enum.types:
+    $ref: '#/templates/enum'

@@ -15,8 +15,9 @@ const REPOSITORY = "https://github.com/dryvcode/packs";
 
 type PackDocument = {
   key: string;
+  layout?: "inject" | "package" | "project";
   info: { title: string; version: string; description?: string };
-  catalog?: { purpose: string; layout?: "inject" | "standalone"; summary?: string; languages?: string[]; frameworks?: string[]; tags?: string[] };
+  catalog?: { purpose: string; summary?: string; languages?: string[]; frameworks?: string[]; tags?: string[] };
   provides?: Record<string, unknown>;
   needs?: Record<string, unknown>;
 };
@@ -28,22 +29,26 @@ export type CatalogEntry = {
   version: string;
   summary: string | null;
   purpose: string;
-  layout: "inject" | "standalone";
+  layout: "inject" | "package" | "project";
   languages: string[];
   frameworks: string[];
   tags: string[];
   provides: string[];
   needs: string[];
-  source: { type: "git"; repository: string; revision: string; path: string };
+  source: { repository: string; ref: string; root: string };
+  path: string;
 };
 
 function packs(): string[] {
   const found: string[] = [];
-  for (const purpose of readdirSync(PACKS, { withFileTypes: true })) {
-    if (!purpose.isDirectory()) continue;
-    for (const pack of readdirSync(join(PACKS, purpose.name), { withFileTypes: true })) {
-      if (pack.isDirectory() && existsSync(join(PACKS, purpose.name, pack.name, "dryv.pack.yaml"))) {
-        found.push(`${purpose.name}/${pack.name}`);
+  for (const layout of readdirSync(PACKS, { withFileTypes: true })) {
+    if (!layout.isDirectory()) continue;
+    for (const purpose of readdirSync(join(PACKS, layout.name), { withFileTypes: true })) {
+      if (!purpose.isDirectory()) continue;
+      for (const pack of readdirSync(join(PACKS, layout.name, purpose.name), { withFileTypes: true })) {
+        if (pack.isDirectory() && existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))) {
+          found.push(`${layout.name}/${purpose.name}/${pack.name}`);
+        }
       }
     }
   }
@@ -51,13 +56,14 @@ function packs(): string[] {
 }
 
 export function entry(id: string): { entry: CatalogEntry | null; problems: string[] } {
-  const [purpose, name] = id.split("/") as [string, string];
+  const [layout, purpose, name] = id.split("/") as ["inject" | "package" | "project", string, string];
   const document = Bun.YAML.parse(readFileSync(join(PACKS, id, "dryv.pack.yaml"), "utf8")) as PackDocument;
   const problems: string[] = [];
   const catalog = document.catalog;
   if (catalog === undefined) problems.push(`${id}: no catalog block`);
   else if (catalog.purpose !== purpose) problems.push(`${id}: catalog.purpose is ${catalog.purpose}, folder is ${purpose}`);
   if (document.key !== `${purpose}.${name}`) problems.push(`${id}: key is ${document.key}, expected ${purpose}.${name}`);
+  if ((document.layout ?? "inject") !== layout) problems.push(`${id}: layout is ${document.layout ?? "inject"}, folder is ${layout}`);
   if (catalog === undefined) return { entry: null, problems };
   const version = document.info.version;
   return {
@@ -69,13 +75,14 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
       version,
       summary: catalog.summary ?? null,
       purpose: catalog.purpose,
-      layout: catalog.layout ?? "inject",
+      layout: document.layout ?? "inject",
       languages: catalog.languages ?? [],
       frameworks: catalog.frameworks ?? [],
       tags: catalog.tags ?? [],
       provides: Object.keys(document.provides ?? {}).sort(),
       needs: Object.keys(document.needs ?? {}).sort(),
-      source: { type: "git", repository: REPOSITORY, revision: `${id}/v${version}`, path: `packs/${id}` },
+      source: { repository: REPOSITORY, ref: `${id}/v${version}`, root: "packs" },
+      path: id,
     },
   };
 }

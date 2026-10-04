@@ -2,11 +2,11 @@
 /**
  * Render each pack's test fixture through the Dryv CLI and run its checks.
  *
- *   bun scripts/test-pack.ts persistence/typeorm-entities [...]
+ *   bun scripts/test-pack.ts inject/persistence/typeorm-entities [...]
  *   bun scripts/test-pack.ts --all
  *   bun scripts/test-pack.ts --keep <pack>     # keep the rendered project to inspect it
  *
- * For each pack under packs/<purpose>/<name> with tests/check.sh:
+ * For each pack under packs/<layout>/<purpose>/<name> with tests/check.sh:
  *   1. copy tests/fixture/ into a temporary project, with the whole packs/ tree under
  *      packs/ and tests/dryv.ir.yaml as dryv.ir.yaml (unless the fixture brings its own);
  *   2. run `dryv generate --yes` against the engine at DRYV_API_URL;
@@ -23,17 +23,22 @@ import { join, relative, resolve } from "node:path";
 const REPO = resolve(import.meta.dir, "..");
 const PACKS = join(REPO, "packs");
 const CLI = process.env.DRYV_CLI?.trim()
-  ? process.env.DRYV_CLI.trim().split(/\s+/)
+  ? process.env.DRYV_CLI.trim().split(/\s+/).map((part) =>
+      part.startsWith(".") && existsSync(resolve(REPO, part)) ? resolve(REPO, part) : part
+    )
   : [join(REPO, "node_modules", ".bin", "dryv")];
 const API_URL = process.env.DRYV_API_URL ?? "http://127.0.0.1:8750";
 
 function allPacks(): string[] {
   const packs: string[] = [];
-  for (const purpose of readdirSync(PACKS, { withFileTypes: true })) {
-    if (!purpose.isDirectory()) continue;
-    for (const pack of readdirSync(join(PACKS, purpose.name), { withFileTypes: true })) {
-      if (pack.isDirectory() && existsSync(join(PACKS, purpose.name, pack.name, "dryv.pack.yaml"))) {
-        packs.push(`${purpose.name}/${pack.name}`);
+  for (const layout of readdirSync(PACKS, { withFileTypes: true })) {
+    if (!layout.isDirectory()) continue;
+    for (const purpose of readdirSync(join(PACKS, layout.name), { withFileTypes: true })) {
+      if (!purpose.isDirectory()) continue;
+      for (const pack of readdirSync(join(PACKS, layout.name, purpose.name), { withFileTypes: true })) {
+        if (pack.isDirectory() && existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))) {
+          packs.push(`${layout.name}/${purpose.name}/${pack.name}`);
+        }
       }
     }
   }
@@ -45,14 +50,14 @@ function run(command: string[], cwd: string): number {
 }
 
 function prepare(pack: string): string {
-  const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replace("/", "-")}-`));
+  const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replaceAll("/", "-")}-`));
   cpSync(join(PACKS, pack, "tests", "fixture"), project, { recursive: true });
   cpSync(PACKS, join(project, "packs"), {
     recursive: true,
     filter: (path) => {
       const parts = relative(PACKS, path).split("/");
-      // packs/<purpose>/<name>/...: skip each pack's tests/ and its orchestration dryv.yaml
-      return !(parts[2] === "tests" || (parts.length === 3 && parts[2] === "dryv.yaml"));
+      // packs/<layout>/<purpose>/<name>/...: skip fixture tests and pack-only dryv.yaml.
+      return !(parts[3] === "tests" || (parts.length === 4 && parts[3] === "dryv.yaml"));
     },
   });
   if (!existsSync(join(project, "dryv.ir.yaml"))) {
@@ -70,7 +75,7 @@ async function main(): Promise<number> {
   const named = args.filter((arg) => !arg.startsWith("--"));
   const packs = args.includes("--all") ? allPacks() : named;
   if (packs.length === 0) {
-    console.error("usage: bun scripts/test-pack.ts <purpose>/<name> [...] | --all");
+    console.error("usage: bun scripts/test-pack.ts <layout>/<purpose>/<name> [...] | --all");
     return 2;
   }
   const failures: string[] = [];

@@ -1,0 +1,23 @@
+version: dryv.usage/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  code:
+    out:
+      path: out
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  client:
+    source:
+      $ref: "#/sources/packs/local"
+    path: package/clients/next-api-bridge
+    destination:
+      $ref: "#/destinations/code/out"

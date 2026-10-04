@@ -6,7 +6,7 @@ Official packs for [Dryv](https://dryv.alidantech.org): reusable templates that 
 
 > **Status:** being set up. No packs are published yet.
 
-Packs live at `packs/<purpose>/<pack-name>`, for example `packs/persistence/typeorm-entities` ([folder structure](.docs/folder-structure.md)). Folders are for browsing only. What a pack does is declared in its `dryv.pack.yaml`.
+Packs live at `packs/<layout>/<purpose>/<name>`, for example `packs/inject/persistence/typeorm-entities` ([folder structure](.docs/folder-structure.md)). The manifest declares behavior; the folder path is for browsing and source selection.
 
 ## Official, local or private
 
@@ -14,22 +14,35 @@ Your project chooses its packs explicitly. Official packs from this repo, local 
 
 ## Using a pack
 
-Each pack is released on its own, with a tag made of its path and version. Reference it from your project's `dryv.yaml`:
+Declare the collection once in `dryv.yaml`, then activate the pack by path:
 
 ```yaml
+version: dryv.usage/v1alpha1
+
+sources:
+  authoring:
+    ir: { type: ir, path: dryv.ir.yaml }
+  packs:
+    official:
+      repository: https://github.com/dryvcode/packs
+      ref: develop
+      root: packs
+destinations:
+  code:
+    backend: { path: src/modules }
+authoring:
+  source: { $ref: "#/sources/authoring/ir" }
 packs:
   entities:
-    source:
-      type: git
-      repository: https://github.com/dryvcode/packs
-      revision: persistence/typeorm-entities/v0.1.0
-      path: packs/persistence/typeorm-entities
+    source: { $ref: "#/sources/packs/official" }
+    path: inject/persistence/typeorm-entities
+    destination: { $ref: "#/destinations/code/backend" }
 ```
 
 ## License
 
 - The repository, pack definitions, tooling and tests: [Apache License 2.0](LICENSE).
-- Code-emitting template material under `packs/*/*/templates/`: [0BSD](LICENSE-0BSD).
+- Code-emitting template material under `packs/*/*/*/templates/`: [0BSD](LICENSE-0BSD).
 
 Code that Dryv generates from these packs is yours, under your project's own license.
 

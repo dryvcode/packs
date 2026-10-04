@@ -1,0 +1,87 @@
+version: dryv.pack/v1alpha1
+key: clients.dart-client-sdk
+layout: package
+package:
+  name: { $ref: "#/inputs/package_name" }
+  import_root: lib
+
+source: templates
+
+info:
+  title: Dart Client SDK
+  version: 0.1.0
+  description: Generates typed Dart models, enums, feature API clients, feature libraries, and a root SDK library.
+catalog:
+  purpose: clients
+  summary: A typed Dart client SDK for the application's HTTP API.
+  languages: [dart]
+  frameworks: [http]
+  tags: [client, sdk]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name: { type: string, default: dryv_client }
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  # A client SDK can only call operations that are reachable over HTTP.
+  api:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: '#/selections/enums'
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+
+  model:
+    $ref: '#/selections/models'
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/model'
+
+  api:
+    $ref: '#/selections/api'
+    output:
+      name: $(feature.name.snake)
+      path:
+        - $(group.name.snake)
+        - $(feature.name.snake)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Api
+    imports:
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/enum'
+
+  feature-library:
+    output:
+      name: $(feature.name.snake)
+      path:
+        - $(group.name.snake)
+        - $(feature.name.snake)
+    barrel: each
+    exports:
+      - $ref: '#/templates/api'
+
+
+  sdk-library:
+    exports:
+      - $ref: '#/templates/feature-library'
+      - $ref: '#/templates/model'
+      - $ref: '#/templates/enum'

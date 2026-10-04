@@ -1,0 +1,65 @@
+version: dryv.pack/v1alpha1
+key: backend.nestjs-backend
+source: templates
+
+info:
+  title: NestJS Backend
+  version: 0.1.0
+  description: Generates NestJS controllers, service contracts and feature modules over bound validation and persistence packs.
+catalog:
+  purpose: backend
+  summary: NestJS controllers, service contracts and modules, composed with validation and persistence packs.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, rest, http]
+
+# Handlebars renders the barrels. Jinja renders controllers, which reshape HTTP paths
+# ({id} → :id) and method names (GET → Get).
+plugins:
+  - name: handlebars
+    extensions: [.hbs]
+  - name: jinja
+    extensions: [.j2]
+
+# The project binds these to packs such as class-validator-dtos, zod-schemas or
+# joi-schemas (validation) and typeorm-entities (persistence).
+needs:
+  schema.validation: { required: true }
+  schema.persistence: { required: false }
+
+selections:
+  # Only operations reachable over HTTP get a controller method.
+  controllers:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  controller:
+    $ref: '#/selections/controllers'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbols:
+        controller: $(group.name.pascal)$(feature.name.pascal)Controller
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        module: $(group.name.pascal)$(feature.name.pascal)Module
+    imports:
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
+
+  feature-index:
+    output:
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+    barrel: each
+    exports:
+      - $ref: '#/templates/controller'
+
+  root-index:
+    exports:
+      - $ref: '#/templates/feature-index'

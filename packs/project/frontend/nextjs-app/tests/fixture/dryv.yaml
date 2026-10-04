@@ -1,0 +1,42 @@
+version: dryv.usage/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  code:
+    web:
+      path: out/web
+    client:
+      path: out/client
+    webBridge:
+      path: out/web-bridge
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  web:
+    source:
+      $ref: "#/sources/packs/local"
+    path: project/frontend/nextjs-app
+    destination:
+      $ref: "#/destinations/code/web"
+  client:
+    source:
+      $ref: "#/sources/packs/local"
+    path: package/clients/next-api-bridge
+    destination:
+      $ref: "#/destinations/code/client"
+  web-bridge:
+    source:
+      $ref: "#/sources/packs/local"
+    path: project/frontend/nextjs-app
+    destination:
+      $ref: "#/destinations/code/webBridge"
+    bind:
+      operation.client:
+        $ref: "#/packs/client"

@@ -1,0 +1,23 @@
+version: dryv.usage/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  code:
+    out:
+      path: out
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  entities:
+    source:
+      $ref: "#/sources/packs/local"
+    path: inject/persistence/typeorm-entities
+    destination:
+      $ref: "#/destinations/code/out"

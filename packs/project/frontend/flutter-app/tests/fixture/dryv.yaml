@@ -1,0 +1,36 @@
+version: dryv.usage/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  code:
+    api:
+      path: out/api
+    app:
+      path: out/app
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  api:
+    source:
+      $ref: "#/sources/packs/local"
+    path: package/clients/flutter-api-bridge
+    destination:
+      $ref: "#/destinations/code/api"
+  app:
+    source:
+      $ref: "#/sources/packs/local"
+    path: project/frontend/flutter-app
+    destination:
+      $ref: "#/destinations/code/app"
+    bind:
+      operation.client:
+        $ref: "#/packs/api"
+      schema.types:
+        $ref: "#/packs/api"
