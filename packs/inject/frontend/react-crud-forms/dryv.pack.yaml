@@ -21,6 +21,7 @@ dependencies:
   runtime:
     react: "*"
   dev:
+    "@types/react": "*"
     prettier: "*"
 
 choose:
