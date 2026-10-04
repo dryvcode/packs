@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: frontend.react-crud-forms
+source: templates
+
+info:
+  title: React CRUD Forms
+  version: 0.1.0
+  description: Generates typed React forms for HTTP create and update operations using bound DTO/types and operation clients.
+
+catalog:
+  purpose: frontend
+  summary: Pure Handlebars React forms driven by create/update operations and their input DTO semantics.
+  languages: [typescript]
+  frameworks: [react]
+  tags: [frontend, forms, crud, handlebars]
+
+plugins:
+  - { name: handlebars, extensions: [.hbs] }
+
+dependencies:
+  runtime:
+    react: "*"
+  dev:
+    prettier: "*"
+
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+
+selections:
+  forms:
+    subject: operation
+    filter:
+      all: { facet: http }
+      any: { role: [create, update] }
+    scope: each
+
+templates:
+  form:
+    $ref: "#/selections/forms"
+    output:
+      name: $(subject.name.kebab)-form
+      symbol: $(subject.name.pascal)Form
+    imports:
+      - $ref: "#/needs/schema.types"
+      - $ref: "#/needs/operation.client"
+
+  index:
+    exports:
+      - $ref: "#/templates/form"
+
+needs:
+  schema.types: { required: true }
+  operation.client: { required: true }
+
+actions:
+  files:
+    format:
+      extensions: [.ts, .tsx]
+      commands:
+        - run: [(pnpm|yarn), exec, prettier, --write, $(files)]
+        - run: [npm, exec, --, prettier, --write, $(files)]
+        - run: [bun, x, prettier, --write, $(files)]
+
+  final:
+    install:
+      dependencies:
+        args:
+          - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+          - { pinned: "$(name)@$(version)", any: "$(name)" }
+      commands:
+        - run: [(pnpm|bun|yarn), add]
+        - run: [npm, install]
