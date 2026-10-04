@@ -63,3 +63,32 @@ provides:
     $ref: '#/templates/entity'
   property.enum.types:
     $ref: '#/templates/enum'
+
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+
+# Libraries the generated code imports, and the formatter its format action runs.
+dependencies:
+  runtime:
+    reflect-metadata: ^0.2
+    typeorm: ^0.3
+  dev:
+    prettier: "*"
+
+actions:
+  files:
+    format:
+      extensions: [.ts]
+      commands:
+        - run: [(pnpm|yarn), exec, prettier, --write, $(files)]
+        - run: [npm, exec, --, prettier, --write, $(files)]
+        - run: [bun, x, prettier, --write, $(files)]
+  final:
+    install:
+      dependencies:
+        args:
+          - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+          - { pinned: "$(name)@$(version)", any: "$(name)" }
+      commands:
+        - run: [(pnpm|bun|yarn), add]
+        - run: [npm, install]

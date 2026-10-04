@@ -85,3 +85,12 @@ templates:
       - $ref: '#/templates/feature-library'
       - $ref: '#/templates/model'
       - $ref: '#/templates/enum'
+
+choose:
+  dart.tool: { options: [dart, flutter] }
+
+actions:
+  final:
+    install:
+      commands:
+        - run: [(dart|flutter), pub, get]

@@ -79,3 +79,12 @@ provides:
     $ref: '#/templates/model'
   property.enum.types:
     $ref: '#/templates/enum'
+
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+
+actions:
+  final:
+    install:
+      commands:
+        - run: [(pnpm|npm|bun|yarn), install]

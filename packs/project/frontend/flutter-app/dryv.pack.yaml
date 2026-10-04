@@ -79,3 +79,18 @@ templates:
 needs:
   operation.client: { required: true }
   schema.types: { required: true }
+
+choose:
+  dart.tool: { options: [flutter, dart] }
+
+actions:
+  files:
+    format:
+      extensions: [.dart]
+      commands:
+        - run: [dart, format, $(files)]
+        - { id: flutter, run: [dart, format, $(files)] }
+  final:
+    install:
+      commands:
+        - run: [(flutter|dart), pub, get]

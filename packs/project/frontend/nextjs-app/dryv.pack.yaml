@@ -81,3 +81,33 @@ templates:
 # clients/next-api-bridge). Unbound, they use this pack's own fetch-based calls.
 needs:
   operation.client: { required: false }
+
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+
+# The pages and components import these; install adds them to the app's package.json.
+dependencies:
+  runtime:
+    next: ^16
+    react: ^19
+    react-dom: ^19
+  dev:
+    prettier: "*"
+
+actions:
+  files:
+    format:
+      extensions: [.ts, .tsx]
+      commands:
+        - run: [(pnpm|yarn), exec, prettier, --write, $(files)]
+        - run: [npm, exec, --, prettier, --write, $(files)]
+        - run: [bun, x, prettier, --write, $(files)]
+  final:
+    install:
+      dependencies:
+        args:
+          - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+          - { pinned: "$(name)@$(version)", any: "$(name)" }
+      commands:
+        - run: [(pnpm|bun|yarn), add]
+        - run: [npm, install]

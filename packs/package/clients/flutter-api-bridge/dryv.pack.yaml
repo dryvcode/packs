@@ -100,3 +100,18 @@ provides:
     $ref: '#/templates/model'
   property.enum.types:
     $ref: '#/templates/enum'
+
+choose:
+  dart.tool: { options: [flutter, dart] }
+
+actions:
+  final:
+    install:
+      commands:
+        - run: [(flutter|dart), pub, get]
+    generate:
+      name: Generate JSON code
+      description: Runs build_runner for the json_serializable models.
+      after: [install]
+      commands:
+        - run: [dart, run, build_runner, build, --delete-conflicting-outputs]
