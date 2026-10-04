@@ -1,5 +1,14 @@
 # Pack repository design decisions
 
+**Historical record.** The owner-approved pack-design program supersedes the
+folder shape and Usage examples here where they conflict. Current public packs
+live at `packs/<layout>/<purpose>/<name>`; the manifest's scalar `layout` is
+authoritative. See [folder structure](folder-structure.md) and each pack's
+`tests/fixture/dryv.yaml` for current, executable examples. The detailed
+approved design record is in the Dryv repository at
+`.docs/reference/pack-design/`; unfinished features there are marked as design,
+not as implemented behavior.
+
 Status: **locked by the project owner unless explicitly reopened**
 
 This document records the current architectural decisions for the Dryv packs
