@@ -1,0 +1,30 @@
+version: dryv.usage/v1alpha1
+
+sources:
+  authoring:
+    ir: { type: ir, path: dryv.ir.yaml }
+  packs:
+    local: { path: packs }
+
+destinations:
+  code:
+    app: { path: out }
+
+authoring:
+  source: { $ref: "#/sources/authoring/ir" }
+
+packs:
+  client:
+    source: { $ref: "#/sources/packs/local" }
+    path: package/clients/ts-api-client
+    destination: { $ref: "#/destinations/code/app" }
+    inputs:
+      package_name: react-crud-forms-fixture
+
+  forms:
+    source: { $ref: "#/sources/packs/local" }
+    path: inject/frontend/react-crud-forms
+    destination: { $ref: "#/destinations/code/app" }
+    bind:
+      schema.types: { $ref: "#/packs/client" }
+      operation.client: { $ref: "#/packs/client" }
