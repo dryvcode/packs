@@ -1,0 +1,76 @@
+version: dryv.pack/v1alpha1
+key: validation.fluentvalidation-dtos
+layout: package
+package:
+  name: { $ref: "#/inputs.project_name" }
+
+source: templates
+
+info:
+  title: FluentValidation DTOs
+  version: 0.1.0
+  description: Generates .NET 10 DTOs, canonical enums and FluentValidation validators from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: System.Text.Json DTOs with FluentValidation 12 validators.
+  languages: [csharp]
+  frameworks: [fluentvalidation, system-text-json]
+  tags: [dto, validation, csharp, dotnet]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  project_name:
+    type: string
+    default: Dryv.Validation
+    description: Generated .NET project name.
+  root_namespace:
+    type: string
+    default: Dryv.Generated.Validation
+    description: Root C# namespace for generated DTOs and validators.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/dto"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
