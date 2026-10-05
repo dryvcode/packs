@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **60 pack manifests**.
+The repository currently contains **61 pack manifests**.
 
 ### Inject
 
@@ -28,6 +28,10 @@ Validation:
 - [x] `inject/validation/class-validator-dtos`
 - [x] `inject/validation/zod-schemas`
 - [x] `inject/validation/joi-schemas`
+
+Documentation:
+
+- [x] `inject/documentation/markdown-reference`
 
 ### Package
 
@@ -127,6 +131,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
+- documentation/reference → `markdown-reference`
 
 ## Current thin areas
 
@@ -136,7 +141,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - multipart/file semantics
 - streaming semantics
 - auth/security generation contracts
-- cross-language contract/documentation packs
+- cross-language contract output beyond Markdown reference (OpenAPI is blocked on effective route resolution)
 - additional UI ecosystems and native/mobile application packs
 - portable JSON Schema 2020-12 is now represented by `package/validation/json-schema`
 - database migration/schema packs for defaults, checks and target-specific DDL semantics that ORMs cannot express portably
