@@ -2,7 +2,7 @@
 
 Status: living coverage audit.
 
-This document records the public-pack coverage visible on `develop` before the ecosystem expansion work starts.
+This document records the living public-pack coverage visible on `develop`.
 
 The numbering in this folder is only for navigation. It does not establish implementation order.
 
@@ -34,11 +34,19 @@ Validation:
 Backend:
 
 - [x] `package/backend/fastapi-backend`
-- [x] `package/backend/axum-backend` — implementation present; verification deferred
+- [x] `package/backend/axum-backend` — verification deferred
+- [x] `package/backend/jakarta-rest-backend` — verification deferred
+- [x] `package/backend/go-net-http-backend` — verification deferred
+
+Persistence:
+
+- [x] `package/persistence/seaorm-entities` — verification deferred
+- [x] `package/persistence/jpa-entities` — verification deferred
 
 Validation:
 
-- [x] `package/validation/jakarta-validation-dtos` — implementation present; verification deferred
+- [x] `package/validation/jakarta-validation-dtos` — verification deferred
+- [x] `package/validation/validator-dtos` — verification deferred
 
 Clients:
 
@@ -47,6 +55,8 @@ Clients:
 - [x] `package/clients/next-api-bridge`
 - [x] `package/clients/ts-api-client`
 - [x] `package/clients/go-client-sdk`
+- [x] `package/clients/rust-client-sdk` — verification deferred
+- [x] `package/clients/java-client-sdk` — verification deferred
 
 ### Project
 
@@ -63,9 +73,9 @@ Generated-language families currently represented:
 - [x] TypeScript / JavaScript
 - [x] Python
 - [x] Dart
-- [x] Go — client SDK verified; server/persistence/validation coverage still absent
-- [x] Rust — Axum backend implemented; verification deferred
-- [x] Java — Jakarta Validation DTOs implemented; verification deferred
+- [x] Go — client SDK verified; standard-library backend implemented; persistence/validation still absent
+- [x] Rust — backend, client, persistence and validation represented; verification deferred for new packs
+- [x] Java — backend, client, persistence and validation represented; verification deferred
 - [ ] C#
 - [ ] PHP
 - [ ] Swift
@@ -84,11 +94,10 @@ Strongest current areas:
 Thin or absent areas:
 
 - Python persistence and standalone validation
-- non-TypeScript persistence
-- non-TypeScript validation
-- Go server ecosystem
-- Rust client/persistence/validation ecosystem
-- Java/JVM server/persistence/client ecosystem
+- Go persistence and validation
+- Python persistence and standalone validation
+- Rust project packs and additional framework alternatives
+- Java/JVM project packs and additional framework alternatives
 - .NET server/persistence/validation/client ecosystem
 - PHP, Swift, Ruby and Elixir
 - backend project packs
@@ -96,12 +105,12 @@ Thin or absent areas:
 
 ## Proven pack patterns to reuse
 
-- SQL ORM/persistence → `typeorm-entities`
+- SQL ORM/persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`
 - document persistence → `mongoose-models`
-- validation DTOs → `class-validator-dtos`, `jakarta-validation-dtos`
+- validation DTOs → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backend → `fastapi-backend`, `nestjs-backend`, `axum-backend`
-- HTTP SDK → `ts-api-client`, `dart-client-sdk`
+- HTTP backend → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`
+- HTTP SDK → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
