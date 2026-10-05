@@ -1,0 +1,110 @@
+import Foundation
+
+{%- macro swift_ident(name) -%}
+{%- if name in ['associatedtype','class','deinit','enum','extension','fileprivate','func','import','init','inout','internal','let','open','operator','private','protocol','public','rethrows','static','struct','subscript','typealias','var','break','case','continue','default','defer','do','else','fallthrough','for','guard','if','in','repeat','return','throw','switch','where','while','as','Any','catch','false','is','nil','super','self','Self','throws','true','try','_'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}DryvJSONValue
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'DryvJSONValue' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'DryvJSONValue' }}
+{%- elif value.is.boolean -%}Bool
+{%- elif value.is.integer -%}Int64
+{%- elif value.is.decimal or value.is.money -%}Decimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.record -%}[String: DryvJSONValue]
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}DryvJSONValue
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro storage_type(field) -%}
+{%- if field.array is not none -%}[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{{- storage_type(field) -}}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+
+public struct {{ file.symbol }}: Codable, Sendable {
+{%- for field in schema.fields %}
+    public var {{ swift_ident(field.name.camel) }}: {{ field_type(field) }}
+{%- endfor %}
+
+    public init(
+{%- for field in schema.fields %}
+        {{ swift_ident(field.name.camel) }}: {{ field_type(field) }}{% if field.optional %} = nil{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+{%- for field in schema.fields %}
+        self.{{ swift_ident(field.name.camel) }} = {{ swift_ident(field.name.camel) }}
+{%- endfor %}
+    }
+
+    private enum CodingKeys: String, CodingKey {
+{%- for field in schema.fields %}
+        case {{ swift_ident(field.name.camel) }} = {{ field.name.raw | tojson }}
+{%- endfor %}
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+{%- for field in schema.fields %}
+{%- if field.optional %}
+        self.{{ swift_ident(field.name.camel) }} = try container.decodeIfPresent(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- elif field.nullable %}
+        guard container.contains(.{{ swift_ident(field.name.camel) }}) else {
+            throw DecodingError.keyNotFound(
+                .{{ swift_ident(field.name.camel) }},
+                .init(
+                    codingPath: container.codingPath,
+                    debugDescription: "Missing required nullable field {{ field.name.raw }}"
+                )
+            )
+        }
+        self.{{ swift_ident(field.name.camel) }} = try container.decodeIfPresent(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- else %}
+        self.{{ swift_ident(field.name.camel) }} = try container.decode(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- endif %}
+{%- endfor %}
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+{%- for field in schema.fields %}
+{%- if field.optional %}
+        try container.encodeIfPresent(
+            {{ swift_ident(field.name.camel) }},
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- elif field.nullable %}
+        if let value = {{ swift_ident(field.name.camel) }} {
+            try container.encode(value, forKey: .{{ swift_ident(field.name.camel) }})
+        } else {
+            try container.encodeNil(forKey: .{{ swift_ident(field.name.camel) }})
+        }
+{%- else %}
+        try container.encode(
+            {{ swift_ident(field.name.camel) }},
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- endif %}
+{%- endfor %}
+    }
+}
