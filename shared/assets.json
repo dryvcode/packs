@@ -15,5 +15,13 @@
   "templates/typescript/export-index.ts.hbs": [
     "packs/inject/backend/nestjs-backend/templates/{feature-index}/index.ts.hbs",
     "packs/inject/backend/nestjs-backend/templates/{root-index}/index.ts.hbs"
+  ],
+  "templates/rust/serde-enum.rs.j2": [
+    "packs/package/backend/axum-backend/templates/src/models/{enum}/$(name).rs.j2",
+    "packs/package/clients/rust-client-sdk/templates/src/models/{enum}/$(name).rs.j2"
+  ],
+  "templates/rust/serde-model.rs.j2": [
+    "packs/package/backend/axum-backend/templates/src/models/{model}/$(name).rs.j2",
+    "packs/package/clients/rust-client-sdk/templates/src/models/{model}/$(name).rs.j2"
   ]
 }
