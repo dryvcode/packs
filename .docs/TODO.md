@@ -15,6 +15,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Reuse existing pack architecture and patterns.
 - [x] Keep Runtime IR as the only semantic authority.
 - [x] Keep framework/library mapping inside packs.
+- [x] Use one shared Runtime IR fixture at `fixtures/dryv.ir.yaml`; pack-local IR copies are prohibited.
 - [ ] Audit a candidate before implementation.
 - [ ] Confirm renderer, selections, slots, dependencies and fixture strategy before implementation.
 - [ ] Report context/Engine gaps instead of hiding them in templates.
