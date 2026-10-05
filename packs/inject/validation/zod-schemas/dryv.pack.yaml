@@ -55,8 +55,10 @@ provides:
   schema.validation:
     $ref: '#/templates/schema'
 
+# shared:js-package-manager:start
 choose:
   js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
 
 # Libraries the generated code imports, and the formatter its format action runs.
 dependencies:
@@ -65,6 +67,7 @@ dependencies:
   dev:
     prettier: "*"
 
+# shared:js-prettier-actions:start
 actions:
   files:
     format:
@@ -82,3 +85,4 @@ actions:
       commands:
         - run: [(pnpm|bun|yarn), add]
         - run: [npm, install]
+# shared:js-prettier-actions:end
