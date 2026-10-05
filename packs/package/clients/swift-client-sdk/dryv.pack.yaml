@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: clients.swift-client-sdk
+layout: package
+package:
+  name: DryvClient
+
+source: templates
+
+info:
+  title: Swift Client SDK
+  version: 0.1.0
+  description: Generates a Swift 6 URLSession client SDK with Codable models and typed async operations.
+
+catalog:
+  purpose: clients
+  summary: Dependency-free Swift URLSession SDK with Codable wire types.
+  languages: [swift]
+  frameworks: [urlsession, foundation]
+  tags: [client, sdk, swift, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvClient
+    description: Swift module and library product name.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.camel)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
