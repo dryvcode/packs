@@ -1,0 +1,14 @@
+{
+  "name": "dryv/generated-entities",
+  "version": "0.1.0",
+  "type": "library",
+  "require": {
+    "php": ">=8.4.1",
+    "doctrine/orm": "3.7.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "{{ pack.inputs.root_namespace | replace('\\', '\\\\') }}\\": "src/"
+    }
+  }
+}
