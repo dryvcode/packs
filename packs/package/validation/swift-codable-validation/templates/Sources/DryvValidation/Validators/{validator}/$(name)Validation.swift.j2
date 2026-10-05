@@ -102,9 +102,16 @@ import Foundation
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro swift_literal(value) -%}
+{%- if value is boolean -%}{% if value %}true{% else %}false{% endif %}
+{%- elif value is integer or value is float -%}{{ value }}
+{%- elif value is string -%}String(decoding: [{{ value.encode('utf-8') | join(', ') }}], as: UTF8.self)
+{%- endif -%}
+{%- endmacro -%}
+
 {%- macro operand_expr(operand) -%}
 {%- if operand.is.field -%}value.{{ swift_ident(operand.field.camel) }}
-{%- else -%}{{ operand.value_json }}
+{%- else -%}{{ swift_literal(operand.value) }}
 {%- endif -%}
 {%- endmacro -%}
 
