@@ -30,6 +30,10 @@
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro java_field_type(field) -%}
+{%- if field.array is not none -%}List<{{ java_type(field.value) }}>{%- else -%}{{ java_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
 {%- macro whole_group(http, kind) -%}
 {%- for binding in http.inputs -%}
 {%- if binding.port.field is none and ((kind == 'body' and binding.is.body) or (kind == 'query_object' and binding.is.query_object) or (kind == 'form' and binding.is.form)) -%}x{%- endif -%}
@@ -129,6 +133,7 @@ import java.time.LocalTime;
 import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Map;
 
 @Path("/")
@@ -173,7 +178,7 @@ public final class {{ file.symbol }} {
 {%- for binding in http.input_groups.query_object %}
 {%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
 {%- for field in operation.input.fields %}
-        {% if not params.first %},{% endif %}@QueryParam("{{ field.name.raw }}") {{ java_type(field.value) }} query_object_{{ java_ident(field.name.camel) }}{% set params.first=false %}
+        {% if not params.first %},{% endif %}@QueryParam("{{ field.name.raw }}") {{ java_field_type(field) }} query_object_{{ java_ident(field.name.camel) }}{% set params.first=false %}
 {%- endfor %}
 {%- else %}
         {% if not params.first %},{% endif %}@QueryParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
@@ -188,7 +193,7 @@ public final class {{ file.symbol }} {
 {%- for binding in http.input_groups.form %}
 {%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
 {%- for field in operation.input.fields %}
-        {% if not params.first %},{% endif %}@FormParam("{{ field.name.raw }}") {{ java_type(field.value) }} form_{{ java_ident(field.name.camel) }}{% set params.first=false %}
+        {% if not params.first %},{% endif %}@FormParam("{{ field.name.raw }}") {{ java_field_type(field) }} form_{{ java_ident(field.name.camel) }}{% set params.first=false %}
 {%- endfor %}
 {%- else %}
         {% if not params.first %},{% endif %}@FormParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
