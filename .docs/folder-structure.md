@@ -4,9 +4,11 @@ Public packs are organized as `packs/<layout>/<purpose>/<name>`.
 
 | Layout | Role | Examples |
 | --- | --- | --- |
-| `inject` | Contributes files to a destination owned by the project or another pack | TypeORM entities, class-validator DTOs |
+| `inject` | Contributes files to a destination owned by the project or another pack | TypeORM entities, Markdown reference docs, schema-example fixtures |
 | `package` | Owns a generated package with a declared package name and optional import root | Dart, Go and TypeScript clients, FastAPI package |
 | `project` | Owns a generated application | Flutter, React Native and Next.js apps |
+
+Purposes describe what a pack emits and are proven by real packs, not by a fixed language taxonomy. Current examples include `backend`, `clients`, `frontend`, `persistence`, `validation`, `documentation`, and `testing`.
 
 The scalar `layout` in `dryv.pack.yaml` is authoritative; `inject` is the default. A `package` pack declares `package.name` as a reference to an input. The folder hierarchy does not supply Runtime IR meaning. Language and framework tags belong in `catalog` metadata, never in Engine context.
 
