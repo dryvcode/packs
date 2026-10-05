@@ -1,0 +1,251 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro module_for(value) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.schema) }}
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.property.enum) }}
+{%- else -%}nil
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_kind(value) -%}
+{%- if value.is.schema -%}:schema
+{%- elif value.is.enum -%}:enum
+{%- elif value.is.boolean -%}:boolean
+{%- elif value.is.integer -%}:integer
+{%- elif value.is.number -%}:number
+{%- elif value.is.string or value.is.temporal or value.is.decimal or value.is.money -%}:string
+{%- else -%}:raw
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro ex_fun(name) -%}
+{%- if name in ['after','alias','and','case','catch','cond','def','defmodule','defp','do','else','end','fn','for','if','import','in','not','or','quote','raise','receive','require','rescue','super','try','unless','unquote','use','when'] -%}{{ name }}_operation{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_module(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ module_for(operation.input.value) }}
+{%- else -%}{{ pack.inputs.module_prefix }}.Inputs.{{ operation.name.pascal }}Input
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+{%- macro source_values(binding, field) -%}
+{%- if binding.is.path -%}[Map.get(conn.path_params, {{ (binding.name or binding.port.name.raw) | tojson }})]
+{%- elif binding.is.query -%}Http.query_values(conn, {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}[Http.header_value(conn, {{ (binding.name or binding.port.name.raw) | tojson }})]
+{%- elif binding.is.cookie -%}[Http.cookie_value(conn, {{ (binding.name or binding.port.name.raw) | tojson }})]
+{%- elif binding.is.form -%}Http.form_values(conn, {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- else -%}[]
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bind_non_body(field, binding) -%}
+Http.bind_values!(
+  {{ source_values(binding, field) }},
+  {{ decode_kind(field.value) }},
+  {{ module_for(field.value) }},
+  {% if field.array is not none %}true{% else %}false{% endif %},
+  {% if field.optional %}false{% else %}true{% endif %},
+  {{ field.name.raw | tojson }}
+)
+{%- endmacro -%}
+
+{%- macro bind_body_field(field) -%}
+case Http.body_map(conn) do
+  body when is_map(body) ->
+    present? = Map.has_key?(body, {{ field.name.raw | tojson }}) or Map.has_key?(body, :"{{ field.name.snake }}")
+
+    if not present? and {% if field.optional %}false{% else %}true{% endif %} do
+      raise ArgumentError, "missing required {{ field.name.raw }}"
+    end
+
+    raw =
+      if Map.has_key?(body, {{ field.name.raw | tojson }}) do
+        Map.get(body, {{ field.name.raw | tojson }})
+      else
+        Map.get(body, :"{{ field.name.snake }}")
+      end
+
+    if is_nil(raw) do
+      nil
+    else
+      {% if field.array is not none %}Http.decode_many(List.wrap(raw), {{ decode_kind(field.value) }}, {{ module_for(field.value) }}){% else %}Http.decode(raw, {{ decode_kind(field.value) }}, {{ module_for(field.value) }}){% endif %}
+    end
+end
+{%- endmacro -%}
+
+{%- macro field_binding(operation, field) -%}
+{%- set match = namespace(binding=none) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}{%- set match.binding = binding -%}{%- endif -%}
+{%- endfor -%}
+{%- if match.binding is none -%}
+{%- if field.optional -%}nil{%- else -%}raise ArgumentError, "no HTTP binding for required field {{ field.name.raw }}"{%- endif -%}
+{%- elif match.binding.is.body -%}{{ bind_body_field(field) }}
+{%- else -%}{{ bind_non_body(field, match.binding) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro build_struct(operation) -%}
+{%- set http = operation.facets.http -%}
+{%- set whole = namespace(kind='') -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and binding.is.body -%}{%- set whole.kind='body' -%}{%- endif -%}
+{%- if binding.port.field is none and binding.is.query_object -%}{%- set whole.kind='query' -%}{%- endif -%}
+{%- if binding.port.field is none and binding.is.form -%}{%- set whole.kind='form' -%}{%- endif -%}
+{%- endfor -%}
+{%- if operation.input.kind == 'schema' and whole.kind == 'body' -%}
+{{ input_module(operation) }}.from_map!(Http.body_map(conn))
+{%- else -%}
+struct!({{ input_module(operation) }}, %{
+{%- for field in operation.input.fields %}
+  :"{{ field.name.snake }}" =>
+{%- if whole.kind == 'query' %}
+    Http.bind_values!(
+      Http.query_values(conn, {{ field.name.raw | tojson }}),
+      {{ decode_kind(field.value) }},
+      {{ module_for(field.value) }},
+      {% if field.array is not none %}true{% else %}false{% endif %},
+      {% if field.optional %}false{% else %}true{% endif %},
+      {{ field.name.raw | tojson }}
+    ){% if not loop.last %},{% endif %}
+{%- elif whole.kind == 'form' %}
+    Http.bind_values!(
+      Http.form_values(conn, {{ field.name.raw | tojson }}),
+      {{ decode_kind(field.value) }},
+      {{ module_for(field.value) }},
+      {% if field.array is not none %}true{% else %}false{% endif %},
+      {% if field.optional %}false{% else %}true{% endif %},
+      {{ field.name.raw | tojson }}
+    ){% if not loop.last %},{% endif %}
+{%- else %}
+    {{ field_binding(operation, field) }}{% if not loop.last %},{% endif %}
+{%- endif %}
+{%- endfor %}
+})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- for operation in operations %}
+{%- if operation.input and operation.input.kind != 'schema' %}
+defmodule {{ pack.inputs.module_prefix }}.Inputs.{{ operation.name.pascal }}Input do
+  @moduledoc false
+
+  defstruct [
+{%- for field in operation.input.fields %}
+    :"{{ field.name.snake }}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+
+  @type t :: %__MODULE__{}
+end
+
+{%- endif %}
+{%- endfor %}
+defmodule {{ pack.inputs.module_prefix }}.Services.{{ file.symbols.service }} do
+  @moduledoc false
+
+{%- for operation in operations %}
+  @callback {{ ex_fun(operation.name.snake) }}({% if operation.input %}{{ input_module(operation) }}.t(){% endif %}) ::
+{%- if operation.output %}
+              {:ok, term()} | {:error, term()}
+{%- else %}
+              :ok | {:error, term()}
+{%- endif %}
+{%- endfor %}
+end
+
+defmodule {{ pack.inputs.module_prefix }}.Controllers.{{ file.symbols.controller }} do
+  @moduledoc false
+
+  use Phoenix.Controller, formats: [:json]
+
+  alias {{ pack.inputs.module_prefix }}.Http
+
+{%- for operation in operations %}
+  def {{ ex_fun(operation.name.snake) }}(conn, _params) do
+{%- if operation.facets.http.input_groups.multipart %}
+    conn
+    |> put_status(501)
+    |> json(%{message: "multipart bindings require an explicit Elixir semantic mapping"})
+{%- else %}
+    binding =
+      try do
+{%- if operation.input %}
+        {:ok, {{ build_struct(operation) }}}
+{%- else %}
+        {:ok, :no_input}
+{%- endif %}
+      rescue
+        error in [ArgumentError, KeyError] -> {:error, Exception.message(error)}
+      end
+
+    case binding do
+      {:error, message} ->
+        conn
+        |> put_status(400)
+        |> json(%{message: message})
+
+      {:ok, input} ->
+        service = Map.fetch!(conn.private, :dryv_service)
+
+        result =
+{%- if operation.input %}
+          service.{{ ex_fun(operation.name.snake) }}(input)
+{%- else %}
+          service.{{ ex_fun(operation.name.snake) }}()
+{%- endif %}
+
+        case result do
+{%- if operation.output %}
+          {:ok, output} ->
+            conn
+            |> put_status({{ success_status(operation.facets.http) }})
+            |> json(Http.wire(output))
+{%- else %}
+          :ok ->
+            send_resp(conn, {{ success_status(operation.facets.http) }}, "")
+{%- endif %}
+
+          {:error, reason} ->
+            raise RuntimeError, "Dryv service error: #{inspect(reason)}"
+        end
+    end
+{%- endif %}
+  end
+
+{%- endfor %}
+end
+
+defmodule {{ pack.inputs.module_prefix }}.Routes.{{ file.symbols.routes }} do
+  @moduledoc false
+
+  defmacro routes(service_module) do
+    service_module = Macro.expand(service_module, __CALLER__)
+
+    quote bind_quoted: [service_module: service_module] do
+{%- for operation in operations %}
+{%- set route = namespace(path=operation.facets.http.path.local) -%}
+{%- for binding in operation.facets.http.input_groups.path -%}
+{%- set route.path = route.path | replace('{' ~ (binding.name or binding.port.name.raw) ~ '}', ':' ~ (binding.name or binding.port.name.raw)) -%}
+{%- endfor %}
+      match(
+        :{{ operation.facets.http.method | lower }},
+        {{ route.path | tojson }},
+        {{ pack.inputs.module_prefix }}.Controllers.{{ file.symbols.controller }},
+        :{{ ex_fun(operation.name.snake) }},
+        private: %{dryv_service: service_module}
+      )
+{%- endfor %}
+    end
+  end
+end
