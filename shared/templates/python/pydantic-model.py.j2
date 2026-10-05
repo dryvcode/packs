@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+{% macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro py_json(text) -%}
+{%- if text == 'true' -%}True
+{%- elif text == 'false' -%}False
+{%- elif text == 'null' -%}None
+{%- else -%}{{ text }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro literal_value(literal) -%}
+{%- if literal.kind == 'boolean' -%}{% if literal.value %}True{% else %}False{% endif %}
+{%- elif literal.kind == 'null' -%}None
+{%- else -%}{{ literal.value | tojson }}
+{%- endif -%}
+{%- endmacro %}
+
+# Other models are imported for type checking only; the package index rebuilds models
+# once all are loaded, so schemas that reference each other don't import in a cycle.
+if TYPE_CHECKING:
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+    from .{{ dependency.path.relative | replace('/', '.') | replace('.py', '') }} import {{ dependency.symbol }}
+{%- endif %}{% endfor %}
+    pass
+
+{% macro value_type(value) -%}
+{%- if value.is.unknown -%}object
+{%- elif value.is.dynamic -%}Any
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Any' }}
+{%- elif value.is.primitive -%}
+  {%- if value.property.primitive.is.boolean -%}bool
+  {%- elif value.property.primitive.is.integer -%}int
+  {%- elif value.property.primitive.is_decimal or value.property.primitive.is_money -%}Decimal
+  {%- elif value.property.primitive.is.number -%}float
+  {%- elif value.property.primitive.is.uuid -%}UUID
+  {%- else -%}str
+  {%- endif -%}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Any' }}
+{%- elif value.is.literal -%}Literal[{{ literal_value(value.property.literal.value) }}]
+{%- elif value.is.temporal -%}
+  {%- if value.property.temporal.is.date -%}date
+  {%- elif value.property.temporal.is.time -%}time
+  {%- elif value.property.temporal.is.duration or value.property.temporal.is.interval -%}timedelta
+  {%- else -%}datetime
+  {%- endif -%}
+{%- elif value.is.record -%}dict[str, Any]
+{%- elif value.is.tuple -%}tuple[Any, ...]
+{%- elif value.is.generic -%}{{ value.property.generic.name.pascal }}
+{%- else -%}Any
+{%- endif -%}
+{%- endmacro %}
+
+{%- macro format_pattern(format) -%}
+{%- if format == 'email' -%}^[^@\s]+@[^@\s]+\.[^@\s]+$
+{%- elif format == 'url' or format == 'uri' -%}^[A-Za-z][A-Za-z0-9+.-]*://\S+$
+{%- elif format == 'phone' -%}^\+?[0-9 ().-]{7,20}$
+{%- elif format == 'e164' -%}^\+[1-9][0-9]{1,14}$
+{%- elif format == 'slug' -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif format == 'hex-color' -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif format == 'hex' -%}^[0-9a-fA-F]+$
+{%- elif format == 'ulid' -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif format == 'jwt' -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif format == 'semver' -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif format == 'country-code' -%}^[A-Z]{2}$
+{%- elif format == 'currency-code' -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_args(value) -%}
+{%- if value.is.property and value.is.primitive -%}
+  {%- set primitive = value.property.primitive -%}
+  {%- set c = primitive.constraints -%}
+  {%- if c.length is not none and c.length.has_exact %}min_length={{ c.length.exact }}, max_length={{ c.length.exact }}, {% endif -%}
+  {%- if c.length is not none and c.length.has_min %}min_length={{ c.length.min }}, {% endif -%}
+  {%- if c.length is not none and c.length.has_max %}max_length={{ c.length.max }}, {% endif -%}
+  {%- if c.range is not none and c.range.has_min %}ge={{ c.range.min }}, {% endif -%}
+  {%- if c.range is not none and c.range.has_max %}le={{ c.range.max }}, {% endif -%}
+  {%- if c.has_multiple_of %}multiple_of={{ c.multiple_of }}, {% endif -%}
+  {%- if format_pattern(primitive.format) %}pattern={{ format_pattern(primitive.format) | tojson }}, {% elif c.pattern is not none %}{% for expression in c.pattern.match %}{% if loop.first %}pattern={{ expression | tojson }}, {% endif %}{% endfor %}{% endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro constrained_type(value) -%}
+{%- if field_args(value) -%}Annotated[{{ value_type(value) }}, Field({{ field_args(value) }})]
+{%- else -%}{{ value_type(value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}Annotated[list[{{ constrained_type(field.value) }}], Field({% if field.array.has_min %}min_length={{ field.array.min }}, {% endif %}{% if field.array.has_max %}max_length={{ field.array.max }}, {% endif %})]
+{%- else -%}{{ constrained_type(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro py_operand(operand) -%}
+{%- if operand.is.field -%}self.{{ operand.field.snake }}
+{%- elif operand.is.literal -%}{{ py_json(operand.value_json) }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}self.{{ term.field.snake }}{% else %}{{ py_json(term.value_json) }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro py_operator(operator) -%}
+{%- if operator == 'equal' -%}=={%- elif operator == 'not-equal' -%}!={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+
+
+class {{ file.symbol }}(BaseModel):
+    model_config = ConfigDict(extra="forbid", validate_default=True)
+
+{% for field in schema.fields %}
+    {{ field.name.snake }}: {{ field_type(field) }}{% if field.nullable or field.optional %} | None{% endif %}{% if field.default and field.default.kind == 'value' %} = {{ py_json(field.default.value_json) }}{% elif field.optional %} = None{% endif %}
+{% else %}
+    pass
+{% endfor %}
+{%- for invariant in schema.invariants %}
+{%- if invariant.form.is.opaque %}
+
+    # Invariant "{{ invariant.name.raw }}" has no simple form, so it isn't checked here.
+{%- else %}
+
+    @model_validator(mode="after")
+    def _check_{{ invariant.name.snake }}(self) -> Self:
+        if not ({% for comparison in invariant.form.comparisons %}{{ py_operand(comparison.left) }} {{ py_operator(comparison.operator) }} {{ py_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.is.all %} and {% else %} or {% endif %}{% endif %}{% endfor %}):
+            raise ValueError({{ (invariant.message or invariant.name.title) | tojson }})
+        return self
+{%- endif %}
+{%- endfor %}
