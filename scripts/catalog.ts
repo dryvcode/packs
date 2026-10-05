@@ -1,23 +1,38 @@
 #!/usr/bin/env bun
 /**
- * Build the packs catalogue: discovery metadata for every pack, read from each
- * dryv.pack.yaml. Discovery only; Dryv never reads the catalogue to plan or generate.
+ * Build the packs catalogue from dryv.pack.yaml metadata.
+ *
+ * The manifests are the only catalogue source of truth. This script validates and
+ * projects them; it never maintains a second hand-authored pack list.
  *
  *   bun scripts/catalog.ts [out.json]       # default: catalog.json
- *   bun scripts/catalog.ts --check          # fail when a pack's metadata is missing or inconsistent
+ *   bun scripts/catalog.ts --check
  */
-import { readdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const REPO = resolve(import.meta.dir, "..");
-const PACKS = join(REPO, "packs");
-const REPOSITORY = "https://github.com/dryvcode/packs";
+import {
+  PACKS,
+  REPOSITORY_URL,
+  packIds,
+  parsePackId,
+  releaseRef,
+  type PackLayout,
+} from "./lib/repository.ts";
+
+type CatalogMetadata = {
+  purpose: string;
+  summary?: string;
+  languages?: string[];
+  frameworks?: string[];
+  tags?: string[];
+};
 
 type PackDocument = {
   key: string;
-  layout?: "inject" | "package" | "project";
+  layout?: PackLayout;
   info: { title: string; version: string; description?: string };
-  catalog?: { purpose: string; summary?: string; languages?: string[]; frameworks?: string[]; tags?: string[] };
+  catalog?: CatalogMetadata;
   provides?: Record<string, unknown>;
   needs?: Record<string, unknown>;
 };
@@ -29,7 +44,7 @@ export type CatalogEntry = {
   version: string;
   summary: string | null;
   purpose: string;
-  layout: "inject" | "package" | "project";
+  layout: PackLayout;
   languages: string[];
   frameworks: string[];
   tags: string[];
@@ -39,32 +54,44 @@ export type CatalogEntry = {
   path: string;
 };
 
-function packs(): string[] {
-  const found: string[] = [];
-  for (const layout of readdirSync(PACKS, { withFileTypes: true })) {
-    if (!layout.isDirectory()) continue;
-    for (const purpose of readdirSync(join(PACKS, layout.name), { withFileTypes: true })) {
-      if (!purpose.isDirectory()) continue;
-      for (const pack of readdirSync(join(PACKS, layout.name, purpose.name), { withFileTypes: true })) {
-        if (pack.isDirectory() && existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))) {
-          found.push(`${layout.name}/${purpose.name}/${pack.name}`);
-        }
-      }
-    }
+function normalized(values: string[] | undefined, label: string, problems: string[]): string[] {
+  const items = values ?? [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (!item.trim()) problems.push(\`\${label}: entries must be non-empty\`);
+    if (seen.has(item)) problems.push(\`\${label}: duplicate entry \${item}\`);
+    seen.add(item);
   }
-  return found.sort();
+  return [...items].sort();
 }
 
 export function entry(id: string): { entry: CatalogEntry | null; problems: string[] } {
-  const [layout, purpose, name] = id.split("/") as ["inject" | "package" | "project", string, string];
+  const { layout, purpose, name } = parsePackId(id);
   const document = Bun.YAML.parse(readFileSync(join(PACKS, id, "dryv.pack.yaml"), "utf8")) as PackDocument;
   const problems: string[] = [];
   const catalog = document.catalog;
-  if (catalog === undefined) problems.push(`${id}: no catalog block`);
-  else if (catalog.purpose !== purpose) problems.push(`${id}: catalog.purpose is ${catalog.purpose}, folder is ${purpose}`);
-  if (document.key !== `${purpose}.${name}`) problems.push(`${id}: key is ${document.key}, expected ${purpose}.${name}`);
-  if ((document.layout ?? "inject") !== layout) problems.push(`${id}: layout is ${document.layout ?? "inject"}, folder is ${layout}`);
+  const effectiveLayout = document.layout ?? "inject";
+
+  if (catalog === undefined) problems.push(\`\${id}: no catalog block\`);
+  else {
+    if (catalog.purpose !== purpose) {
+      problems.push(\`\${id}: catalog.purpose is \${catalog.purpose}, folder is \${purpose}\`);
+    }
+    if (!catalog.summary?.trim()) problems.push(\`\${id}: catalog.summary must be non-empty\`);
+    if ((catalog.languages ?? []).length === 0) problems.push(\`\${id}: catalog.languages must not be empty\`);
+  }
+
+  if (document.key !== \`\${purpose}.\${name}\`) {
+    problems.push(\`\${id}: key is \${document.key}, expected \${purpose}.\${name}\`);
+  }
+  if (effectiveLayout !== layout) {
+    problems.push(\`\${id}: layout is \${effectiveLayout}, folder is \${layout}\`);
+  }
+  if (!document.info.title?.trim()) problems.push(\`\${id}: info.title must be non-empty\`);
+  if (!document.info.version?.trim()) problems.push(\`\${id}: info.version must be non-empty\`);
+
   if (catalog === undefined) return { entry: null, problems };
+
   const version = document.info.version;
   return {
     problems,
@@ -75,33 +102,56 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
       version,
       summary: catalog.summary ?? null,
       purpose: catalog.purpose,
-      layout: document.layout ?? "inject",
-      languages: catalog.languages ?? [],
-      frameworks: catalog.frameworks ?? [],
-      tags: catalog.tags ?? [],
+      layout: effectiveLayout,
+      languages: normalized(catalog.languages, \`\${id}: catalog.languages\`, problems),
+      frameworks: normalized(catalog.frameworks, \`\${id}: catalog.frameworks\`, problems),
+      tags: normalized(catalog.tags, \`\${id}: catalog.tags\`, problems),
       provides: Object.keys(document.provides ?? {}).sort(),
       needs: Object.keys(document.needs ?? {}).sort(),
-      source: { repository: REPOSITORY, ref: `${id}/v${version}`, root: "packs" },
+      source: { repository: REPOSITORY_URL, ref: releaseRef(id, version), root: "packs" },
       path: id,
     },
   };
 }
 
+function uniqueness(entries: CatalogEntry[]): string[] {
+  const problems: string[] = [];
+  for (const field of ["id", "key", "title"] as const) {
+    const seen = new Map<string, string>();
+    for (const item of entries) {
+      const value = item[field];
+      const previous = seen.get(value);
+      if (previous !== undefined) {
+        problems.push(\`catalog duplicate \${field} \${JSON.stringify(value)}: \${previous}, \${item.id}\`);
+      } else {
+        seen.set(value, item.id);
+      }
+    }
+  }
+  return problems;
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  const results = packs().map(entry);
-  const problems = results.flatMap((result) => result.problems);
-  for (const problem of problems) console.error(`✖ ${problem}`);
+  const results = packIds().map(entry);
+  const entries = results
+    .map((result) => result.entry)
+    .filter((value): value is CatalogEntry => value !== null);
+  const problems = [...results.flatMap((result) => result.problems), ...uniqueness(entries)];
+
+  for (const problem of problems) console.error(\`✖ \${problem}\`);
+
   if (args.includes("--check")) {
-    if (problems.length === 0) console.log(`✓ ${results.length} pack(s) have consistent catalogue metadata.`);
+    if (problems.length === 0) {
+      console.log(\`✓ \${entries.length} pack(s) have consistent catalogue metadata.\`);
+    }
     process.exit(problems.length === 0 ? 0 : 1);
   }
+
   if (problems.length > 0) process.exit(1);
+
   const out = args.find((arg) => !arg.startsWith("--")) ?? "catalog.json";
-  const catalogue = {
-    repository: REPOSITORY,
-    packs: results.map((result) => result.entry).filter((value): value is CatalogEntry => value !== null),
-  };
-  writeFileSync(out, `${JSON.stringify(catalogue, null, 2)}\n`);
-  console.log(`✓ wrote ${catalogue.packs.length} pack(s) to ${out}`);
+  const catalogue = { repository: REPOSITORY_URL, packs: entries };
+  writeFileSync(out, \`\${JSON.stringify(catalogue, null, 2)}\\n\`);
+  console.log(\`✓ wrote \${entries.length} pack(s) to \${out}\`);
 }
