@@ -1,0 +1,209 @@
+#pragma once
+
+#include <cctype>
+#include <iomanip>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <cpr/cpr.h>
+#include <nlohmann/json.hpp>
+
+namespace {{ pack.inputs.namespace }} {
+
+struct ApiError {
+    long status{};
+    std::string message{};
+    nlohmann::json payload{nullptr};
+};
+
+template <typename T>
+struct Result {
+    std::optional<T> value{};
+    std::optional<ApiError> error{};
+
+    [[nodiscard]] bool ok() const noexcept { return value.has_value() && !error.has_value(); }
+
+    static Result success(T value) {
+        return Result{std::move(value), std::nullopt};
+    }
+
+    static Result failure(ApiError error) {
+        return Result{std::nullopt, std::move(error)};
+    }
+};
+
+template <>
+struct Result<void> {
+    bool succeeded{false};
+    std::optional<ApiError> error{};
+
+    [[nodiscard]] bool ok() const noexcept { return succeeded && !error.has_value(); }
+
+    static Result success() {
+        return Result{true, std::nullopt};
+    }
+
+    static Result failure(ApiError error) {
+        return Result{false, std::move(error)};
+    }
+};
+
+inline std::string percent_encode(const std::string& value) {
+    std::ostringstream output;
+    output << std::uppercase << std::hex;
+
+    for (const unsigned char ch : value) {
+        if (std::isalnum(ch) || ch == '-' || ch == '_' || ch == '.' || ch == '~') {
+            output << static_cast<char>(ch);
+        } else {
+            output << '%' << std::setw(2) << std::setfill('0') << static_cast<int>(ch);
+        }
+    }
+
+    return output.str();
+}
+
+inline std::string wire_string(const nlohmann::json& value) {
+    if (value.is_string()) {
+        return value.get<std::string>();
+    }
+    if (value.is_boolean()) {
+        return value.get<bool>() ? "true" : "false";
+    }
+    if (value.is_number()) {
+        return value.dump();
+    }
+    if (value.is_null()) {
+        return "";
+    }
+    return value.dump();
+}
+
+template <typename T>
+nlohmann::json wire_json(const T& value) {
+    return nlohmann::json(value);
+}
+
+template <typename T>
+std::string wire_string(const T& value) {
+    return wire_string(wire_json(value));
+}
+
+class Client {
+public:
+    explicit Client(std::string base_url) : base_url_(std::move(base_url)) {
+        while (!base_url_.empty() && base_url_.back() == '/') {
+            base_url_.pop_back();
+        }
+    }
+
+    Result<nlohmann::json> request(
+        const std::string& method,
+        const std::string& path,
+        const std::vector<std::pair<std::string, std::string>>& query = {},
+        const std::vector<std::pair<std::string, std::string>>& headers = {},
+        const std::vector<std::pair<std::string, std::string>>& cookies = {},
+        const std::optional<nlohmann::json>& json_body = std::nullopt,
+        const std::vector<std::pair<std::string, std::string>>& form = {}
+    ) const {
+        cpr::Session session;
+        session.SetUrl(cpr::Url{base_url_ + path});
+
+        cpr::Parameters parameters;
+        for (const auto& [name, value] : query) {
+            parameters.Add(cpr::Parameter{name, value});
+        }
+        session.SetParameters(std::move(parameters));
+
+        cpr::Header header_map;
+        for (const auto& [name, value] : headers) {
+            header_map[name] = value;
+        }
+
+        if (!cookies.empty()) {
+            std::string cookie_header;
+            for (const auto& [name, value] : cookies) {
+                if (!cookie_header.empty()) {
+                    cookie_header += "; ";
+                }
+                cookie_header += name + "=" + percent_encode(value);
+            }
+            header_map["Cookie"] = cookie_header;
+        }
+
+        if (json_body.has_value()) {
+            header_map["Content-Type"] = "application/json";
+            session.SetBody(cpr::Body{json_body->dump()});
+        } else if (!form.empty()) {
+            cpr::Payload payload{};
+            for (const auto& [name, value] : form) {
+                payload.Add(cpr::Pair{name, value});
+            }
+            session.SetPayload(std::move(payload));
+        }
+
+        session.SetHeader(header_map);
+
+        cpr::Response response;
+        if (method == "GET") {
+            response = session.Get();
+        } else if (method == "POST") {
+            response = session.Post();
+        } else if (method == "PUT") {
+            response = session.Put();
+        } else if (method == "PATCH") {
+            response = session.Patch();
+        } else if (method == "DELETE") {
+            response = session.Delete();
+        } else if (method == "HEAD") {
+            response = session.Head();
+        } else if (method == "OPTIONS") {
+            response = session.Options();
+        } else {
+            return Result<nlohmann::json>::failure(ApiError{
+                0,
+                "unsupported HTTP method in cpr transport: " + method,
+                nullptr,
+            });
+        }
+
+        if (response.status_code == 0) {
+            return Result<nlohmann::json>::failure(ApiError{
+                0,
+                response.error.message,
+                nullptr,
+            });
+        }
+
+        nlohmann::json payload = nullptr;
+        if (!response.text.empty()) {
+            payload = nlohmann::json::parse(response.text, nullptr, false);
+            if (payload.is_discarded()) {
+                payload = response.text;
+            }
+        }
+
+        if (response.status_code < 200 || response.status_code >= 300) {
+            std::string message = response.text;
+            if (payload.is_object() && payload.contains("message") && payload["message"].is_string()) {
+                message = payload["message"].get<std::string>();
+            }
+
+            return Result<nlohmann::json>::failure(ApiError{
+                response.status_code,
+                std::move(message),
+                std::move(payload),
+            });
+        }
+
+        return Result<nlohmann::json>::success(std::move(payload));
+    }
+
+private:
+    std::string base_url_;
+};
+
+} // namespace {{ pack.inputs.namespace }}
