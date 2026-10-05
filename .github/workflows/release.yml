@@ -50,6 +50,9 @@ jobs:
         with:
           channel: stable
       - run: bun install --frozen-lockfile
+      - name: Install Dryv CLI dependencies
+        working-directory: .dryv-source/source/apps/cli
+        run: bun install --frozen-lockfile
       - name: Shared assets and catalogue are consistent
         run: bun run shared:check && bun run catalog:check
       - name: Render and check the pack
