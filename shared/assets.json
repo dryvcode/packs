@@ -137,5 +137,11 @@
     "packs/package/clients/elixir-client-sdk/templates/lib/models/{model}/$(name).ex.j2",
     "packs/package/validation/ecto-changesets/templates/lib/models/{model}/$(name).ex.j2",
     "packs/package/backend/phoenix-backend/templates/lib/models/{model}/$(name).ex.j2"
+  ],
+  "templates/cpp/wire-enum.hpp.j2": [
+    "packs/package/clients/cpp-client-sdk/templates/include/dryv_client/models/{enum}/$(name).hpp.j2"
+  ],
+  "templates/cpp/wire-model.hpp.j2": [
+    "packs/package/clients/cpp-client-sdk/templates/include/dryv_client/models/{model}/$(name).hpp.j2"
   ]
 }
