@@ -72,10 +72,10 @@ use Symfony\Component\Routing\Attribute\Route;
 
 {%- macro source_presence(binding, field) -%}
 {%- if binding.is.path -%}$request->attributes->has({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif binding.is.query or binding.is.query_object -%}$request->query->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query or binding.is.query_object -%}DryvHttp::queryHas($request, {{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.header -%}$request->headers->has({{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.cookie -%}$request->cookies->has({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif binding.is.form -%}$request->request->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form -%}DryvHttp::formHas($request, {{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.body -%}array_key_exists({{ field.name.raw | tojson }}, $json)
 {%- else -%}false
 {%- endif -%}
@@ -83,12 +83,12 @@ use Symfony\Component\Routing\Attribute\Route;
 
 {%- macro source_raw(binding, field) -%}
 {%- if binding.is.path -%}$request->attributes->get({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif (binding.is.query or binding.is.query_object) and field.array is not none -%}$request->query->all({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif binding.is.query or binding.is.query_object -%}$request->query->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif (binding.is.query or binding.is.query_object) and field.array is not none -%}DryvHttp::queryValues($request, {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query or binding.is.query_object -%}DryvHttp::queryValue($request, {{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.header -%}$request->headers->get({{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.cookie -%}$request->cookies->get({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif binding.is.form and field.array is not none -%}$request->request->all({{ (binding.name or binding.port.name.raw) | tojson }})
-{%- elif binding.is.form -%}$request->request->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form and field.array is not none -%}DryvHttp::formValues($request, {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form -%}DryvHttp::formValue($request, {{ (binding.name or binding.port.name.raw) | tojson }})
 {%- elif binding.is.body -%}$json[{{ field.name.raw | tojson }}]
 {%- else -%}null
 {%- endif -%}
@@ -157,17 +157,17 @@ final class {{ file.symbols.controller }}
 {%- set bag = '$request->request' %}
 {%- endif %}
 {%- if field.optional %}
-            if ({{ bag }}->has({{ field.name.raw | tojson }})) {
+            if ({% if whole.kind == 'query' %}DryvHttp::queryHas($request, {{ field.name.raw | tojson }}){% else %}DryvHttp::formHas($request, {{ field.name.raw | tojson }}){% endif %}) {
 {%- endif %}
 {%- if not field.optional %}
-            if (!{{ bag }}->has({{ field.name.raw | tojson }})) {
+            if (!{% if whole.kind == 'query' %}DryvHttp::queryHas($request, {{ field.name.raw | tojson }}){% else %}DryvHttp::formHas($request, {{ field.name.raw | tojson }}){% endif %}) {
                 return new JsonResponse(['message' => 'Missing required {{ field.name.raw }}'], 400);
             }
 {%- endif %}
 {%- if field.array is not none %}
-            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {{ bag }}->all({{ field.name.raw | tojson }});
+            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {% if whole.kind == 'query' %}DryvHttp::queryValues($request, {{ field.name.raw | tojson }}){% else %}DryvHttp::formValues($request, {{ field.name.raw | tojson }}){% endif %};
 {%- else %}
-            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {{ bag }}->get({{ field.name.raw | tojson }});
+            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {% if whole.kind == 'query' %}DryvHttp::queryValue($request, {{ field.name.raw | tojson }}){% else %}DryvHttp::formValue($request, {{ field.name.raw | tojson }}){% endif %};
 {%- endif %}
             {% if field.optional %}    {% endif %}$inputData[{{ field.name.raw | tojson }}] = {{ decode_field(field, '$raw' ~ field.name.pascal) }};
 {%- if field.optional %}
@@ -189,7 +189,7 @@ final class {{ file.symbols.controller }}
 {%- endfor %}
 {%- endif %}
 {%- endif %}
-        } catch (\InvalidArgumentException|\JsonException $error) {
+        } catch (\InvalidArgumentException|\JsonException|\TypeError $error) {
             return new JsonResponse(['message' => $error->getMessage()], 400);
         }
 
