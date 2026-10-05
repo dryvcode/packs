@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+import httpx
+from pydantic import BaseModel, TypeAdapter
+
+
+class ApiError(RuntimeError):
+    def __init__(self, status: int, message: str, payload: Any = None) -> None:
+        super().__init__(message)
+        self.status = status
+        self.payload = payload
+
+
+def to_wire(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json", exclude_none=True)
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, (UUID, Decimal)):
+        return str(value)
+    if isinstance(value, (date, datetime, time)):
+        return value.isoformat()
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if isinstance(value, dict):
+        return {key: to_wire(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_wire(item) for item in value]
+    return value
+
+
+class DryvClient:
+    def __init__(
+        self,
+        base_url: str,
+        http: httpx.AsyncClient | None = None,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.http = http or httpx.AsyncClient()
+        self._owns_http = http is None
+
+    async def aclose(self) -> None:
+        if self._owns_http:
+            await self.http.aclose()
+
+    async def __aenter__(self) -> "DryvClient":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        await self.aclose()
+
+    async def send(
+        self,
+        method: str,
+        path: str,
+        *,
+        output_type: Any = None,
+        params: list[tuple[str, Any]] | None = None,
+        headers: dict[str, str] | None = None,
+        cookies: dict[str, str] | None = None,
+        json_body: Any = None,
+        has_json_body: bool = False,
+        form: list[tuple[str, Any]] | None = None,
+    ) -> Any:
+        kwargs: dict[str, Any] = {
+            "params": params,
+            "headers": headers,
+            "cookies": cookies,
+        }
+        if has_json_body:
+            kwargs["json"] = to_wire(json_body)
+        if form is not None:
+            kwargs["data"] = [(name, str(to_wire(value))) for name, value in form if value is not None]
+
+        response = await self.http.request(method, self.base_url + path, **kwargs)
+        if not response.is_success:
+            payload: Any = None
+            message = response.text.strip()
+            try:
+                payload = response.json()
+                if isinstance(payload, dict) and isinstance(payload.get("message"), str):
+                    message = payload["message"]
+            except ValueError:
+                pass
+            raise ApiError(response.status_code, message, payload)
+
+        if output_type is None or response.status_code == 204 or not response.content:
+            return None
+        return TypeAdapter(output_type).validate_python(response.json())
