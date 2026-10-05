@@ -55,6 +55,7 @@ needs:
   schema.types: { required: true }
   operation.client: { required: true }
 
+# shared:js-prettier-tsx-actions:start
 actions:
   files:
     format:
@@ -63,7 +64,6 @@ actions:
         - run: [(pnpm|yarn), exec, prettier, --write, $(files)]
         - run: [npm, exec, --, prettier, --write, $(files)]
         - run: [bun, x, prettier, --write, $(files)]
-
   final:
     install:
       dependencies:
@@ -73,3 +73,4 @@ actions:
       commands:
         - run: [(pnpm|bun|yarn), add]
         - run: [npm, install]
+# shared:js-prettier-tsx-actions:end
