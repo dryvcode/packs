@@ -1,0 +1,22 @@
+package {{ pack.inputs.java_package }};
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+public final class ApiException extends RuntimeException {
+    private final int status;
+    private final JsonNode payload;
+
+    public ApiException(int status, String message, JsonNode payload) {
+        super(message);
+        this.status = status;
+        this.payload = payload;
+    }
+
+    public int status() {
+        return status;
+    }
+
+    public JsonNode payload() {
+        return payload;
+    }
+}
