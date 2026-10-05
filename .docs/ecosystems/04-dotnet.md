@@ -1,26 +1,26 @@
 # .NET / C# ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: ASP.NET Core backend, EF Core persistence, FluentValidation DTOs and HttpClient SDK are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 ## Coverage
 
-- [ ] backend pack
-- [ ] persistence pack
-- [ ] validation pack
-- [ ] API client SDK
+- [x] backend pack
+- [x] persistence pack
+- [x] validation pack
+- [x] API client SDK
 - [ ] frontend/application pack
 
 ## Backends
 
 - [ ] ASP.NET Core controllers backend
-- [ ] ASP.NET Core Minimal APIs backend
+- [x] `package/backend/aspnet-core-backend` — endpoint-registration implementation present; verification deferred
 - [ ] FastEndpoints backend research
 - [ ] Carter backend research
-- [ ] generated endpoint/controller layer separated from business services
-- [ ] route/query/body/header binding
-- [ ] typed responses and status codes
-- [ ] feature/group organization
-- [ ] dependency injection boundaries
+- [x] generated endpoint layer separated from business services
+- [x] route/query/query-object/body/header/cookie/form binding
+- [x] typed responses and status codes
+- [x] feature/group organization
+- [x] dependency injection service boundaries
 - [ ] validation composition
 
 Models:
@@ -30,18 +30,18 @@ Models:
 
 ## Persistence
 
-- [ ] Entity Framework Core entities/configuration
+- [x] `package/persistence/ef-core-entities` — entity + fluent configuration implementation present; verification deferred
 - [ ] EF Core fluent configuration variant
 - [ ] Dapper model/repository research
 - [ ] Linq2db research
-- [ ] primary/generated keys
-- [ ] table/schema names
-- [ ] indexes and uniqueness
-- [ ] relations
-- [ ] delete behavior
-- [ ] enums
-- [ ] temporal mapping
-- [ ] decimal/money
+- [x] primary/generated keys
+- [x] table/schema names
+- [x] indexes and uniqueness
+- [x] relations
+- [x] delete behavior
+- [x] enums
+- [x] temporal mapping
+- [x] decimal/money
 - [ ] concurrency/version fields if represented semantically
 - [ ] database checks where supported
 
@@ -49,29 +49,29 @@ Primary model: `typeorm-entities`.
 
 ## Validation
 
-- [ ] FluentValidation DTOs/validators
+- [x] `package/validation/fluentvalidation-dtos` — implementation present; verification deferred
 - [ ] DataAnnotations DTO validation
-- [ ] nested validation
-- [ ] collection validation
-- [ ] enum validation
-- [ ] length/range/pattern mappings
-- [ ] common string formats
+- [x] nested validation
+- [x] collection validation
+- [x] enum validation
+- [x] length/range/pattern mappings
+- [x] common string formats
 - [ ] cross-field invariant strategy
-- [ ] provide `schema.validation` and `schema.types`
+- [x] provide `schema.validation` and `schema.types`
 
 Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [ ] `package/clients/csharp-client-sdk`
-- [ ] HttpClient baseline transport
-- [ ] System.Text.Json models
-- [ ] typed operations
-- [ ] path/query/body bindings
-- [ ] typed outputs
-- [ ] error model
+- [x] `package/clients/csharp-client-sdk` — implementation present; verification deferred
+- [x] HttpClient baseline transport
+- [x] System.Text.Json models
+- [x] typed operations
+- [x] path/query/body bindings
+- [x] typed outputs
+- [x] error model
 - [ ] Refit-based alternative research
-- [ ] provide operation/type/enum capability slots
+- [x] provide operation/type/enum capability slots
 
 ## Projects and UI
 
@@ -94,11 +94,11 @@ Primary model: `class-validator-dtos`.
 
 ## Context questions to verify
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] authentication/authorization
 - [ ] generic/container responses
-- [ ] nullable reference type mapping
+- [x] nullable reference type mapping, with absent-vs-null limitation documented
 
 C# attributes, EF types and ASP.NET routing syntax belong in packs, not Runtime IR.
