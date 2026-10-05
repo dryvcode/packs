@@ -1,0 +1,74 @@
+{%- macro value_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}{{ value.schema.name.qualified }}
+{%- elif value.is.enum -%}{{ value.property.enum.name.qualified }}
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}{{ value.property.temporal.kind }}
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}object
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}{{ value.property.generic.name.qualified }}
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{{ value_type(field.value) }}{% if field.array is not none %}[]{% endif %}{% if field.nullable %} | null{% endif %}
+{%- endmacro -%}
+
+# Schema Catalogue
+
+{% for schema in schemas %}
+## {{ schema.name.title }}
+
+{% if schema.description %}{{ schema.description }}
+
+{% endif %}- **ID:** `{{ schema.id }}`
+- **Qualified name:** `{{ schema.name.qualified }}`
+- **Role:** {% if schema.role %}`{{ schema.role }}`{% else %}—{% endif %}
+- **Abstract:** `{{ schema.abstract }}`
+- **Group:** {% if schema.group %}`{{ schema.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if schema.feature %}`{{ schema.feature.name.qualified }}`{% else %}—{% endif %}
+{% if schema.tags %}- **Tags:** {% for tag in schema.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+### Fields
+
+| Field | Type | Presence | Mutation | Sensitive | Relation |
+| --- | --- | --- | --- | --- | --- |
+{% for field in schema.fields %}| `{{ field.name.raw }}` | `{{ field_type(field) }}` | {% if field.optional %}optional{% else %}required{% endif %} | {% if field.mutation %}`{{ field.mutation }}`{% else %}—{% endif %} | `{{ field.sensitive }}` | {% if field.relation %}`{{ field.relation.cardinality }} → {{ field.relation.target.schema.name.qualified }}.{{ field.relation.target.field.raw }}`{% elif field.related %}`inverse {{ field.related.cardinality }} via {{ field.related.via.schema.name.qualified }}.{{ field.related.via.field.raw }}`{% else %}—{% endif %} |
+{% endfor %}
+
+{% if schema.facets.storage %}
+### Storage
+
+- **Name:** {% if schema.facets.storage.name %}`{{ schema.facets.storage.name }}`{% else %}—{% endif %}
+- **Namespace:** {% if schema.facets.storage.namespace %}`{{ schema.facets.storage.namespace }}`{% else %}—{% endif %}
+- **Primary key fields:** {% set primary = namespace(first=true) %}{% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{% if not primary.first %}, {% endif %}`{{ field.name.raw }}`{% set primary.first=false %}{% endif %}{% endfor %}{% if primary.first %}—{% endif %}
+{% if schema.facets.storage.indexes %}
+- **Indexes:**
+{% for index in schema.facets.storage.indexes %}  - {% if index.name %}`{{ index.name }}` — {% endif %}{% if index.unique %}unique {% endif %}[{% for field in index.fields %}`{{ field.raw }}`{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if schema.invariants %}
+### Invariants
+
+{% for invariant in schema.invariants %}- **{{ invariant.name.title }}** (`{{ invariant.form.kind }}`){% if invariant.message %}: {{ invariant.message }}{% endif %}
+{% endfor %}
+{% endif %}
+{% if schema.examples %}
+### Examples
+
+{% for example in schema.examples %}- `{{ example | tojson }}`
+{% endfor %}
+{% endif %}
+---
+{% endfor %}
