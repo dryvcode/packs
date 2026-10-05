@@ -1,0 +1,185 @@
+import Foundation
+
+{%- macro swift_ident(name) -%}
+{%- if name in ['associatedtype','class','deinit','enum','extension','fileprivate','func','import','init','inout','internal','let','open','operator','private','protocol','public','rethrows','static','struct','subscript','typealias','var','break','case','continue','default','defer','do','else','fallthrough','for','guard','if','in','repeat','return','throw','switch','where','while','as','Any','catch','false','is','nil','super','self','Self','throws','true','try','_'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-10:] == 'Validation' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_pattern(primitive) -%}
+{%- if primitive.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif primitive.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif primitive.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif primitive.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif primitive.is.hex -%}^[0-9a-fA-F]+$
+{%- elif primitive.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif primitive.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif primitive.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif primitive.is.country_code -%}^[A-Z]{2}$
+{%- elif primitive.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro scalar_checks(expression, value, path) -%}
+{%- if value.is.primitive %}
+{%- set primitive = value.property.primitive %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %}
+        guard {{ expression }}.count == {{ constraints.length.exact }} else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "must contain exactly {{ constraints.length.exact }} character(s)")
+        }
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %}
+        guard {{ expression }}.count >= {{ constraints.length.min }} else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "is shorter than {{ constraints.length.min }} character(s)")
+        }
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %}
+        guard {{ expression }}.count <= {{ constraints.length.max }} else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "is longer than {{ constraints.length.max }} character(s)")
+        }
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+        guard DryvValidation.isEmail({{ expression }}) else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "must be a valid email")
+        }
+{%- elif primitive.is.url or primitive.is.uri %}
+        guard DryvValidation.isURL({{ expression }}) else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "must be a valid URL")
+        }
+{%- elif format_pattern(primitive) %}
+        guard DryvValidation.matches({{ format_pattern(primitive) | tojson }}, {{ expression }}) else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "has invalid format")
+        }
+{%- endif %}
+{%- if constraints.pattern is not none %}
+{%- for pattern in constraints.pattern.match %}
+        guard DryvValidation.matches({{ pattern | tojson }}, {{ expression }}) else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "does not match required pattern {{ loop.index }}")
+        }
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %}
+        guard {{ expression }} >= {{ constraints.range.min }} else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "is below the minimum {{ constraints.range.min }}")
+        }
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %}
+        guard {{ expression }} <= {{ constraints.range.max }} else {
+            throw DryvValidationError(path: {{ path | tojson }}, message: "is above the maximum {{ constraints.range.max }}")
+        }
+{%- endif %}
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_is_optional(name) -%}
+{%- for field in schema.fields -%}
+{%- if field.name.raw == name.raw and (field.optional or field.nullable) -%}x{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro operand_supported(operand) -%}
+{%- if operand.is.field and not field_is_optional(operand.field) -%}x
+{%- elif operand.is.literal and operand.value_json != 'null' -%}x
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if not operand_supported(comparison.left) or not operand_supported(comparison.right) -%}{%- set state.ok=false -%}{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand_expr(operand) -%}
+{%- if operand.is.field -%}value.{{ swift_ident(operand.field.camel) }}
+{%- else -%}{{ operand.value_json }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro swift_operator(operator) -%}
+{%- if operator == 'equal' -%}==
+{%- elif operator == 'not-equal' -%}!=
+{%- elif operator == 'less-than' -%}<
+{%- elif operator == 'less-than-or-equal' -%}<=
+{%- elif operator == 'greater-than' -%}>
+{%- else -%}>=
+{%- endif -%}
+{%- endmacro -%}
+
+public enum {{ file.symbol }} {
+    public static func validate(_ value: {{ file.symbol | replace('Validation', '') }}) throws {
+{%- for field in schema.fields %}
+{%- if field.optional or field.nullable %}
+        if let fieldValue = value.{{ swift_ident(field.name.camel) }} {
+{%- if field.array is not none %}
+            guard fieldValue.count{% if field.array.has_min %} >= {{ field.array.min }}{% else %} >= 0{% endif %}{% if field.array.has_max %} && fieldValue.count <= {{ field.array.max }}{% endif %} else {
+                throw DryvValidationError(path: {{ field.name.raw | tojson }}, message: "has invalid collection size")
+            }
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+            for item in fieldValue {
+                try {{ validator_for(field.value.schema) }}.validate(item)
+            }
+{%- else %}
+            for item in fieldValue {
+{{ scalar_checks('item', field.value, field.name.raw) | indent(16, true) }}
+            }
+{%- endif %}
+{%- elif field.value.is.schema and validator_for(field.value.schema) %}
+            try {{ validator_for(field.value.schema) }}.validate(fieldValue)
+{%- else %}
+{{ scalar_checks('fieldValue', field.value, field.name.raw) | indent(12, true) }}
+{%- endif %}
+        }
+{%- else %}
+        let fieldValue = value.{{ swift_ident(field.name.camel) }}
+{%- if field.array is not none %}
+        guard fieldValue.count{% if field.array.has_min %} >= {{ field.array.min }}{% else %} >= 0{% endif %}{% if field.array.has_max %} && fieldValue.count <= {{ field.array.max }}{% endif %} else {
+            throw DryvValidationError(path: {{ field.name.raw | tojson }}, message: "has invalid collection size")
+        }
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+        for item in fieldValue {
+            try {{ validator_for(field.value.schema) }}.validate(item)
+        }
+{%- else %}
+        for item in fieldValue {
+{{ scalar_checks('item', field.value, field.name.raw) | indent(12, true) }}
+        }
+{%- endif %}
+{%- elif field.value.is.schema and validator_for(field.value.schema) %}
+        try {{ validator_for(field.value.schema) }}.validate(fieldValue)
+{%- else %}
+{{ scalar_checks('fieldValue', field.value, field.name.raw) | indent(8, true) }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+        guard (
+{%- for comparison in invariant.form.comparisons %}
+            {{ operand_expr(comparison.left) }} {{ swift_operator(comparison.operator) }} {{ operand_expr(comparison.right) }}{% if not loop.last %}{% if invariant.form.is.all %} &&{% else %} ||{% endif %}{% endif %}
+{%- endfor %}
+        ) else {
+            throw DryvValidationError(
+                path: {{ invariant.name.raw | tojson }},
+                message: {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %}
+            )
+        }
+{%- elif not invariant.form.is.opaque %}
+        // Invariant "{{ invariant.name.raw }}" references optional/nullable or arithmetic operands and is intentionally not force-unwrapped.
+{%- endif %}
+{%- endfor %}
+    }
+}
