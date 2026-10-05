@@ -55,6 +55,8 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 - [x] Go Client SDK
 - [x] Go net/http backend — implementation present; verification deferred
+- [x] GORM entities — implementation present; verification deferred
+- [x] Go validator DTOs — implementation present; verification deferred
 
 ### Rust
 
@@ -72,7 +74,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ### Language coverage
 
-- [x] Go — client SDK verified; standard-library backend implemented
+- [x] Go — client SDK verified; backend, persistence and validation implemented
 - [x] Rust — backend, client, persistence and validation represented
 - [x] Java — backend, client, persistence and validation represented
 - [ ] .NET / C#
