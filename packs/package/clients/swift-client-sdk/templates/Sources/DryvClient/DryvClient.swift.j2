@@ -81,10 +81,11 @@ public final class DryvClient: @unchecked Sendable {
     }
 
     public static func formData(_ items: [URLQueryItem]) -> Data {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
         let body = items.map { item in
-            let name = item.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? item.name
+            let name = item.name.addingPercentEncoding(withAllowedCharacters: allowed) ?? item.name
             let rawValue = item.value ?? ""
-            let value = rawValue.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? rawValue
+            let value = rawValue.addingPercentEncoding(withAllowedCharacters: allowed) ?? rawValue
             return "\(name)=\(value)"
         }.joined(separator: "&")
         return Data(body.utf8)
