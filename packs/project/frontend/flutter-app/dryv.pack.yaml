@@ -80,8 +80,10 @@ needs:
   operation.client: { required: true }
   schema.types: { required: true }
 
+# shared:dart-tool:start
 choose:
   dart.tool: { options: [flutter, dart] }
+# shared:dart-tool:end
 
 actions:
   files:
