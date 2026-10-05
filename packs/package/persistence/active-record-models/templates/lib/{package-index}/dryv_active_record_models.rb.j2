@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+require "active_record"
+
+{% for item in file.exports %}
+require_relative "{{ item.path.relative | replace('.rb', '') }}"
+{%- endfor %}
+
+module {{ pack.inputs.module_name }}
+end
