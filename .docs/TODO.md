@@ -103,6 +103,13 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Exposed tables — implementation present; verification deferred
 - [x] Kotlinx validation — implementation present; verification deferred
 
+### Ruby
+
+- [x] Ruby Client SDK — implementation present; verification deferred
+- [x] Sinatra backend — implementation present; verification deferred
+- [x] Active Record models — implementation present; verification deferred
+- [x] dry-validation contracts — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
@@ -113,7 +120,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] PHP — backend, client, persistence and validation represented
 - [x] Swift — backend, client, persistence and validation represented
 - [x] Kotlin — backend, client, persistence and validation represented
-- [ ] Ruby
+- [x] Ruby — backend, client, persistence and validation represented
 - [ ] Elixir
 - [ ] C / C++
 
@@ -140,4 +147,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift and Kotlin across backend, client, persistence and validation baselines.
 
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target Ruby, Elixir, C/C++ and cross-ecosystem gaps rather than duplicating existing baselines.
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target Elixir, C/C++ and cross-ecosystem gaps rather than duplicating existing baselines.
