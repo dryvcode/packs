@@ -1,0 +1,35 @@
+package {{ pack.inputs.java_package }};
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+
+@Converter
+public final class JsonAttributeConverter implements AttributeConverter<Object, String> {
+    private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
+
+    @Override
+    public String convertToDatabaseColumn(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return MAPPER.writeValueAsString(value);
+        } catch (JsonProcessingException error) {
+            throw new IllegalArgumentException("cannot serialize JSON persistence value", error);
+        }
+    }
+
+    @Override
+    public Object convertToEntityAttribute(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(value, Object.class);
+        } catch (JsonProcessingException error) {
+            throw new IllegalArgumentException("cannot deserialize JSON persistence value", error);
+        }
+    }
+}
