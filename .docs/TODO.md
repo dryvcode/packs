@@ -89,6 +89,13 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Doctrine ORM entities — implementation present; verification deferred
 - [x] Symfony Validator DTOs — implementation present; verification deferred
 
+### Swift
+
+- [x] Swift Client SDK — implementation present; verification deferred
+- [x] Vapor backend — implementation present; verification deferred
+- [x] Fluent models — implementation present; verification deferred
+- [x] Swift Codable validation — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
@@ -97,8 +104,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] .NET / C# — backend, client, persistence and validation represented
 - [x] Python — backend, client, persistence and validation represented
 - [x] PHP — backend, client, persistence and validation represented
-- [ ] PHP
-- [ ] Swift
+- [x] Swift — backend, client, persistence and validation represented
 - [ ] Kotlin-specific ecosystem
 - [ ] Ruby
 - [ ] Elixir
@@ -125,10 +131,6 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-The multi-language expansion batch is implemented on `develop`:
+The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP and Swift across backend, client, persistence and validation baselines.
 
-- Go client + standard-library backend;
-- Rust Axum backend + reqwest client + SeaORM persistence + validator DTOs;
-- Java Jakarta REST backend + HttpClient SDK + JPA persistence + Jakarta Validation DTOs.
-
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target remaining ecosystem gaps rather than duplicating these baselines.
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target Kotlin, Ruby, Elixir, C/C++ and cross-ecosystem gaps rather than duplicating existing baselines.
