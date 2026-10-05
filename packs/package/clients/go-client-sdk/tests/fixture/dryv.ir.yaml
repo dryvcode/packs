@@ -523,19 +523,15 @@ operations:
         - name: status
           value:
             $ref: '#/properties/enums/UserStatus'
-          optional: true
         - name: limit
           value:
             $ref: '#/properties/primitives/Count'
-          optional: true
         - name: traceId
           value:
             $ref: '#/properties/primitives/UserId'
-          optional: true
         - name: session
           value:
             $ref: '#/properties/primitives/DisplayName'
-          optional: true
     output:
       value:
         $ref: '#/schemas/UserProfile'
