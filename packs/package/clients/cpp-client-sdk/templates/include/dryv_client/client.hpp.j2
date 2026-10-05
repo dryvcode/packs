@@ -92,6 +92,50 @@ std::string wire_string(const T& value) {
     return wire_string(wire_json(value));
 }
 
+template <typename T>
+void append_wire_pair(
+    std::vector<std::pair<std::string, std::string>>& target,
+    const std::string& name,
+    const T& value
+) {
+    const auto json = wire_json(value);
+    if (json.is_array()) {
+        for (const auto& item : json) {
+            if (!item.is_null()) {
+                target.emplace_back(name, wire_string(item));
+            }
+        }
+        return;
+    }
+    if (!json.is_null()) {
+        target.emplace_back(name, wire_string(json));
+    }
+}
+
+template <typename T>
+void append_wire_pair(
+    std::vector<std::pair<std::string, std::string>>& target,
+    const std::string& name,
+    const std::optional<T>& value
+) {
+    if (value.has_value()) {
+        append_wire_pair(target, name, *value);
+    }
+}
+
+template <typename T>
+std::optional<nlohmann::json> optional_wire_json(const T& value) {
+    return wire_json(value);
+}
+
+template <typename T>
+std::optional<nlohmann::json> optional_wire_json(const std::optional<T>& value) {
+    if (!value.has_value()) {
+        return std::nullopt;
+    }
+    return wire_json(*value);
+}
+
 class Client {
 public:
     explicit Client(std::string base_url) : base_url_(std::move(base_url)) {
