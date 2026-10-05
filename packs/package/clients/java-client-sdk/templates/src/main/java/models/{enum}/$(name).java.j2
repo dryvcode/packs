@@ -33,6 +33,15 @@ public enum {{ file.symbol }} {
         throw new IllegalArgumentException("invalid {{ property.enum.name.local }} value: " + wireJson);
     }
 
+    public static {{ file.symbol }} fromString(String value) {
+        for ({{ file.symbol }} item : values()) {
+            if (item.toString().equals(value)) {
+                return item;
+            }
+        }
+        throw new IllegalArgumentException("invalid {{ property.enum.name.local }} value: " + value);
+    }
+
     @Override
     public String toString() {
         JsonNode value = value();
