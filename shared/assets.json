@@ -120,10 +120,12 @@
   ],
   "templates/ruby/wire-enum.rb.j2": [
     "packs/package/clients/ruby-client-sdk/templates/lib/models/{enum}/$(name).rb.j2",
-    "packs/package/backend/sinatra-backend/templates/lib/models/{enum}/$(name).rb.j2"
+    "packs/package/backend/sinatra-backend/templates/lib/models/{enum}/$(name).rb.j2",
+    "packs/package/validation/dry-validation-contracts/templates/lib/models/{enum}/$(name).rb.j2"
   ],
   "templates/ruby/wire-model.rb.j2": [
     "packs/package/clients/ruby-client-sdk/templates/lib/models/{model}/$(name).rb.j2",
-    "packs/package/backend/sinatra-backend/templates/lib/models/{model}/$(name).rb.j2"
+    "packs/package/backend/sinatra-backend/templates/lib/models/{model}/$(name).rb.j2",
+    "packs/package/validation/dry-validation-contracts/templates/lib/models/{dto}/$(name).rb.j2"
   ]
 }
