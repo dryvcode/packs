@@ -24,8 +24,10 @@ dependencies:
     "@types/react": "*"
     prettier: "*"
 
+# shared:js-package-manager:start
 choose:
   js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
 
 selections:
   forms:
