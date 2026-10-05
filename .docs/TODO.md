@@ -82,6 +82,13 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] EF Core entities — implementation present; verification deferred
 - [x] FluentValidation DTOs — implementation present; verification deferred
 
+### PHP
+
+- [x] Symfony backend — implementation present; verification deferred
+- [x] PHP Client SDK — implementation present; verification deferred
+- [x] Doctrine ORM entities — implementation present; verification deferred
+- [x] Symfony Validator DTOs — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
@@ -89,6 +96,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Java — backend, client, persistence and validation represented
 - [x] .NET / C# — backend, client, persistence and validation represented
 - [x] Python — backend, client, persistence and validation represented
+- [x] PHP — backend, client, persistence and validation represented
 - [ ] PHP
 - [ ] Swift
 - [ ] Kotlin-specific ecosystem
