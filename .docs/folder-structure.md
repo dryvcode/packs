@@ -19,8 +19,10 @@ fixtures/
   ...                       other reusable test inputs
 
 shared/
-  assets.json               canonical-source → portable pack-copy mappings
+  assets.json               canonical whole-file → portable pack-copy mappings
+  fragments.json            canonical manifest-fragment → marked target mappings
   templates/...             canonical reusable template assets
+  manifests/...             canonical reusable dryv.pack.yaml policy fragments
 
 scripts/
   lib/repository.ts         pack discovery, identity and path rules
