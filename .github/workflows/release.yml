@@ -1,12 +1,12 @@
 name: release pack
 
 # A pack is released by a tag made of its path and version:
-#   persistence/typeorm-entities/v0.1.0
+#   inject/persistence/typeorm-entities/v0.1.0
 # The tag's version must equal the pack's info.version. The release carries the pack as a
 # tarball and the full catalogue (catalog.json), generated from every pack's metadata.
 on:
   push:
-    tags: ["*/*/v*"]
+    tags: ["*/*/*/v*"]
 
 permissions:
   contents: write
@@ -50,6 +50,8 @@ jobs:
         with:
           channel: stable
       - run: bun install --frozen-lockfile
+      - name: Shared assets and catalogue are consistent
+        run: bun run shared:check && bun run catalog:check
       - name: Tag matches info.version
         run: |
           actual=$(bun -e "console.log(Bun.YAML.parse(await Bun.file('packs/${{ steps.tag.outputs.pack }}/dryv.pack.yaml').text()).info.version)")
