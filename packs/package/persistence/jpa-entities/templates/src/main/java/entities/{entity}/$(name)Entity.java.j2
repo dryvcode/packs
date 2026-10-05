@@ -155,12 +155,12 @@ public class {{ file.symbol }} {
             if (!(other instanceof Key value)) {
                 return false;
             }
-            return {% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}Objects.equals({{ java_ident(field.name.camel) }}, value.{{ java_ident(field.name.camel) }}){% if not loop.last %} && {% endif %}{% endif %}{% endfor %};
+            return {% set key_state = namespace(first=true) %}{% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{% if not key_state.first %} && {% endif %}Objects.equals({{ java_ident(field.name.camel) }}, value.{{ java_ident(field.name.camel) }}){% set key_state.first = false %}{% endif %}{% endfor %};
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash({% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{{ java_ident(field.name.camel) }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %});
+            return Objects.hash({% set hash_state = namespace(first=true) %}{% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{% if not hash_state.first %}, {% endif %}{{ java_ident(field.name.camel) }}{% set hash_state.first = false %}{% endif %}{% endfor %});
         }
     }
 {%- endif %}
