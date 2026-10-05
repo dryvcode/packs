@@ -1,0 +1,80 @@
+version: dryv.pack/v1alpha1
+key: validation.pydantic-models
+layout: package
+package:
+  name: dryv-validation
+
+source: templates
+
+info:
+  title: Pydantic Models
+  version: 0.1.0
+  description: Generates standalone Pydantic v2 models, enums and generic models from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Standalone Pydantic v2 schema and validation package.
+  languages: [python]
+  frameworks: [pydantic]
+  tags: [validation, schema, dto, python]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  generics:
+    subject: property.generic
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/generic"
+
+  generic:
+    $ref: "#/selections/generics"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/generic"
+
+  models-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/generic"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/models-index"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/model"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
