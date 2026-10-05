@@ -53,9 +53,11 @@
     "packs/package/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2"
   ],
   "templates/csharp/system-text-json-enum.cs.j2": [
-    "packs/package/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2"
+    "packs/package/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2",
+    "packs/package/backend/aspnet-core-backend/templates/Models/{enum}/$(name).cs.j2"
   ],
   "templates/csharp/system-text-json-model.cs.j2": [
-    "packs/package/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2"
+    "packs/package/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2",
+    "packs/package/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2"
   ]
 }
