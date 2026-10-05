@@ -40,7 +40,7 @@ module {{ pack.inputs.module_name }}
       path = {{ http.path.local | tojson }}
 {%- for binding in http.input_groups.path %}
       path = path.gsub(
-        "{#{ {{ (binding.name or binding.port.name.raw) | tojson }} }}",
+        {{ ('{' ~ (binding.name or binding.port.name.raw) ~ '}') | tojson }},
         URI.encode_www_form_component(DryvClient.wire({{ bound(binding) }}).to_s),
       )
 {%- endfor %}
