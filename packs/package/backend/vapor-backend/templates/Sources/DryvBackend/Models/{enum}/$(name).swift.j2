@@ -37,6 +37,10 @@ public struct {{ file.symbol }}: Codable, Equatable, Sendable, CustomStringConve
         try value.encode(to: encoder)
     }
 
+    public static func parseWire(_ raw: String) -> Self? {
+        allValues.first(where: { $0.description == raw })
+    }
+
     public var description: String {
         value.description
     }
