@@ -26,11 +26,15 @@ If a new pack needs semantics the shared fixture does not cover, extend the root
 
 Shared environment/test files belong under `fixtures/`.
 
-A pack can request them with `tests/shared-fixtures.json`:
+Reusable mappings are declared centrally in `fixtures/manifest.json`:
 
 ```json
 {
-  "<temporary-project-path>": "<path-under-fixtures>"
+  "packs": {
+    "package/clients/example-client": {
+      "<temporary-project-path>": "<path-under-fixtures>"
+    }
+  }
 }
 ```
 
