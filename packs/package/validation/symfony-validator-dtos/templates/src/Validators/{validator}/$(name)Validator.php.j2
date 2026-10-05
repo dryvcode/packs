@@ -83,11 +83,11 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 {%- elif primitive.is.uuid %}
                 new Assert\Uuid(),
 {%- elif format_regex(primitive) %}
-                new Assert\Regex(pattern: '#{{ format_regex(primitive) | replace('#', '\\#') }}#'),
+                new Assert\Regex(pattern: {{ ('#' ~ (format_regex(primitive) | replace('#', '\\#')) ~ '#') | tojson }}),
 {%- endif %}
 {%- if constraints.pattern is not none %}
 {%- for expression in constraints.pattern.match %}
-                new Assert\Regex(pattern: '#{{ expression | replace('#', '\\#') }}#'),
+                new Assert\Regex(pattern: {{ ('#' ~ (expression | replace('#', '\\#')) ~ '#') | tojson }}),
 {%- endfor %}
 {%- endif %}
 {%- elif primitive.is.number %}
