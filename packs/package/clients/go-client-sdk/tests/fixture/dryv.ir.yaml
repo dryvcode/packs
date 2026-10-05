@@ -1,0 +1,688 @@
+version: dryv.ir/v1alpha1
+key: canonical-users
+info:
+  title: Canonical Users Example
+  version: 1.0.0
+  description: End-to-end Runtime IR example demonstrating canonical Dryv naming, declarations that name their owning Group
+    and Feature, direct behavior value ports, explicit workflow flow, Operation-owned facets, and View-owned interaction meaning
+    while preserving user-authored identifiers exactly.
+groups:
+  core:
+    description: Core user-management semantics
+    facets:
+      storage:
+        namespace: identity
+  administration:
+    parent:
+      $ref: '#/groups/core'
+    description: Administrative operations
+properties:
+  primitives:
+    UserId:
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      type: string
+      kind: format
+      format: uuid
+    DisplayName:
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      type: string
+      kind: text
+      length:
+        min: 1
+        max: 120
+    Count:
+      group:
+        $ref: '#/groups/core'
+      type: number
+      kind: integer
+      format: non-negative-integer
+      range:
+        min: 0
+  enums:
+    UserStatus:
+      group:
+        $ref: '#/groups/core'
+      values:
+        active:
+          value: active
+        suspended:
+          value: suspended
+        AdminUser:
+          value: admin_user
+  composites:
+    NamePair:
+      group:
+        $ref: '#/groups/core'
+      fields:
+        firstName:
+          kind: property
+          $ref: '#/properties/primitives/DisplayName'
+        lastName:
+          kind: property
+          $ref: '#/properties/primitives/DisplayName'
+  literals:
+    ActiveStatus:
+      group:
+        $ref: '#/groups/core'
+      value: active
+  unions:
+    UserLookup:
+      group:
+        $ref: '#/groups/core'
+      discriminant: lookupKind
+      members:
+        byId:
+          kind: reference
+          $ref: '#/properties/primitives/UserId'
+        byDisplayName:
+          kind: reference
+          $ref: '#/properties/primitives/DisplayName'
+  records:
+    Labels:
+      group:
+        $ref: '#/groups/core'
+      keys:
+        kind: primitive
+        name: string
+      values:
+        kind: primitive
+        name: string
+  tuples:
+    UserCoordinate:
+      group:
+        $ref: '#/groups/core'
+      items:
+        - kind: primitive
+          name: number
+        - kind: primitive
+          name: number
+  generics:
+    Page:
+      kind: definition
+      group:
+        $ref: '#/groups/core'
+      parameters:
+        - name: T
+          description: Item carried by the page
+      value:
+        kind: object
+        fields:
+          items:
+            kind: array
+            items:
+              kind: parameter
+              name: T
+          total:
+            kind: reference
+            $ref: '#/properties/primitives/Count'
+        required:
+          - items
+          - total
+    UserPage:
+      kind: application
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      $ref: '#/properties/generics/Page'
+      arguments:
+        - kind: reference
+          $ref: '#/schemas/UserProfile'
+  temporal:
+    CreatedAt:
+      group:
+        $ref: '#/groups/core'
+      kind: instant
+      precision: millisecond
+    MaintenanceWindow:
+      group:
+        $ref: '#/groups/administration'
+      kind: interval
+      point:
+        $ref: '#/properties/temporal/CreatedAt'
+      range:
+        min: PT5M
+        max: PT2H
+expressions:
+  core.ExternalIdIsDistinct:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    description: A user's external customer ID is never their own user ID.
+    value:
+      operator: not-equal
+      left:
+        context: value
+        path:
+          - externalCustomerId
+      right:
+        context: value
+        path:
+          - id
+schemas:
+  UserProfile:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: entity
+    tags:
+      - public
+    description: User-authored identity names are preserved exactly.
+    fields:
+      id:
+        kind: property
+        $ref: '#/properties/primitives/UserId'
+        mutation: system
+      externalCustomerId:
+        kind: property
+        $ref: '#/properties/primitives/UserId'
+        mutation: create-only
+        query:
+          filter:
+            - equal
+            - not-equal
+          sort: true
+      displayName:
+        kind: property
+        $ref: '#/properties/primitives/DisplayName'
+        query:
+          filter:
+            - starts-with
+            - not-equal
+          sort: true
+          search: true
+      status:
+        kind: property
+        $ref: '#/properties/enums/UserStatus'
+        default: active
+      createdAt:
+        kind: property
+        $ref: '#/properties/temporal/CreatedAt'
+        mutation: system
+        query:
+          filter:
+            - before
+            - after
+            - between
+          sort: true
+      opaquePayload:
+        kind: unknown
+        optional: true
+      runtimeMetadata:
+        kind: dynamic
+        optional: true
+    facets:
+      storage:
+        name: users
+        primary_key:
+          - id
+        indexes:
+          - name: users_external_customer_unique
+            fields:
+              - externalCustomerId
+            unique: true
+          - name: users_status_name
+            fields:
+              - status
+              - displayName
+    invariants:
+      - name: externalIdIsDistinct
+        rule:
+          $ref: '#/expressions/core.ExternalIdIsDistinct'
+        message: The external customer ID must differ from the user ID.
+  CreateUserRequest:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: request
+    description: The caller-supplied part of a new user.
+    projection:
+      source:
+        $ref: '#/schemas/UserProfile'
+      purpose: create
+      fields:
+        externalCustomerId:
+          from: externalCustomerId
+        displayName:
+          from: displayName
+        status:
+          from: status
+          optional: true
+  UserEnvelope:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: response
+    fields:
+      user:
+        kind: schema
+        $ref: '#/schemas/UserProfile'
+policies:
+  core.Authenticated:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: authentication
+    description: Requires an authenticated caller
+  administration.Administrator:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: authorization
+    description: Requires administrative access
+failures:
+  UserNotFound:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    code: user_not_found
+    payload:
+      kind: reference
+      $ref: '#/properties/primitives/UserId'
+events:
+  UserCreated:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: domain
+    tags:
+      - audit
+    payload:
+      $ref: '#/schemas/UserProfile'
+  UsersPruned:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: integration
+    payload:
+      $ref: '#/properties/primitives/Count'
+operations:
+  ListUsers:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - public
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+      rate_limit:
+        limit: 120
+        window:
+          seconds: 60
+      cache:
+        ttl:
+          seconds: 30
+    facets:
+      http:
+        method: GET
+        path: /users
+        outputs:
+          - port:
+              $ref: '#/operations/ListUsers'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+    output:
+      value:
+        $ref: '#/properties/generics/UserPage'
+  CreateUser:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: create
+    tags:
+      - public
+    failures:
+      - $ref: '#/failures/UserNotFound'
+    emits:
+      - $ref: '#/events/UserCreated'
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/administration.Administrator'
+    execution:
+      mode: sync
+      timeout:
+        seconds: 10
+      transaction:
+        required: true
+      retry:
+        max_attempts: 3
+        backoff:
+          seconds: 1
+      audit:
+        required: true
+      invalidates:
+        - $ref: '#/operations/ListUsers'
+    facets:
+      http:
+        method: POST
+        path: /users
+        inputs:
+          - port:
+              $ref: '#/operations/CreateUser'
+              direction: input
+            source:
+              kind: body
+              representation:
+                kind: json
+                media_type: application/json
+        outputs:
+          - port:
+              $ref: '#/operations/CreateUser'
+              direction: output
+            response:
+              status: 201
+              representations:
+                - kind: json
+                  media_type: application/json
+        failures:
+          - failure:
+              $ref: '#/failures/UserNotFound'
+            status: 404
+      websocket:
+        path: /users/socket
+    input:
+      schema:
+        $ref: '#/schemas/CreateUserRequest'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  GetUser:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: detail
+    tags:
+      - public
+    failures:
+      - $ref: '#/failures/UserNotFound'
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+    facets:
+      http:
+        method: GET
+        path: /users/{id}
+        inputs:
+          - port:
+              $ref: '#/operations/GetUser'
+              direction: input
+              field: id
+            source:
+              kind: path
+              name: id
+        outputs:
+          - port:
+              $ref: '#/operations/GetUser'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+        failures:
+          - failure:
+              $ref: '#/failures/UserNotFound'
+            status: 404
+    input:
+      fields:
+        - name: id
+          value:
+            $ref: '#/properties/primitives/UserId'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  SearchUsers:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - public
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+    facets:
+      http:
+        method: GET
+        path: /users/search
+        inputs:
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: status
+            source:
+              kind: query
+              name: status
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: limit
+            source:
+              kind: query
+              name: limit
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: traceId
+            source:
+              kind: header
+              name: X-Trace-Id
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: session
+            source:
+              kind: cookie
+              name: session
+        outputs:
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+    input:
+      fields:
+        - name: status
+          value:
+            $ref: '#/properties/enums/UserStatus'
+          optional: true
+        - name: limit
+          value:
+            $ref: '#/properties/primitives/Count'
+          optional: true
+        - name: traceId
+          value:
+            $ref: '#/properties/primitives/UserId'
+          optional: true
+        - name: session
+          value:
+            $ref: '#/properties/primitives/DisplayName'
+          optional: true
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  PruneUsers:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: action
+    tags:
+      - internal
+    emits:
+      - $ref: '#/events/UsersPruned'
+    execution:
+      mode: async
+      audit:
+        required: true
+    facets:
+      schedule:
+        schedule:
+          kind: daily
+          hour: 2
+          minute: 30
+          time_zone: Africa/Nairobi
+    output:
+      value:
+        $ref: '#/properties/primitives/Count'
+views:
+  UsersView:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - admin
+    description: Browse users and create a new user without describing concrete UI controls.
+    parts:
+      users:
+        kind: present
+        description: Present the user-list result.
+        source:
+          port:
+            $ref: '#/operations/ListUsers'
+            direction: output
+      createUser:
+        kind: collect
+        description: Collect the complete CreateUser input and invoke the Operation.
+        target:
+          port:
+            $ref: '#/operations/CreateUser'
+            direction: input
+      createdUser:
+        kind: present
+        description: Present selected fields from the created user result.
+        source:
+          port:
+            $ref: '#/operations/CreateUser'
+            direction: output
+          select:
+            - - id
+            - - displayName
+            - - status
+    presentations:
+      adminWeb:
+        surface:
+          $ref: '#/surfaces/AdminWeb'
+workflows:
+  CreateUserFlow:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: process
+    inputs:
+      - name: request
+        value:
+          $ref: '#/schemas/CreateUserRequest'
+    outputs:
+      - name: user
+        value:
+          $ref: '#/schemas/UserProfile'
+    output_bindings:
+      - target:
+          $ref: '#/workflows/CreateUserFlow'
+          direction: output
+          index: 0
+        source:
+          kind: step-output
+          step:
+            $ref: '#/workflows/CreateUserFlow'
+            step: create
+          index: 0
+    start:
+      $ref: '#/workflows/CreateUserFlow'
+      step: create
+    steps:
+      create:
+        kind: operation
+        operation:
+          $ref: '#/operations/CreateUser'
+        inputs:
+          - target: 0
+            source:
+              kind: workflow-input
+              port:
+                $ref: '#/workflows/CreateUserFlow'
+                direction: input
+                index: 0
+      created:
+        kind: wait
+        event:
+          $ref: '#/events/UserCreated'
+        timeout:
+          seconds: 30
+    transitions:
+      - from:
+          $ref: '#/workflows/CreateUserFlow'
+          step: create
+        to:
+          $ref: '#/workflows/CreateUserFlow'
+          step: created
+surfaces:
+  AdminWeb:
+    kind: web
+    tags:
+      - admin
+    group:
+      $ref: '#/groups/administration'
+    description: Administrative web application
+features:
+  core.UserManagement:
+    group:
+      $ref: '#/groups/core'
+    description: Browse and create users
+  administration.UserAdministration:
+    group:
+      $ref: '#/groups/administration'
+    description: Administrative user maintenance
+applications:
+  AdminConsole:
+    description: User administration console
+    facets:
+      http:
+        root: /api
+    groups:
+      - $ref: '#/groups/core'
+      - $ref: '#/groups/administration'
+    surfaces:
+      - $ref: '#/surfaces/AdminWeb'
