@@ -30,19 +30,12 @@ jobs:
       DRYV_API_URL: http://127.0.0.1:8750
     steps:
       - uses: actions/checkout@v4
-      - name: Pack and version from the tag
-        id: tag
-        run: |
-          tag="$GITHUB_REF_NAME"
-          pack="${tag%/v*}"
-          version="${tag##*/v}"
-          test -f "packs/$pack/dryv.pack.yaml" || { echo "no pack at packs/$pack"; exit 1; }
-          echo "pack=$pack" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "name=${pack//\//-}" >> "$GITHUB_OUTPUT"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      - name: Pack and version from the tag
+        id: tag
+        run: bun scripts/release-tag.ts "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.x"
@@ -52,10 +45,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Shared assets and catalogue are consistent
         run: bun run shared:check && bun run catalog:check
-      - name: Tag matches info.version
-        run: |
-          actual=$(bun -e "console.log(Bun.YAML.parse(await Bun.file('packs/${{ steps.tag.outputs.pack }}/dryv.pack.yaml').text()).info.version)")
-          test "$actual" = "${{ steps.tag.outputs.version }}" || { echo "tag ${{ steps.tag.outputs.version }} != info.version $actual"; exit 1; }
       - name: Render and check the pack
         run: bun scripts/test-pack.ts ${{ steps.tag.outputs.pack }}
       - name: Catalogue and tarball
