@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.symfony-validator-dtos
+layout: package
+package:
+  name: dryv/generated-validation
+
+source: templates
+
+info:
+  title: Symfony Validator DTOs
+  version: 0.1.0
+  description: Generates typed PHP DTOs and Symfony Validator 8.1 validators from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Framework-neutral PHP DTOs with reusable Symfony Validator classes.
+  languages: [php]
+  frameworks: [symfony-validator]
+  tags: [dto, validation, php]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_namespace:
+    type: string
+    default: 'Dryv\Generated\Validation'
+    description: Root PHP namespace for generated DTOs and validators.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/dto"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
