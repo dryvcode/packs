@@ -24,12 +24,23 @@ type FixtureManifest = {
   packs?: Record<string, Record<string, string>>;
 };
 
-const CLI = process.env.DRYV_CLI?.trim()
-  ? process.env.DRYV_CLI.trim().split(/\s+/).map((part) =>
+function cliCommand(): string[] {
+  const configured = process.env.DRYV_CLI?.trim();
+  if (configured) {
+    return configured.split(/\s+/).map((part) =>
       part.startsWith(".") && existsSync(resolve(REPO, part)) ? resolve(REPO, part) : part,
-    )
-  : [join(REPO, "node_modules", ".bin", "dryv")];
+    );
+  }
 
+  const sibling = resolve(REPO, "../dryv/source/apps/cli/bin/dryv.ts");
+  if (existsSync(sibling)) return ["bun", sibling];
+
+  throw new Error(
+    "No current Dryv CLI found. Set DRYV_CLI or keep the dryv repository beside packs.",
+  );
+}
+
+const CLI = cliCommand();
 const API_URL = process.env.DRYV_API_URL ?? "http://127.0.0.1:8750";
 const FIXTURE_MANIFEST = JSON.parse(
   readFileSync(join(FIXTURES, "manifest.json"), "utf8"),
