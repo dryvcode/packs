@@ -13,7 +13,7 @@ public struct {{ file.symbol }}: Codable, Equatable, Sendable, CustomStringConve
 
 {%- for item in property.enum.values %}
     public static let {{ swift_ident(item.name.camel) }} = Self(
-        value: DryvJSONValue.literal({{ item.value_json | tojson }})
+        value: {% if item.value is boolean %}.bool({% if item.value %}true{% else %}false{% endif %}){% elif item.value is integer %}.int({{ item.value }}){% elif item.value is float %}.double({{ item.value }}){% elif item.value is string %}.string(String(decoding: [{{ item.value.encode('utf-8') | join(', ') }}], as: UTF8.self)){% endif %}
     )
 {%- endfor %}
 
