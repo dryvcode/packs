@@ -1,0 +1,113 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro module_for(value) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.schema) }}
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.property.enum) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_expression(value, expr) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ module_for(value) }}.from_map!({{ expr }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ module_for(value) }}.parse!({{ expr }})
+{%- else -%}{{ expr }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro encode_expression(value, expr) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ module_for(value) }}.to_map({{ expr }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ module_for(value) }}.to_wire({{ expr }})
+{%- else -%}{{ expr }}
+{%- endif -%}
+{%- endmacro -%}
+
+defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
+  @moduledoc false
+
+  defstruct [
+{%- for field in schema.fields %}
+    :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+
+  @type t :: %__MODULE__{
+{%- for field in schema.fields %}
+          {{ field.name.snake }}: term(){% if not loop.last %},{% endif %}
+{%- endfor %}
+        }
+
+  @spec from_map(map()) :: {:ok, t()} | {:error, term()}
+  def from_map(data) when is_map(data) do
+    {:ok, from_map!(data)}
+  rescue
+    error in [ArgumentError, KeyError] -> {:error, error}
+  end
+
+  @spec from_map!(map()) :: t()
+  def from_map!(data) when is_map(data) do
+    %__MODULE__{
+{%- for field in schema.fields %}
+      {{ field.name.snake }}:
+{%- if field.optional %}
+        decode_{{ field.name.snake }}(fetch_optional(data, {{ field.name.raw | tojson }}, :{{ field.name.snake }})){% if not loop.last %},{% endif %}
+{%- else %}
+        decode_{{ field.name.snake }}(fetch_required!(data, {{ field.name.raw | tojson }}, :{{ field.name.snake }})){% if not loop.last %},{% endif %}
+{%- endif %}
+{%- endfor %}
+    }
+  end
+
+  @spec to_map(t()) :: map()
+  def to_map(%__MODULE__{} = value) do
+    %{}
+{%- for field in schema.fields %}
+{%- if field.optional %}
+    |> put_optional({{ field.name.raw | tojson }}, value.{{ field.name.snake }}, &encode_{{ field.name.snake }}/1)
+{%- else %}
+    |> Map.put({{ field.name.raw | tojson }}, encode_{{ field.name.snake }}(value.{{ field.name.snake }}))
+{%- endif %}
+{%- endfor %}
+  end
+
+{%- for field in schema.fields %}
+  defp decode_{{ field.name.snake }}(nil), do: nil
+{%- if field.array is not none %}
+  defp decode_{{ field.name.snake }}(value) when is_list(value) do
+    Enum.map(value, fn item -> {{ decode_expression(field.value, 'item') }} end)
+  end
+{%- else %}
+  defp decode_{{ field.name.snake }}(value), do: {{ decode_expression(field.value, 'value') }}
+{%- endif %}
+
+  defp encode_{{ field.name.snake }}(nil), do: nil
+{%- if field.array is not none %}
+  defp encode_{{ field.name.snake }}(value) when is_list(value) do
+    Enum.map(value, fn item -> {{ encode_expression(field.value, 'item') }} end)
+  end
+{%- else %}
+  defp encode_{{ field.name.snake }}(value), do: {{ encode_expression(field.value, 'value') }}
+{%- endif %}
+
+{%- endfor %}
+  defp fetch_required!(data, raw, atom) do
+    cond do
+      Map.has_key?(data, raw) -> Map.fetch!(data, raw)
+      Map.has_key?(data, atom) -> Map.fetch!(data, atom)
+      true -> raise KeyError, key: raw, term: data
+    end
+  end
+
+  defp fetch_optional(data, raw, atom) do
+    cond do
+      Map.has_key?(data, raw) -> Map.get(data, raw)
+      Map.has_key?(data, atom) -> Map.get(data, atom)
+      true -> nil
+    end
+  end
+
+  defp put_optional(map, _key, nil, _encoder), do: map
+  defp put_optional(map, key, value, encoder), do: Map.put(map, key, encoder.(value))
+end
