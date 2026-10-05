@@ -1,0 +1,177 @@
+#pragma once
+
+#include <regex>
+#include <string>
+
+#include "dryv_validation/validation.hpp"
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+#include "{{ dependency.path.relative | replace('include/', '') }}"
+{%- endif %}{% endfor %}
+
+namespace {{ pack.inputs.namespace }} {
+
+{%- macro cpp_ident(name) -%}
+{%- if name in ['alignas','alignof','and','and_eq','asm','atomic_cancel','atomic_commit','atomic_noexcept','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','reflexpr','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','synchronized','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro model_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] != 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] == 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_pattern(primitive) -%}
+{%- if primitive.is.email -%}^[^@\s]+@[^@\s]+\.[^@\s]+$
+{%- elif primitive.is.url or primitive.is.uri -%}^[A-Za-z][A-Za-z0-9+.-]*://\S+$
+{%- elif primitive.is.uuid -%}^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+{%- elif primitive.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif primitive.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif primitive.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif primitive.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif primitive.is.hex -%}^[0-9a-fA-F]+$
+{%- elif primitive.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif primitive.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif primitive.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif primitive.is.country_code -%}^[A-Z]{2}$
+{%- elif primitive.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro scalar_checks(field, variable, path) -%}
+{%- if field.value.is.enum %}
+            if (!{{ variable }}.is_valid()) {
+                result.add({{ path }}, "invalid enum value");
+            }
+{%- endif %}
+{%- if field.value.is.primitive %}
+{%- set primitive = field.value.property.primitive %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %}
+            if ({{ variable }}.size() != {{ constraints.length.exact }}) {
+                result.add({{ path }}, "must have length {{ constraints.length.exact }}");
+            }
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %}
+            if ({{ variable }}.size() < {{ constraints.length.min }}) {
+                result.add({{ path }}, "is shorter than the minimum length");
+            }
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %}
+            if ({{ variable }}.size() > {{ constraints.length.max }}) {
+                result.add({{ path }}, "is longer than the maximum length");
+            }
+{%- endif %}
+{%- endif %}
+{%- if format_pattern(primitive) %}
+            if (!std::regex_match({{ variable }}, std::regex{R"regex({{ format_pattern(primitive) }})regex"})) {
+                result.add({{ path }}, "has invalid format");
+            }
+{%- endif %}
+{%- if constraints.pattern is not none %}
+{%- for expression in constraints.pattern.match %}
+            if (!std::regex_match({{ variable }}, std::regex{R"regex({{ expression }})regex"})) {
+                result.add({{ path }}, "does not match required pattern {{ loop.index }}");
+            }
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %}
+            if ({{ variable }} < {{ constraints.range.min }}) {
+                result.add({{ path }}, "is below the minimum");
+            }
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %}
+            if ({{ variable }} > {{ constraints.range.max }}) {
+                result.add({{ path }}, "is above the maximum");
+            }
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+            result.merge({{ validator_for(field.value.schema) }}::validate({{ variable }}), {{ path }});
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand_json(operand) -%}
+{%- if operand.is.field -%}validation_json(value.{{ cpp_ident(operand.field.snake) }})
+{%- elif operand.is.literal -%}nlohmann::json::parse(R"json({{ operand.value_json }})json")
+{%- else -%}nlohmann::json(nullptr)
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic -%}{%- set state.ok=false -%}{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_predicate(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}
+compare_json({{ operand_json(comparison.left) }}, {{ operand_json(comparison.right) }}, {{ comparison.operator | tojson }}){% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+class {{ file.symbol }} {
+public:
+    static ValidationResult validate(const {{ model_for(schema) }}& value) {
+        ValidationResult result;
+
+{%- for field in schema.fields %}
+        {
+{%- if field.optional or field.nullable %}
+            if (value.{{ cpp_ident(field.name.snake) }}.has_value()) {
+                const auto& field_value = *value.{{ cpp_ident(field.name.snake) }};
+{%- else %}
+            {
+                const auto& field_value = value.{{ cpp_ident(field.name.snake) }};
+{%- endif %}
+{%- if field.array is not none %}
+{%- if field.array.has_min %}
+                if (field_value.size() < {{ field.array.min }}) {
+                    result.add({{ field.name.raw | tojson }}, "contains fewer than the minimum number of items");
+                }
+{%- endif %}
+{%- if field.array.has_max %}
+                if (field_value.size() > {{ field.array.max }}) {
+                    result.add({{ field.name.raw | tojson }}, "contains more than the maximum number of items");
+                }
+{%- endif %}
+                for (std::size_t index = 0; index < field_value.size(); ++index) {
+                    const auto& item = field_value[index];
+                    const auto item_path = std::string{ {{ field.name.raw | tojson }} } + "[" + std::to_string(index) + "]";
+{{ scalar_checks(field, 'item', 'item_path') }}
+                }
+{%- else %}
+{{ scalar_checks(field, 'field_value', field.name.raw | tojson) }}
+{%- endif %}
+            }
+        }
+
+{%- endfor %}
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+        if (!({{ invariant_predicate(invariant) }})) {
+            result.add(
+                {{ invariant.name.raw | tojson }},
+                {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %}
+            );
+        }
+{%- endif %}
+{%- endfor %}
+
+        return result;
+    }
+};
+
+} // namespace {{ pack.inputs.namespace }}
