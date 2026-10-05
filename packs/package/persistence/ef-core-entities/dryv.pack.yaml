@@ -1,0 +1,67 @@
+version: dryv.pack/v1alpha1
+key: persistence.ef-core-entities
+layout: package
+package:
+  name: { $ref: "#/inputs.project_name" }
+
+source: templates
+
+info:
+  title: EF Core Entities
+  version: 0.1.0
+  description: Generates .NET 10 EF Core entities and fluent configurations from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: EF Core 10 entities and fluent mappings with keys, indexes and relations.
+  languages: [csharp]
+  frameworks: [ef-core]
+  tags: [entities, database, orm, csharp, dotnet]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  project_name:
+    type: string
+    default: Dryv.Entities
+    description: Generated .NET project name.
+  root_namespace:
+    type: string
+    default: Dryv.Generated.Persistence
+    description: Root C# namespace for generated entities.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+  db-context:
+    $ref: "#/selections/all-entities"
+    output:
+      name: DryvDbContext
+      symbol: DryvDbContext
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
