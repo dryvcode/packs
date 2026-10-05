@@ -1,12 +1,12 @@
 # Rust ecosystem
 
-Status: Axum backend, reqwest client SDK and SeaORM entities are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
+Status: Axum backend, reqwest client SDK, SeaORM entities and validator DTOs are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 ## Coverage
 
 - [x] backend pack
 - [x] persistence pack
-- [ ] validation/schema pack
+- [x] validation/schema pack
 - [x] API client SDK
 - [ ] project pack
 
@@ -46,15 +46,15 @@ Primary model: `typeorm-entities`.
 
 ## Validation and schema types
 
-- [ ] serde-based generated schema models
-- [ ] validator crate integration
+- [x] `package/validation/validator-dtos` — serde schema models + validator derive; verification deferred
+- [x] validator crate integration
 - [ ] garde integration
-- [ ] nested model validation
-- [ ] enum validation
-- [ ] optional/null distinction strategy
-- [ ] collection constraints
-- [ ] length/range/pattern mappings
-- [ ] UUID/URL/email and other format mappings
+- [x] nested model validation
+- [x] enum validation through serde canonical-value decoding
+- [x] optional/null distinction strategy documented, including plain Option limitation
+- [x] collection cardinality constraints; primitive element constraints documented as a gap
+- [x] length/range/pattern mappings
+- [x] UUID/URL/email and selected format mappings
 - [ ] cross-field invariant strategy
 
 Models:
@@ -65,15 +65,15 @@ Models:
 ## Client SDKs
 
 - [x] `package/clients/rust-client-sdk` — implementation present; verification deferred
-- [ ] reqwest transport
-- [ ] serde models
-- [ ] typed enums
+- [x] reqwest transport
+- [x] serde models
+- [x] typed enums with canonical wire values
 - [ ] feature clients
-- [ ] path/query/body bindings
-- [ ] response decoding
-- [ ] typed error surface
+- [x] path/query/query-object/header/cookie/body/form bindings
+- [x] response decoding
+- [x] typed error surface
 - [ ] async runtime choice and dependency implications
-- [ ] provide `operation.client`, `schema.types`, `property.enum.types`
+- [x] provide `operation.client`, `schema.types`, `property.enum.types`
 
 Models:
 
@@ -99,7 +99,7 @@ Models:
 
 ## Context questions to verify before implementation
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] security/auth
