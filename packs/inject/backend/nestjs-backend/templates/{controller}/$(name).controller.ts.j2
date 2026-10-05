@@ -52,6 +52,12 @@
 {%- macro result(operation) -%}
 Promise<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}void{% endif %}>
 {%- endmacro -%}
+{%- macro scalar_pipe(value) -%}
+{%- if value.is.integer -%}, ParseIntPipe
+{%- elif value.is.number -%}, ParseFloatPipe
+{%- elif value.is.boolean -%}, ParseBoolPipe
+{%- endif -%}
+{%- endmacro -%}
 {#- Non-empty when HTTP binds the whole (schema) input in one parameter. -#}
 {%- macro binds_whole(http) -%}
 {%- for binding in http.inputs %}{% if binding.port.field is none %}x{% endif %}{% endfor -%}
@@ -71,12 +77,18 @@ Promise<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}
 import {
   Body,
   Controller,
+  createParamDecorator,
   Delete,
   type DynamicModule,
+  type ExecutionContext,
   Get,
+  Headers,
   HttpCode,
   Module,
   Param,
+  ParseBoolPipe,
+  ParseFloatPipe,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -96,6 +108,20 @@ import { SchemaValidationPipe } from "../../common/server/validation/schema-vali
 {%- for dependency in file.dependencies %}{% if dependency.symbol %}
 import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
 {%- endif %}{% endfor %}
+
+const Cookie = createParamDecorator(
+  (name: string, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<{ headers: { cookie?: string } }>();
+    const header = request.headers.cookie;
+    if (!header) return undefined;
+
+    for (const part of header.split(";")) {
+      const [key, ...value] = part.trim().split("=");
+      if (key === name) return decodeURIComponent(value.join("="));
+    }
+    return undefined;
+  },
+);
 
 /** What {{ feature.name.title }} needs from handwritten code. */
 export abstract class {{ file.symbols.service }} {
@@ -117,7 +143,7 @@ export class {{ file.symbols.controller }} {
 {%- endfor %}
   {{ operation.name.camel }}(
 {%- for binding in http.inputs %}
-    {% if binding.is.path %}@Param("{{ binding.name }}"){% elif binding.is.query %}@Query("{{ binding.name }}"){% elif binding.is.query_object %}@Query({{ body_pipe(binding.port.value) }}){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
+    {% if binding.is.path %}@Param("{{ binding.name }}"{{ scalar_pipe(binding.port.value) }}){% elif binding.is.query %}@Query("{{ binding.name }}"{{ scalar_pipe(binding.port.value) }}){% elif binding.is.query_object %}@Query({{ body_pipe(binding.port.value) }}){% elif binding.is.header %}@Headers("{{ binding.name }}"){% elif binding.is.cookie %}@Cookie("{{ binding.name }}"){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
 {%- endfor %}
   ): {{ result(operation) }} {
     return this.service.{{ operation.name.camel }}({{ call_input(operation, http) }});
