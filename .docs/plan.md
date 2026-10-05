@@ -1,86 +1,123 @@
 # Packs repository plan
 
-Status: **final, ready to build** (2026-10-03).
+Status: **current repository maintenance plan** (2026-10-05).
 
-[pack-design-decisions.md](pack-design-decisions.md) is the authority. If this plan and that document ever disagree, that document wins, and the conflict is raised with the owner.
+The architectural authority remains Dryv's canonical contracts and the locked historical decisions in [pack-design-decisions.md](pack-design-decisions.md). This file records the current repository shape and maintenance rules.
 
-## Decisions
+## Current structure
 
-| Topic | Decision |
+```text
+packs/<layout>/<purpose>/<name>/
+fixtures/
+shared/
+scripts/
+.docs/
+```
+
+| Area | Responsibility |
 | --- | --- |
-| Repository | `dryvcode/packs`, public. Work on `develop`; CI runs for `main` only. |
-| Folder structure | `packs/<purpose>/<pack-name>`. Folders carry no runtime meaning. |
-| First purposes | `persistence`, `validation`, `backend`, `clients`, `frontend`. A new purpose is added only when a real pack needs it. |
-| Licenses | `LICENSE` (Apache-2.0) covers the repo, pack definitions, tooling and tests. `LICENSE-0BSD` covers code-emitting template material under `packs/*/*/templates/`. Generated code is under the consuming project's license. |
-| Tags | `<purpose>/<pack-name>/v<version>`, starting at `0.1.0`, e.g. `persistence/typeorm-entities/v0.1.0` |
-| Catalogue metadata | An optional `catalog` block in `dryv.pack.yaml` (`purpose`, `summary`, `languages`, `frameworks`, `tags`), added to Dryv's pack contract. The engine accepts it and ignores it at runtime. |
-| Catalogue | Generated in CI from every pack's `catalog` block and published with releases. Not committed. Discovery only. |
-| Composition | Explicit `provides`, `needs` and project bindings only |
-| Collisions | One output path, one owner. Collisions fail planning. |
-| Reproducibility | A readable tag in `dryv.yaml`, resolved by the client to a commit SHA and content digest stored in `dryv.lock.yaml` (the existing Dryv lock schema) |
-| Source type | No `source: { type: dryv }`. Projects use explicit `git` sources; `dryv packs add` will write them. |
-| Starter packs | **Copied** from the Dryv repo's `_examples/packs`. Dryv keeps its own copies for its examples and tests. |
-| Fixture testing | Every pack has a fixture rendered through the Dryv CLI and checked with its real toolchain. CI runs the engine image (`ghcr.io/dryvcode/dryv-engine`, pinned tag) as a service container. |
-| Generated-file ownership | Managed (Dryv owns it) and scaffold (created once, then owned by the project). Scaffold mode is built in Dryv **after** the first packs. Line-level ownership is not an approved design. |
+| `packs/` | Standalone, portable pack definitions, templates, pack-specific tests and docs |
+| `fixtures/` | Repository-wide reusable test inputs; owns the single canonical pack-test Runtime IR |
+| `shared/` | Canonical sources for repeated portable assets that must still be copied into released packs |
+| `scripts/` | Repository discovery, catalogue projection, shared-asset sync, duplication audits and fixture harness |
+| `.docs/` | Current repository guidance and ecosystem planning |
 
-## Pack layout
+## Pack identity
+
+A pack ID is always:
+
+`<layout>/<purpose>/<name>`
+
+Examples:
+
+- `inject/persistence/typeorm-entities`
+- `package/clients/ts-api-client`
+- `project/frontend/flutter-app`
+
+Release tags use that complete ID:
+
+`<layout>/<purpose>/<name>/v<version>`
+
+Example:
+
+`inject/persistence/typeorm-entities/v0.1.0`
+
+The same convention is used by the catalogue and release tooling. Do not maintain a second tag convention.
+
+## Catalogue
+
+`dryv.pack.yaml` is the only catalogue metadata source of truth.
+
+The generated catalogue is a projection used for discovery only. It is not committed and is never semantic/runtime authority.
+
+`scripts/catalog.ts`:
+
+- discovers packs through the shared repository utility;
+- validates pack ID, key, layout and purpose consistency;
+- validates non-empty titles, summaries and language metadata;
+- rejects duplicate catalogue IDs, keys and titles;
+- produces deterministic sorted metadata arrays;
+- emits the canonical release ref for each pack.
+
+Do not create a hand-maintained pack list beside manifests.
+
+## Fixtures
+
+Every pack test receives the exact same:
+
+`fixtures/dryv.ir.yaml`
+
+Pack-local `tests/fixture/dryv.ir.yaml` files are prohibited by the harness and duplication audit.
+
+The shared IR is a broad semantic superset. When a new pack needs another canonical semantic case, extend that file rather than creating another Runtime IR document.
+
+Reusable non-IR test files also live under `fixtures/`. Packs opt into them explicitly with `tests/shared-fixtures.json`.
+
+Pack-specific test wiring, assertions and toolchain manifests stay under the pack.
+
+## Portable shared assets
+
+Packs must remain independently releasable, so generation-time files cannot depend on sibling packs or repository-only paths.
+
+When several packs need the exact same template/support asset:
+
+1. keep one canonical source under `shared/`;
+2. map every pack-local target in `shared/assets.json`;
+3. synchronize with `bun run shared:sync`;
+4. commit the synchronized local copies;
+5. validate with `bun run shared:check`.
+
+This gives maintainers one editable source while release tarballs remain self-contained.
+
+Do not put merely similar framework-specific code into `shared/`.
+
+## Repository checks
 
 ```text
-packs/
-├── persistence/
-│   ├── typeorm-entities/        starter
-│   └── mongoose-models/         new
-├── validation/
-│   ├── class-validator-dtos/    starter
-│   ├── zod-schemas/             starter
-│   └── joi-schemas/             starter
-├── backend/
-│   ├── nestjs-backend/          starter
-│   └── fastapi-backend/         starter
-├── clients/
-│   └── dart-client-sdk/         starter
-└── frontend/
-    └── nextjs-app/              new
+bun run shared:check
+bun run catalog:check
+bun run test:packs
 ```
 
-Each pack folder:
+`shared:check` verifies synchronized assets and rejects unmanaged exact duplicate templates or pack-local fixture files.
 
-```text
-<pack-name>/
-├── dryv.pack.yaml               includes the catalog block
-├── README.md                    what it emits, slots it provides and needs, an example dryv.yaml entry
-├── CHANGELOG.md
-├── templates/                   0BSD
-└── tests/fixture/               dryv.yaml, IR, toolchain project, tests
-```
+Fixture/toolchain tests are run by the user/local environment when developing packs.
 
-Repository files:
+## Release flow
 
-```text
-README.md  LICENSE  LICENSE-0BSD
-.docs/                           decisions, plan, folder structure
-scripts/test-pack.ts             fixture harness, adapted from the Dryv repo
-scripts/catalog.ts               catalogue generator
-.github/workflows/               test every pack on PRs to main; release a pack from its tag
-```
+Release validation uses `scripts/release-tag.ts`, which shares the same pack-ID rules as catalogue generation.
 
-## Build order
+A release archive contains the selected pack directory only. Therefore all files needed at generation time must exist inside that pack after shared-asset synchronization.
 
-Each step ends with every fixture passing.
+## Non-negotiable maintenance rules
 
-1. **Dryv: `catalog` block.** Add the optional `catalog` field to the pack contract in the engine and to `dryv.pack.schema.json`, with tests.
-2. **Repository scaffolding:** licenses, README, `scripts/test-pack.ts` adapted to `packs/<purpose>/<name>`, and the CI workflow with the engine service container.
-3. **Starter packs:** copy the seven into their purpose folders, add `catalog` blocks, READMEs and changelogs, and make every fixture pass.
-4. **Catalogue generator** and the release workflow (per-pack tags, GitHub Release, published catalogue).
-5. **New pack:** `persistence/mongoose-models`.
-6. **New pack:** `frontend/nextjs-app`.
-7. **First releases:** tag every pack at `v0.1.0`.
-8. **alidantech-api:** use the released packs from git sources pinned to their tags.
-9. **Dryv: lock state.** The client resolves each tag to a commit SHA and digest and writes `dryv.lock.yaml`.
-10. **Dryv: scaffold mode**, designed and built (Dryv roadmap: generated file ownership).
-11. **Dryv: `dryv packs search` / `dryv packs add`**, reading the published catalogue.
-
-## Open questions
-
-1. The example in `pack-design-decisions.md` §1 writes `provides` as a list (`- schema.persistence`). Dryv's contract makes it a map from slot to template (`schema.persistence: { $ref: '#/templates/entity' }`). Should the example be corrected? The document is locked.
-2. The designs of `mongoose-models` and `nextjs-app`: what they emit, and which slots they provide and need. To be decided before steps 5 and 6.
+- Work on `develop`; CI runs on `main`.
+- All Dryv contracts stay on `v1alpha1`.
+- Runtime IR remains the only semantic authority.
+- Catalogue metadata is derived from manifests, never duplicated manually.
+- One shared Runtime IR fixture is used by all pack tests.
+- Exact reusable assets have one canonical source.
+- Packs remain standalone and portable after synchronization.
+- Framework-specific mappings stay inside packs.
+- Similar code is not centralized unless it represents the same contract/asset.
+- Missing Engine/context semantics are reported instead of hidden in pack conventions.
