@@ -1,30 +1,30 @@
 # C / C++ ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: C++ client, Crow backend, sqlite_orm persistence and generated validation packs are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance. Plain C remains research-only.
 
 This ecosystem should be treated carefully because framework conventions, dependency management and ownership patterns vary widely.
 
 ## Coverage
 
 - [ ] C client SDK research
-- [ ] C++ client SDK
-- [ ] C++ backend pack
-- [ ] C++ persistence pack
-- [ ] C++ schema/validation pack
+- [x] C++ client SDK
+- [x] C++ backend pack
+- [x] C++ persistence pack
+- [x] C++ schema/validation pack
 - [ ] project pack
 
 ## Client SDKs
 
-- [ ] `package/clients/cpp-client-sdk`
-- [ ] standard library + libcurl baseline research
+- [x] `package/clients/cpp-client-sdk` — implementation present; verification deferred
+- [x] cpr 1.14 client baseline selected
 - [ ] cpr-backed transport research
 - [ ] cpp-httplib client research
 - [ ] JSON library choice audit (nlohmann/json or alternative)
-- [ ] generated structs/classes and enums
-- [ ] path/query/body bindings
-- [ ] typed output decoding
-- [ ] error/result strategy
-- [ ] CMake package fixture
+- [x] generated structs/classes and canonical enum wrappers
+- [x] path/query/query-object/body/header/cookie/form bindings
+- [x] typed output decoding
+- [x] generated `Result<T>` + `ApiError` strategy
+- [x] CMake package metadata
 
 - [ ] C client SDK feasibility audit
 - [ ] libcurl transport
@@ -39,40 +39,41 @@ Models:
 
 ## Backends
 
-- [ ] Crow backend
+- [x] `package/backend/crow-backend` — Crow 1.3.4 implementation present; verification deferred
 - [ ] Drogon backend
 - [ ] oat++ backend
 - [ ] Pistache research
 - [ ] cpp-httplib server research
-- [ ] generated routing separated from business interfaces
-- [ ] path/query/body binding
-- [ ] output/status mapping
-- [ ] feature/group organization
+- [x] generated routing separated from business service interfaces
+- [x] path/query/query-object/body/header/cookie/form binding
+- [x] output/status mapping
+- [x] feature/group organization
 
 Primary model: `fastapi-backend`.
 
 ## Persistence
 
 - [ ] SOCI models/integration research
-- [ ] sqlite_orm research
+- [x] `package/persistence/sqlite-orm-models` — sqlite_orm 1.9.1 implementation present; verification deferred
 - [ ] ODB research
 - [ ] Drogon ORM research
-- [ ] primary/generated keys
-- [ ] indexes/uniqueness
-- [ ] relations
-- [ ] nullability/defaults
-- [ ] enum/temporal/decimal mapping
+- [x] primary/generated keys
+- [x] indexes/uniqueness
+- [x] relations
+- [x] nullability
+- [ ] defaults/check expressions
+- [x] enum/temporal/decimal mapping
 
 Primary model: `typeorm-entities`.
 
 ## Validation/schema
 
-- [ ] generated model validation helpers
+- [x] `package/validation/cpp-validation` — generated model validation helpers present; verification deferred
 - [ ] Boost validation-related ecosystem research
-- [ ] compile-time vs runtime validation strategy
-- [ ] ranges/lengths/patterns/formats
-- [ ] nested/collection validation
-- [ ] simple invariants
+- [x] runtime validation with structured `ValidationResult`
+- [x] ranges/lengths/patterns/formats
+- [x] nested/collection validation
+- [x] simple non-arithmetic invariants
 
 ## Projects
 
@@ -91,9 +92,9 @@ Primary model: `typeorm-entities`.
 
 ## Context questions to verify
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] auth/security
-- [ ] ownership/allocation behavior should stay target-specific
-- [ ] C ABI constraints should not affect Runtime IR
+- [x] ownership/allocation behavior stays target-specific
+- [x] C ABI constraints do not affect Runtime IR
