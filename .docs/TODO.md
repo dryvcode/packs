@@ -143,6 +143,11 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 - [x] JSON Schema 2020-12 — `package/validation/json-schema`; verification deferred
 
+### Documentation / contracts
+
+- [x] Markdown Reference — `inject/documentation/markdown-reference`; verification deferred
+- [ ] OpenAPI — blocked on canonical effective HTTP path resolution; do not approximate
+
 ## Ecosystem research
 
 - [x] [00 — Current audit](ecosystems/00-audit.md)
@@ -166,4 +171,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir and C++ across backend, client, persistence and validation baselines.
 
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target cross-ecosystem capabilities, project composition and remaining semantic gaps rather than duplicating existing baselines.
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Cross-ecosystem documentation is now represented by the Markdown Reference pack. Next work should target portable testing/contracts, migration/schema output, project composition, and explicit semantic gaps rather than duplicating language baselines.
