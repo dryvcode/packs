@@ -31,22 +31,6 @@ const CLI = process.env.DRYV_CLI?.trim()
   : [join(REPO, "node_modules", ".bin", "dryv")];
 const API_URL = process.env.DRYV_API_URL ?? "http://127.0.0.1:8750";
 
-function allPacks(): string[] {
-  const packs: string[] = [];
-  for (const layout of readdirSync(PACKS, { withFileTypes: true })) {
-    if (!layout.isDirectory()) continue;
-    for (const purpose of readdirSync(join(PACKS, layout.name), { withFileTypes: true })) {
-      if (!purpose.isDirectory()) continue;
-      for (const pack of readdirSync(join(PACKS, layout.name, purpose.name), { withFileTypes: true })) {
-        if (pack.isDirectory() && existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))) {
-          packs.push(`${layout.name}/${purpose.name}/${pack.name}`);
-        }
-      }
-    }
-  }
-  return packs.sort();
-}
-
 function run(command: string[], cwd: string): number {
   return Bun.spawnSync(command, { cwd, stdout: "inherit", stderr: "inherit" }).exitCode;
 }
@@ -113,7 +97,7 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const keep = args.includes("--keep");
   const named = args.filter((arg) => !arg.startsWith("--"));
-  const packs = args.includes("--all") ? allPacks() : named;
+  const packs = args.includes("--all") ? packIds() : named;
   if (packs.length === 0) {
     console.error("usage: bun scripts/test-pack.ts <layout>/<purpose>/<name> [...] | --all");
     return 2;
