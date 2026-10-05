@@ -161,8 +161,15 @@ public func {{ swift_ident(file.symbol) }}(
     }
 {%- endif %}
 {%- for binding in http.input_groups.body %}
+{%- if binding_optional(operation, binding) %}
+    if let bodyValue = {{ bound(binding) }} {
+        request.httpBody = try client.encode(bodyValue)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    }
+{%- else %}
     request.httpBody = try client.encode({{ bound(binding) }})
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+{%- endif %}
 {%- endfor %}
 {%- if http.input_groups.form %}
     var formItems: [URLQueryItem] = []
