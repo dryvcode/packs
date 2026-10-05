@@ -42,13 +42,13 @@ from .base import Base
 {%- elif value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}Any
 {%- elif value.is.boolean -%}bool
 {%- elif value.is.integer -%}int
-{%- elif value.is_decimal or value.is_money -%}Decimal
+{%- elif value.is.decimal or value.is.money -%}Decimal
 {%- elif value.is.number -%}float
 {%- elif value.is.uuid -%}UUID
 {%- elif value.is.temporal and value.is.date -%}date
 {%- elif value.is.temporal and value.is.time -%}time
-{%- elif value.is.temporal and (value.is_date_time or value.is_instant or value.is_zoned_date_time) -%}datetime
-{%- elif value.is.temporal and (value.is_duration or value.is_interval) -%}timedelta
+{%- elif value.is.temporal and (value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}datetime
+{%- elif value.is.temporal and (value.is.duration or value.is.interval) -%}timedelta
 {%- elif value.is.string -%}str
 {%- else -%}Any
 {%- endif -%}{%- if field.optional or field.nullable -%} | None{%- endif -%}
@@ -59,7 +59,7 @@ from .base import Base
 {%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}JSON
 {%- elif value.is.boolean -%}Boolean
 {%- elif value.is.integer -%}Integer
-{%- elif value.is_decimal or value.is_money -%}
+{%- elif value.is.decimal or value.is.money -%}
   {%- set constraints = value.property.primitive.constraints -%}
   {%- if constraints.has_precision and constraints.has_scale -%}Numeric({{ constraints.precision }}, {{ constraints.scale }})
   {%- else -%}Numeric
@@ -68,9 +68,9 @@ from .base import Base
 {%- elif value.is.uuid -%}Uuid
 {%- elif value.is.temporal and value.is.date -%}Date
 {%- elif value.is.temporal and value.is.time -%}Time
-{%- elif value.is.temporal and (value.is_instant or value.is_zoned_date_time) -%}DateTime(timezone=True)
-{%- elif value.is.temporal and value.is_date_time -%}DateTime
-{%- elif value.is.temporal and (value.is_duration or value.is_interval) -%}Interval
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}DateTime(timezone=True)
+{%- elif value.is.temporal and value.is.date_time -%}DateTime
+{%- elif value.is.temporal and (value.is.duration or value.is.interval) -%}Interval
 {%- elif value.is.string -%}
   {%- set length = value.property.primitive.constraints.length -%}
   {%- if length is not none and length.has_exact -%}String({{ length.exact }})
