@@ -12,7 +12,7 @@
 {%- elif value.is.primitive -%}
   {%- if value.property.primitive.is.boolean -%}bool
   {%- elif value.property.primitive.is.integer -%}int
-  {%- elif value.property.primitive.is_decimal or value.property.primitive.is_money -%}Decimal
+  {%- elif value.property.primitive.is.decimal or value.property.primitive.is.money -%}Decimal
   {%- elif value.property.primitive.is.number -%}float
   {%- elif value.property.primitive.is.uuid -%}UUID
   {%- else -%}str
