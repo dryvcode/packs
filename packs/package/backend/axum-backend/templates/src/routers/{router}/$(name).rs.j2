@@ -1,3 +1,10 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
+{%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
+
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
@@ -42,10 +49,10 @@
 {%- for binding in http.inputs -%}
 {%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
 {%- set state.found = true -%}
-{%- if binding.is.path -%}path.{{ field.name.snake }}
-{%- elif binding.is.query -%}query.{{ field.name.snake }}
-{%- elif binding.is.header or binding.is.cookie -%}{{ field.name.snake }}
-{%- elif binding.is.form -%}form.{{ field.name.snake }}
+{%- if binding.is.path -%}path.{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.query -%}query.{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.header or binding.is.cookie -%}{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.form -%}form.{{ rust_ident(field.name.snake) }}
 {%- elif binding.is.query_object -%}query_object_{{ field.name.snake }}
 {%- elif binding.is.body -%}body_{{ field.name.snake }}
 {%- else -%}unreachable!()
@@ -59,7 +66,7 @@
 {%- if operation.input -%}
 {%- if operation.input.kind == 'schema' -%}, input: {{ rust_type(operation.input.value) }}
 {%- else -%}
-{%- for field in operation.input.fields -%}, {{ field.name.snake }}: {% if field.optional %}Option<{% endif %}{{ rust_type(field.value) }}{% if field.optional %}>{% endif %}
+{%- for field in operation.input.fields -%}, {{ rust_ident(field.name.snake) }}: {% if field.optional %}Option<{% endif %}{{ rust_type(field.value) }}{% if field.optional %}>{% endif %}
 {%- endfor -%}
 {%- endif -%}
 {%- endif -%}
@@ -75,7 +82,7 @@ Result<{% if operation.output %}{{ rust_type(operation.output.value) }}{% else %
 {%- if binds_whole(http) -%}input
 {%- else -%}{{ rust_type(operation.input.value) }} {
 {%- for field in operation.input.fields %}
-            {{ field.name.snake }}: {{ binding_expr(http, field) }},
+            {{ rust_ident(field.name.snake) }}: {{ binding_expr(http, field) }},
 {%- endfor %}
         }
 {%- endif -%}
@@ -116,7 +123,7 @@ use crate::models::{{ dependency.symbol }};
 #[async_trait]
 pub trait {{ file.symbols.service }}: Send + Sync + 'static {
 {%- for operation in operations %}
-    async fn {{ operation.name.snake }}(&self{{ service_params(operation) }}) -> {{ service_result(operation) }};
+    async fn {{ rust_ident(operation.name.snake) }}(&self{{ service_params(operation) }}) -> {{ service_result(operation) }};
 {%- endfor %}
 }
 
@@ -128,7 +135,7 @@ pub trait {{ file.symbols.service }}: Send + Sync + 'static {
 struct {{ operation.name.pascal }}Path {
 {%- for binding in http.input_groups.path %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
-    {{ binding.port.name.snake }}: {{ bound_type(operation, binding) }},
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
 {%- endfor %}
 }
 {%- endif %}
@@ -138,7 +145,7 @@ struct {{ operation.name.pascal }}Path {
 struct {{ operation.name.pascal }}Query {
 {%- for binding in http.input_groups.query %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
-    {{ binding.port.name.snake }}: {{ bound_type(operation, binding) }},
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
 {%- endfor %}
 }
 {%- endif %}
@@ -148,7 +155,7 @@ struct {{ operation.name.pascal }}Query {
 struct {{ operation.name.pascal }}Form {
 {%- for binding in http.input_groups.form %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
-    {{ binding.port.name.snake }}: {{ bound_type(operation, binding) }},
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
 {%- endfor %}
 }
 {%- endif %}
@@ -159,7 +166,7 @@ pub fn {{ file.symbols.router }}(service: Arc<dyn {{ file.symbols.service }}>) -
 {%- for operation in operations %}
         .route(
             "{{ operation.facets.http.path.local }}",
-            on(MethodFilter::{{ operation.facets.http.method }}, {{ operation.name.snake }}),
+            on(MethodFilter::{{ operation.facets.http.method }}, {{ rust_ident(operation.name.snake) }}),
         )
 {%- endfor %}
         .with_state(service)
@@ -168,7 +175,7 @@ pub fn {{ file.symbols.router }}(service: Arc<dyn {{ file.symbols.service }}>) -
 {%- for operation in operations %}
 {%- set http = operation.facets.http %}
 
-async fn {{ operation.name.snake }}(
+async fn {{ rust_ident(operation.name.snake) }}(
     State(service): State<Arc<dyn {{ file.symbols.service }}>>,
 {%- if http.input_groups.path %}
     Path(path): Path<{{ operation.name.pascal }}Path>,
@@ -205,21 +212,21 @@ async fn {{ operation.name.snake }}(
     ))
 {%- else %}
 {%- for binding in http.input_groups.header %}
-    let {{ binding.port.name.snake }}: {{ bound_type(operation, binding) }} =
+    let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
         {% if binding_optional(operation, binding) %}optional_header{% else %}required_header{% endif %}::<{{ rust_type(binding.port.value) }}>(
             &headers,
             "{{ binding.name or binding.port.name.raw }}",
         )?;
 {%- endfor %}
 {%- for binding in http.input_groups.cookie %}
-    let {{ binding.port.name.snake }}: {{ bound_type(operation, binding) }} =
+    let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
         {% if binding_optional(operation, binding) %}optional_cookie{% else %}required_cookie{% endif %}::<{{ rust_type(binding.port.value) }}>(
             &headers,
             "{{ binding.name or binding.port.name.raw }}",
         )?;
 {%- endfor %}
 
-    let output = service.{{ operation.name.snake }}({{ service_args(operation, http) }}).await?;
+    let output = service.{{ rust_ident(operation.name.snake) }}({{ service_args(operation, http) }}).await?;
     let status = StatusCode::from_u16({{ success_status(http) }})
         .expect("Dryv validates HTTP status codes");
 {%- if operation.output %}
