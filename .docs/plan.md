@@ -71,7 +71,7 @@ Pack-local `tests/fixture/dryv.ir.yaml` files are prohibited by the harness and 
 
 The shared IR is a broad semantic superset. When a new pack needs another canonical semantic case, extend that file rather than creating another Runtime IR document.
 
-Reusable non-IR test files also live under `fixtures/`. Packs opt into them explicitly with `tests/shared-fixtures.json`.
+Reusable non-IR test files also live under `fixtures/`. Reuse mappings are declared once in `fixtures/manifest.json`, keyed by canonical pack ID.
 
 Pack-specific test wiring, assertions and toolchain manifests stay under the pack.
 
@@ -79,13 +79,11 @@ Pack-specific test wiring, assertions and toolchain manifests stay under the pac
 
 Packs must remain independently releasable, so generation-time files cannot depend on sibling packs or repository-only paths.
 
-When several packs need the exact same template/support asset:
+When several packs need the exact same template/support asset, keep one canonical source under `shared/` and map its portable pack-local copies in `shared/assets.json`.
 
-1. keep one canonical source under `shared/`;
-2. map every pack-local target in `shared/assets.json`;
-3. synchronize with `bun run shared:sync`;
-4. commit the synchronized local copies;
-5. validate with `bun run shared:check`.
+When several manifests repeat the exact same repository policy block, keep one canonical YAML fragment under `shared/manifests/` and map its marked regions in `shared/fragments.json`.
+
+Synchronize both forms with `bun run shared:sync`, commit the portable copies, and validate with `bun run shared:check`.
 
 This gives maintainers one editable source while release tarballs remain self-contained.
 
