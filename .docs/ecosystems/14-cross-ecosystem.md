@@ -35,7 +35,7 @@ Questions:
 
 - [ ] generated API contract tests
 - [ ] HTTP smoke tests
-- [ ] schema validation test fixtures
+- [x] authored schema example fixtures — `inject/testing/schema-examples`
 - [ ] generated client integration tests
 - [ ] generated backend route tests
 - [ ] persistence mapping tests
@@ -43,7 +43,7 @@ Questions:
 - [ ] Postman collection generation research
 - [ ] Bruno collection generation research
 
-Potential future purpose: `testing`, only if justified.
+`testing` is now a proven purpose through `inject/testing/schema-examples`. Future testing packs must remain explicit about whether they materialize authored cases or synthesize/execute behavior.
 
 ## Configuration
 
