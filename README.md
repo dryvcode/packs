@@ -1,6 +1,8 @@
 # Dryv packs
 
-[![built with dryv](https://dryv.alidantech.org/badge/built-with-dryv.svg)](https://dryv.alidantech.org)
+<p align="left">
+  <a href="https://dryv.alidantech.org"><img src=".docs/badge/built-with-dryv.svg" alt="built with dryv"></a>
+</p>
 
 Official packs for [Dryv](https://dryv.alidantech.org): reusable templates that turn your Dryv project's meaning into real code for well-known packages and frameworks such as TypeORM, NestJS and zod.
 
