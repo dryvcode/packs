@@ -30,11 +30,7 @@ Framework-specific concepts do not belong in this fixture.
 
 Reusable non-IR fixture files also belong under this directory.
 
-A pack opts into one through:
-
-`packs/<layout>/<purpose>/<pack>/tests/shared-fixtures.json`
-
-The file maps the destination inside the temporary fixture project to a path under this directory.
+Reusable mappings are declared once in `fixtures/manifest.json`, keyed by canonical pack ID. Each mapping sends a destination inside the temporary fixture project to a path under this directory.
 
 Example:
 
