@@ -39,6 +39,25 @@ packs:
     destination: { $ref: "#/destinations/code/backend" }
 ```
 
+## Repository maintenance
+
+The repository avoids parallel sources of truth:
+
+- pack catalogue metadata lives only in each pack's `dryv.pack.yaml`; `catalog.json` is generated and not committed;
+- every pack test uses the same `fixtures/dryv.ir.yaml`;
+- reusable test inputs live under `fixtures/`;
+- exact reusable template/support assets have canonical sources under `shared/` and synchronized copies inside packs so released packs stay standalone;
+- repository pack discovery, pack IDs and release refs come from `scripts/lib/repository.ts`.
+
+Useful consistency checks:
+
+```bash
+bun run shared:check
+bun run catalog:check
+```
+
+See [pack testing](.docs/testing.md) and [folder structure](.docs/folder-structure.md).
+
 ## License
 
 - The repository, pack definitions, tooling and tests: [Apache License 2.0](LICENSE).
