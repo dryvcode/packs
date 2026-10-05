@@ -80,8 +80,10 @@ provides:
   property.enum.types:
     $ref: '#/templates/enum'
 
+# shared:js-package-manager:start
 choose:
   js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
 
 actions:
   final:
