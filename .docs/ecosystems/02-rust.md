@@ -1,13 +1,13 @@
 # Rust ecosystem
 
-Status: Axum backend is implemented on `develop` but verification is deferred while the Dryv Engine is under maintenance. Other Rust candidates remain backlog.
+Status: Axum backend, reqwest client SDK and SeaORM entities are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 ## Coverage
 
 - [x] backend pack
-- [ ] persistence pack
+- [x] persistence pack
 - [ ] validation/schema pack
-- [ ] API client SDK
+- [x] API client SDK
 - [ ] project pack
 
 ## Backends
@@ -29,7 +29,7 @@ Best initial structural model: `fastapi-backend`.
 ## Persistence
 
 - [ ] Diesel models/schema integration
-- [ ] SeaORM entities
+- [x] `package/persistence/seaorm-entities` — implementation present; verification deferred
 - [ ] SQLx models
 - [ ] evaluate rbatis as a later ecosystem candidate
 - [ ] map storage names and namespaces
@@ -64,7 +64,7 @@ Models:
 
 ## Client SDKs
 
-- [ ] `package/clients/rust-client-sdk`
+- [x] `package/clients/rust-client-sdk` — implementation present; verification deferred
 - [ ] reqwest transport
 - [ ] serde models
 - [ ] typed enums
