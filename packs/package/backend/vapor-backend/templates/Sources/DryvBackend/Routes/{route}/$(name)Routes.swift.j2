@@ -1,0 +1,242 @@
+import Foundation
+import Vapor
+
+{%- macro swift_ident(name) -%}
+{%- if name in ['associatedtype','class','deinit','enum','extension','fileprivate','func','import','init','inout','internal','let','open','operator','private','protocol','public','rethrows','static','struct','subscript','typealias','var','break','case','continue','default','defer','do','else','fallthrough','for','guard','if','in','repeat','return','throw','switch','where','while','as','Any','catch','false','is','nil','super','self','Self','throws','true','try','_'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}DryvJSONValue
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'DryvJSONValue' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'DryvJSONValue' }}
+{%- elif value.is.boolean -%}Bool
+{%- elif value.is.integer -%}Int64
+{%- elif value.is.decimal or value.is.money -%}Decimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.record -%}[String: DryvJSONValue]
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}DryvJSONValue
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operation_field_type(field) -%}
+{{- base_type(field.value) -}}{%- if field.optional -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro schema_field_type(field) -%}
+{%- if field.array is not none -%}[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro method_name(name) -%}{{ swift_ident(name.camel) }}{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for output in http.outputs -%}{%- set result.code = output.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+{%- macro whole_binding(http, kind) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and ((kind == 'body' and binding.is.body) or (kind == 'query' and binding.is.query_object) or (kind == 'form' and binding.is.form)) -%}x{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro extract(field, binding, variable, type_name, optional) -%}
+{%- set wire_name = binding.name or binding.port.name.raw -%}
+{%- if binding.is.query %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}? = req.query[{{ type_name }}.self, at: {{ wire_name | tojson }}]
+{%- else %}
+        let {{ variable }}: {{ type_name }} = try req.query.get({{ type_name }}.self, at: {{ wire_name | tojson }})
+{%- endif %}
+{%- elif binding.is.form %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}? = req.content[{{ type_name }}.self, at: {{ wire_name | tojson }}]
+{%- else %}
+        let {{ variable }}: {{ type_name }} = try req.content.get({{ type_name }}.self, at: {{ wire_name | tojson }})
+{%- endif %}
+{%- elif binding.is.body %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}? = try? req.content.decode({{ type_name }}.self)
+{%- else %}
+        let {{ variable }}: {{ type_name }} = try req.content.decode({{ type_name }}.self)
+{%- endif %}
+{%- elif binding.is.path %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}?
+        if let raw = req.parameters.get({{ wire_name | tojson }}) {
+            {{ variable }} = try DryvVapor.decodeWire(raw, as: {{ type_name }}.self, name: {{ wire_name | tojson }})
+        } else {
+            {{ variable }} = nil
+        }
+{%- else %}
+        guard let raw{{ field.name.pascal }} = req.parameters.get({{ wire_name | tojson }}) else {
+            throw Abort(.badRequest, reason: "Missing path parameter {{ wire_name }}")
+        }
+        let {{ variable }}: {{ type_name }} = try DryvVapor.decodeWire(
+            raw{{ field.name.pascal }},
+            as: {{ type_name }}.self,
+            name: {{ wire_name | tojson }}
+        )
+{%- endif %}
+{%- elif binding.is.header %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}?
+        if let raw = req.headers.first(name: {{ wire_name | tojson }}) {
+            {{ variable }} = try DryvVapor.decodeWire(raw, as: {{ type_name }}.self, name: {{ wire_name | tojson }})
+        } else {
+            {{ variable }} = nil
+        }
+{%- else %}
+        guard let raw{{ field.name.pascal }} = req.headers.first(name: {{ wire_name | tojson }}) else {
+            throw Abort(.badRequest, reason: "Missing header {{ wire_name }}")
+        }
+        let {{ variable }}: {{ type_name }} = try DryvVapor.decodeWire(
+            raw{{ field.name.pascal }},
+            as: {{ type_name }}.self,
+            name: {{ wire_name | tojson }}
+        )
+{%- endif %}
+{%- elif binding.is.cookie %}
+{%- if optional %}
+        let {{ variable }}: {{ type_name }}?
+        if let raw = req.cookies[{{ wire_name | tojson }}]?.string {
+            {{ variable }} = try DryvVapor.decodeWire(raw, as: {{ type_name }}.self, name: {{ wire_name | tojson }})
+        } else {
+            {{ variable }} = nil
+        }
+{%- else %}
+        guard let raw{{ field.name.pascal }} = req.cookies[{{ wire_name | tojson }}]?.string else {
+            throw Abort(.badRequest, reason: "Missing cookie {{ wire_name }}")
+        }
+        let {{ variable }}: {{ type_name }} = try DryvVapor.decodeWire(
+            raw{{ field.name.pascal }},
+            as: {{ type_name }}.self,
+            name: {{ wire_name | tojson }}
+        )
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+public protocol {{ file.symbols.service }}: Sendable {
+{%- for operation in operations %}
+    func {{ method_name(operation.name) }}(
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+        input: {{ base_type(operation.input.value) }}
+{%- else %}
+{%- for field in operation.input.fields %}
+        {{ swift_ident(field.name.camel) }}: {{ operation_field_type(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+    ) async throws{% if operation.output %} -> {{ base_type(operation.output.value) }}{% endif %}
+{%- endfor %}
+}
+
+public func {{ file.symbols.register }}(
+    on routes: RoutesBuilder,
+    service: any {{ file.symbols.service }}
+) {
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    routes.on(
+        .{{ http.method }},
+        [
+{%- for segment in http.path.segments %}
+            {% if segment.kind == 'literal' %}{{ segment.literal | tojson }}{% else %}{{ (':' ~ segment.parameter.raw) | tojson }}{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        ]
+    ) { req async throws -> Response in
+{%- if http.input_groups.multipart %}
+        throw Abort(.notImplemented, reason: "Multipart bindings require an explicit Swift semantic mapping.")
+{%- else %}
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+{%- if whole_binding(http, 'body') %}
+        let serviceInput = try req.content.decode({{ base_type(operation.input.value) }}.self)
+{%- elif whole_binding(http, 'query') %}
+        let serviceInput = try req.query.decode({{ base_type(operation.input.value) }}.self)
+{%- elif whole_binding(http, 'form') %}
+        let serviceInput = try req.content.decode({{ base_type(operation.input.value) }}.self)
+{%- else %}
+{%- for field in operation.input.value.schema.fields %}
+{%- set state = namespace(found=false) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}
+{%- set state.found=true %}
+{{ extract(field, binding, 'input' ~ field.name.pascal, (schema_field_type(field) | replace('?', '')), field.optional) }}
+{%- endif %}
+{%- endfor %}
+{%- if not state.found %}
+{%- if field.optional %}
+        let input{{ field.name.pascal }}: {{ schema_field_type(field) }} = nil
+{%- else %}
+        throw Abort(.internalServerError, reason: "Dryv field {{ field.name.raw }} has no HTTP binding")
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+        let serviceInput = {{ base_type(operation.input.value) }}(
+{%- for field in operation.input.value.schema.fields %}
+            {{ swift_ident(field.name.camel) }}: input{{ field.name.pascal }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        )
+{%- endif %}
+{%- else %}
+{%- for field in operation.input.fields %}
+{%- set state = namespace(found=false) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}
+{%- set state.found=true %}
+{{ extract(field, binding, swift_ident(field.name.camel), base_type(field.value), field.optional) }}
+{%- endif %}
+{%- endfor %}
+{%- if not state.found %}
+{%- if field.optional %}
+        let {{ swift_ident(field.name.camel) }}: {{ operation_field_type(field) }} = nil
+{%- else %}
+        throw Abort(.internalServerError, reason: "Dryv input {{ field.name.raw }} has no HTTP binding")
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+
+{%- if operation.output %}
+        let output = try await service.{{ method_name(operation.name) }}(
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+            input: serviceInput
+{%- else %}
+{%- for field in operation.input.fields %}
+            {{ swift_ident(field.name.camel) }}: {{ swift_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+        )
+        return try DryvVapor.jsonResponse(status: {{ success_status(http) }}, value: output)
+{%- else %}
+        try await service.{{ method_name(operation.name) }}(
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+            input: serviceInput
+{%- else %}
+{%- for field in operation.input.fields %}
+            {{ swift_ident(field.name.camel) }}: {{ swift_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+        )
+        return DryvVapor.emptyResponse(status: {{ success_status(http) }})
+{%- endif %}
+{%- endif %}
+    }
+{%- endfor %}
+}
