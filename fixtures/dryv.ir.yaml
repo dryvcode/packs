@@ -1,0 +1,1035 @@
+version: dryv.ir/v1alpha1
+key: public-packs-shared-fixture
+info:
+  title: Public Packs Shared Fixture
+  version: 1.0.0
+  description: Shared Runtime IR fixture used by every public pack test. It intentionally covers HTTP clients and backends, CRUD forms, validation constraints, persistence relations, storage metadata, enums, invariants and canonical behavior.
+groups:
+  core:
+    description: Core user-management semantics
+    facets:
+      storage:
+        namespace: identity
+  administration:
+    parent:
+      $ref: '#/groups/core'
+    description: Administrative operations
+  accounts:
+    description: Sign-up and profiles.
+
+  commerce:
+    description: Carts and their items.
+    facets:
+      storage:
+        namespace: commerce
+
+  forms:
+    description: User management
+
+properties:
+  primitives:
+    UserId:
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      type: string
+      kind: format
+      format: uuid
+    DisplayName:
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      type: string
+      kind: text
+      length:
+        min: 1
+        max: 120
+    Count:
+      group:
+        $ref: '#/groups/core'
+      type: number
+      kind: integer
+      format: non-negative-integer
+      range:
+        min: 0
+    accounts.Name:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: text
+      length: { min: 1, max: 60 }
+    accounts.Email:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: format
+      format: email
+    accounts.Phone:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: format
+      format: phone
+    accounts.Url:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: format
+      format: url
+    accounts.Password:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: text
+      length: { min: 8, max: 50 }
+    accounts.Age:
+      group: { $ref: '#/groups/accounts' }
+      type: number
+      kind: integer
+      range: { min: 18, max: 120 }
+    accounts.Tag:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: text
+      length: { min: 2, max: 20 }
+    accounts.PostalCode:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: text
+      pattern: { match: ['^[0-9]{5}$'] }
+    accounts.Id:
+      group: { $ref: '#/groups/accounts' }
+      type: string
+      kind: format
+      format: uuid
+    commerce.Id:
+      group: { $ref: '#/groups/commerce' }
+      type: string
+      kind: format
+      format: uuid
+    commerce.Title:
+      group: { $ref: '#/groups/commerce' }
+      type: string
+      kind: text
+      length: { min: 1, max: 120 }
+    commerce.Quantity:
+      group: { $ref: '#/groups/commerce' }
+      type: number
+      kind: integer
+      range: { min: 1, max: 999 }
+    commerce.Cents:
+      group: { $ref: '#/groups/commerce' }
+      type: number
+      kind: integer
+      format: money
+      minor_units: true
+      currency: KES
+      description: Monetary amount in cents.
+    commerce.Rate:
+      group: { $ref: '#/groups/commerce' }
+      type: number
+      kind: decimal
+      precision: 5
+      scale: 2
+    forms.FormDisplayName:
+      group: { $ref: "#/groups/forms" }
+      type: string
+      kind: text
+      length: { min: 2, max: 80 }
+
+    forms.FormEmail:
+      group: { $ref: "#/groups/forms" }
+      type: string
+      kind: format
+      format: email
+
+    forms.FormAge:
+      group: { $ref: "#/groups/forms" }
+      type: number
+      kind: integer
+      range: { min: 18, max: 120 }
+
+    forms.FormMarketingOptIn:
+      group: { $ref: "#/groups/forms" }
+      type: boolean
+
+  enums:
+    UserStatus:
+      group:
+        $ref: '#/groups/core'
+      values:
+        active:
+          value: active
+        suspended:
+          value: suspended
+        AdminUser:
+          value: admin_user
+    accounts.Role:
+      group: { $ref: '#/groups/accounts' }
+      values:
+        member: { value: member }
+        admin: { value: admin }
+    commerce.CartStatus:
+      group: { $ref: '#/groups/commerce' }
+      values:
+        active: { value: active }
+        submitted: { value: submitted }
+        cancelled: { value: cancelled }
+    forms.FormUserRole:
+      group: { $ref: "#/groups/forms" }
+      values:
+        member: { value: member, title: Member }
+        manager: { value: manager, title: Manager }
+        administrator: { value: administrator, title: Administrator }
+
+  composites:
+    NamePair:
+      group:
+        $ref: '#/groups/core'
+      fields:
+        firstName:
+          kind: property
+          $ref: '#/properties/primitives/DisplayName'
+        lastName:
+          kind: property
+          $ref: '#/properties/primitives/DisplayName'
+  literals:
+    ActiveStatus:
+      group:
+        $ref: '#/groups/core'
+      value: active
+  unions:
+    UserLookup:
+      group:
+        $ref: '#/groups/core'
+      discriminant: lookupKind
+      members:
+        byId:
+          kind: reference
+          $ref: '#/properties/primitives/UserId'
+        byDisplayName:
+          kind: reference
+          $ref: '#/properties/primitives/DisplayName'
+  records:
+    Labels:
+      group:
+        $ref: '#/groups/core'
+      keys:
+        kind: primitive
+        name: string
+      values:
+        kind: primitive
+        name: string
+    commerce.Metadata:
+      group: { $ref: '#/groups/commerce' }
+      keys: { kind: primitive, name: string }
+      values: { kind: primitive, name: string }
+
+  tuples:
+    UserCoordinate:
+      group:
+        $ref: '#/groups/core'
+      items:
+        - kind: primitive
+          name: number
+        - kind: primitive
+          name: number
+  generics:
+    Page:
+      kind: definition
+      group:
+        $ref: '#/groups/core'
+      parameters:
+        - name: T
+          description: Item carried by the page
+      value:
+        kind: object
+        fields:
+          items:
+            kind: array
+            items:
+              kind: parameter
+              name: T
+          total:
+            kind: reference
+            $ref: '#/properties/primitives/Count'
+        required:
+          - items
+          - total
+    UserPage:
+      kind: application
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      $ref: '#/properties/generics/Page'
+      arguments:
+        - kind: reference
+          $ref: '#/schemas/UserProfile'
+  temporal:
+    CreatedAt:
+      group:
+        $ref: '#/groups/core'
+      kind: instant
+      precision: millisecond
+    MaintenanceWindow:
+      group:
+        $ref: '#/groups/administration'
+      kind: interval
+      point:
+        $ref: '#/properties/temporal/CreatedAt'
+      range:
+        min: PT5M
+        max: PT2H
+    accounts.BirthDate:
+      group: { $ref: '#/groups/accounts' }
+      kind: date
+
+    commerce.Timestamp:
+      group: { $ref: '#/groups/commerce' }
+      kind: instant
+      precision: millisecond
+expressions:
+  core.ExternalIdIsDistinct:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    description: A user's external customer ID is never their own user ID.
+    value:
+      operator: not-equal
+      left:
+        context: value
+        path:
+          - externalCustomerId
+      right:
+        context: value
+        path:
+          - id
+  accounts.PasswordsMatch:
+    group: { $ref: '#/groups/accounts' }
+    value:
+      operator: equal
+      left: { context: value, path: [confirmPassword] }
+      right: { context: value, path: [password] }
+
+  commerce.QuantityPositive:
+    group: { $ref: '#/groups/commerce' }
+    value:
+      operator: greater-than
+      left: { context: value, path: [quantity] }
+      right: { value: 0 }
+  commerce.TotalMatches:
+    group: { $ref: '#/groups/commerce' }
+    value:
+      operator: equal
+      left: { context: value, path: [totalPrice] }
+      right:
+        operator: multiply
+        values:
+          - { context: value, path: [unitPrice] }
+          - { context: value, path: [quantity] }
+
+schemas:
+  UserProfile:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: entity
+    tags:
+      - public
+    description: User-authored identity names are preserved exactly.
+    fields:
+      id:
+        kind: property
+        $ref: '#/properties/primitives/UserId'
+        mutation: system
+      externalCustomerId:
+        kind: property
+        $ref: '#/properties/primitives/UserId'
+        mutation: create-only
+        query:
+          filter:
+            - equal
+            - not-equal
+          sort: true
+      displayName:
+        kind: property
+        $ref: '#/properties/primitives/DisplayName'
+        query:
+          filter:
+            - starts-with
+            - not-equal
+          sort: true
+          search: true
+      status:
+        kind: property
+        $ref: '#/properties/enums/UserStatus'
+        default: active
+      createdAt:
+        kind: property
+        $ref: '#/properties/temporal/CreatedAt'
+        mutation: system
+        query:
+          filter:
+            - before
+            - after
+            - between
+          sort: true
+      opaquePayload:
+        kind: unknown
+        optional: true
+      runtimeMetadata:
+        kind: dynamic
+        optional: true
+    facets:
+      storage:
+        name: users
+        primary_key:
+          - id
+        indexes:
+          - name: users_external_customer_unique
+            fields:
+              - externalCustomerId
+            unique: true
+          - name: users_status_name
+            fields:
+              - status
+              - displayName
+    invariants:
+      - name: externalIdIsDistinct
+        rule:
+          $ref: '#/expressions/core.ExternalIdIsDistinct'
+        message: The external customer ID must differ from the user ID.
+  CreateUserRequest:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: request
+    description: The caller-supplied part of a new user.
+    projection:
+      source:
+        $ref: '#/schemas/UserProfile'
+      purpose: create
+      fields:
+        externalCustomerId:
+          from: externalCustomerId
+        displayName:
+          from: displayName
+        status:
+          from: status
+          optional: true
+  UserEnvelope:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: response
+    fields:
+      user:
+        kind: schema
+        $ref: '#/schemas/UserProfile'
+  accounts.Address:
+    group: { $ref: '#/groups/accounts' }
+    role: value
+    fields:
+      city: { kind: property, $ref: '#/properties/primitives/accounts.Name' }
+      postalCode: { kind: property, $ref: '#/properties/primitives/accounts.PostalCode' }
+  accounts.RegisterRequest:
+    group: { $ref: '#/groups/accounts' }
+    role: request
+    description: Everything a new member submits.
+    fields:
+      firstName: { kind: property, $ref: '#/properties/primitives/accounts.Name' }
+      lastName: { kind: property, $ref: '#/properties/primitives/accounts.Name' }
+      email: { kind: property, $ref: '#/properties/primitives/accounts.Email' }
+      phone: { kind: property, $ref: '#/properties/primitives/accounts.Phone', optional: true }
+      avatar: { kind: property, $ref: '#/properties/primitives/accounts.Url', optional: true }
+      password: { kind: property, $ref: '#/properties/primitives/accounts.Password' }
+      confirmPassword: { kind: property, $ref: '#/properties/primitives/accounts.Password' }
+      age: { kind: property, $ref: '#/properties/primitives/accounts.Age' }
+      role: { kind: property, $ref: '#/properties/enums/accounts.Role', default: member }
+      birthDate: { kind: property, $ref: '#/properties/temporal/accounts.BirthDate', optional: true }
+      tags:
+        kind: property
+        $ref: '#/properties/primitives/accounts.Tag'
+        array: { min: 1, max: 5 }
+      address: { kind: schema, $ref: '#/schemas/accounts.Address' }
+    invariants:
+      - name: passwordsMatch
+        rule: { $ref: '#/expressions/accounts.PasswordsMatch' }
+        message: Passwords must match
+  accounts.Member:
+    group: { $ref: '#/groups/accounts' }
+    role: entity
+    fields:
+      id: { kind: property, $ref: '#/properties/primitives/accounts.Id', mutation: system }
+      email: { kind: property, $ref: '#/properties/primitives/accounts.Email' }
+    facets:
+      storage: { name: members, primary_key: [id] }
+  commerce.Cart:
+    group: { $ref: '#/groups/commerce' }
+    role: entity
+    description: A customer's cart.
+    fields:
+      id: { kind: property, $ref: '#/properties/primitives/commerce.Id', mutation: system }
+      status:
+        kind: property
+        $ref: '#/properties/enums/commerce.CartStatus'
+        default: active
+      discountRate:
+        kind: property
+        $ref: '#/properties/primitives/commerce.Rate'
+        optional: true
+      createdAt: { kind: property, $ref: '#/properties/temporal/commerce.Timestamp', mutation: system }
+      items:
+        kind: schema
+        $ref: '#/schemas/commerce.CartItem'
+        array: {}
+        optional: true
+        related:
+          via: { $ref: '#/schemas/commerce.CartItem', field: cartId }
+          cardinality: one-to-many
+    facets:
+      storage:
+        name: carts
+        primary_key: [id]
+  commerce.CartItem:
+    group: { $ref: '#/groups/commerce' }
+    role: entity
+    fields:
+      id: { kind: property, $ref: '#/properties/primitives/commerce.Id', mutation: system }
+      cartId:
+        kind: property
+        $ref: '#/properties/primitives/commerce.Id'
+        relation:
+          target: { $ref: '#/schemas/commerce.Cart', field: id }
+          cardinality: many-to-one
+          on_delete: cascade
+      title: { kind: property, $ref: '#/properties/primitives/commerce.Title' }
+      quantity: { kind: property, $ref: '#/properties/primitives/commerce.Quantity' }
+      unitPrice: { kind: property, $ref: '#/properties/primitives/commerce.Cents' }
+      totalPrice: { kind: property, $ref: '#/properties/primitives/commerce.Cents' }
+      metadata:
+        kind: property
+        $ref: '#/properties/records/commerce.Metadata'
+        nullable: true
+    invariants:
+      - name: quantityPositive
+        rule: { $ref: '#/expressions/commerce.QuantityPositive' }
+        message: Quantity must be at least 1
+      - name: totalMatches
+        rule: { $ref: '#/expressions/commerce.TotalMatches' }
+    facets:
+      storage:
+        name: cart_items
+        primary_key: [id]
+        indexes:
+          - { fields: [cartId, title], unique: true, name: cart_items_cart_title }
+          - { fields: [cartId] }
+  forms.FormCreateUserRequest:
+    group: { $ref: "#/groups/forms" }
+    role: request
+    description: Values required to create a user.
+    fields:
+      displayName:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormDisplayName"
+      email:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormEmail"
+      age:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormAge"
+      role:
+        kind: property
+        $ref: "#/properties/enums/forms.FormUserRole"
+      marketingOptIn:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormMarketingOptIn"
+        optional: true
+
+  forms.FormUpdateUserRequest:
+    group: { $ref: "#/groups/forms" }
+    role: request
+    description: Editable values for an existing user.
+    fields:
+      displayName:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormDisplayName"
+        optional: true
+      email:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormEmail"
+        optional: true
+      age:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormAge"
+        optional: true
+      role:
+        kind: property
+        $ref: "#/properties/enums/forms.FormUserRole"
+        optional: true
+      marketingOptIn:
+        kind: property
+        $ref: "#/properties/primitives/forms.FormMarketingOptIn"
+        optional: true
+
+policies:
+  core.Authenticated:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: authentication
+    description: Requires an authenticated caller
+  administration.Administrator:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: authorization
+    description: Requires administrative access
+failures:
+  UserNotFound:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    code: user_not_found
+    payload:
+      kind: reference
+      $ref: '#/properties/primitives/UserId'
+events:
+  UserCreated:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: domain
+    tags:
+      - audit
+    payload:
+      $ref: '#/schemas/UserProfile'
+  UsersPruned:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: integration
+    payload:
+      $ref: '#/properties/primitives/Count'
+operations:
+  ListUsers:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - public
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+      rate_limit:
+        limit: 120
+        window:
+          seconds: 60
+      cache:
+        ttl:
+          seconds: 30
+    facets:
+      http:
+        method: GET
+        path: /users
+        outputs:
+          - port:
+              $ref: '#/operations/ListUsers'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+    output:
+      value:
+        $ref: '#/properties/generics/UserPage'
+  CreateUser:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: create
+    tags:
+      - public
+    failures:
+      - $ref: '#/failures/UserNotFound'
+    emits:
+      - $ref: '#/events/UserCreated'
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/administration.Administrator'
+    execution:
+      mode: sync
+      timeout:
+        seconds: 10
+      transaction:
+        required: true
+      retry:
+        max_attempts: 3
+        backoff:
+          seconds: 1
+      audit:
+        required: true
+      invalidates:
+        - $ref: '#/operations/ListUsers'
+    facets:
+      http:
+        method: POST
+        path: /users
+        inputs:
+          - port:
+              $ref: '#/operations/CreateUser'
+              direction: input
+            source:
+              kind: body
+              representation:
+                kind: json
+                media_type: application/json
+        outputs:
+          - port:
+              $ref: '#/operations/CreateUser'
+              direction: output
+            response:
+              status: 201
+              representations:
+                - kind: json
+                  media_type: application/json
+        failures:
+          - failure:
+              $ref: '#/failures/UserNotFound'
+            status: 404
+      websocket:
+        path: /users/socket
+    input:
+      schema:
+        $ref: '#/schemas/CreateUserRequest'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  GetUser:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: detail
+    tags:
+      - public
+    failures:
+      - $ref: '#/failures/UserNotFound'
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+    facets:
+      http:
+        method: GET
+        path: /users/{id}
+        inputs:
+          - port:
+              $ref: '#/operations/GetUser'
+              direction: input
+              field: id
+            source:
+              kind: path
+              name: id
+        outputs:
+          - port:
+              $ref: '#/operations/GetUser'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+        failures:
+          - failure:
+              $ref: '#/failures/UserNotFound'
+            status: 404
+    input:
+      fields:
+        - name: id
+          value:
+            $ref: '#/properties/primitives/UserId'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  SearchUsers:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - public
+    access:
+      authenticated: true
+      policies:
+        - $ref: '#/policies/core.Authenticated'
+    execution:
+      mode: sync
+    facets:
+      http:
+        method: GET
+        path: /users/search
+        inputs:
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: status
+            source:
+              kind: query
+              name: status
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: limit
+            source:
+              kind: query
+              name: limit
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: traceId
+            source:
+              kind: header
+              name: X-Trace-Id
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: input
+              field: session
+            source:
+              kind: cookie
+              name: session
+        outputs:
+          - port:
+              $ref: '#/operations/SearchUsers'
+              direction: output
+            response:
+              status: 200
+              representations:
+                - kind: json
+                  media_type: application/json
+    input:
+      fields:
+        - name: status
+          value:
+            $ref: '#/properties/enums/UserStatus'
+        - name: limit
+          value:
+            $ref: '#/properties/primitives/Count'
+        - name: traceId
+          value:
+            $ref: '#/properties/primitives/UserId'
+        - name: session
+          value:
+            $ref: '#/properties/primitives/DisplayName'
+    output:
+      value:
+        $ref: '#/schemas/UserProfile'
+  PruneUsers:
+    group:
+      $ref: '#/groups/administration'
+    feature:
+      $ref: '#/features/administration.UserAdministration'
+    role: action
+    tags:
+      - internal
+    emits:
+      - $ref: '#/events/UsersPruned'
+    execution:
+      mode: async
+      audit:
+        required: true
+    facets:
+      schedule:
+        schedule:
+          kind: daily
+          hour: 2
+          minute: 30
+          time_zone: Africa/Nairobi
+    output:
+      value:
+        $ref: '#/properties/primitives/Count'
+  forms.FormCreateUser:
+    group: { $ref: "#/groups/forms" }
+    role: create
+    description: Create a user.
+    facets:
+      http:
+        method: POST
+        path: /form-users
+        inputs:
+          - port:
+              $ref: "#/operations/forms.FormCreateUser"
+              direction: input
+            source:
+              kind: body
+              representation: { kind: json, media_type: application/json }
+    input:
+      schema: { $ref: "#/schemas/forms.FormCreateUserRequest" }
+
+  forms.FormUpdateUser:
+    group: { $ref: "#/groups/forms" }
+    role: update
+    description: Update a user.
+    facets:
+      http:
+        method: PATCH
+        path: /form-users
+        inputs:
+          - port:
+              $ref: "#/operations/forms.FormUpdateUser"
+              direction: input
+            source:
+              kind: body
+              representation: { kind: json, media_type: application/json }
+    input:
+      schema: { $ref: "#/schemas/forms.FormUpdateUserRequest" }
+
+  forms.FormGetUser:
+    group: { $ref: "#/groups/forms" }
+    role: detail
+    description: This operation must not produce a form.
+    facets:
+      http:
+        method: GET
+        path: /form-users/detail
+views:
+  UsersView:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: list
+    tags:
+      - admin
+    description: Browse users and create a new user without describing concrete UI controls.
+    parts:
+      users:
+        kind: present
+        description: Present the user-list result.
+        source:
+          port:
+            $ref: '#/operations/ListUsers'
+            direction: output
+      createUser:
+        kind: collect
+        description: Collect the complete CreateUser input and invoke the Operation.
+        target:
+          port:
+            $ref: '#/operations/CreateUser'
+            direction: input
+      createdUser:
+        kind: present
+        description: Present selected fields from the created user result.
+        source:
+          port:
+            $ref: '#/operations/CreateUser'
+            direction: output
+          select:
+            - - id
+            - - displayName
+            - - status
+    presentations:
+      adminWeb:
+        surface:
+          $ref: '#/surfaces/AdminWeb'
+workflows:
+  CreateUserFlow:
+    group:
+      $ref: '#/groups/core'
+    feature:
+      $ref: '#/features/core.UserManagement'
+    role: process
+    inputs:
+      - name: request
+        value:
+          $ref: '#/schemas/CreateUserRequest'
+    outputs:
+      - name: user
+        value:
+          $ref: '#/schemas/UserProfile'
+    output_bindings:
+      - target:
+          $ref: '#/workflows/CreateUserFlow'
+          direction: output
+          index: 0
+        source:
+          kind: step-output
+          step:
+            $ref: '#/workflows/CreateUserFlow'
+            step: create
+          index: 0
+    start:
+      $ref: '#/workflows/CreateUserFlow'
+      step: create
+    steps:
+      create:
+        kind: operation
+        operation:
+          $ref: '#/operations/CreateUser'
+        inputs:
+          - target: 0
+            source:
+              kind: workflow-input
+              port:
+                $ref: '#/workflows/CreateUserFlow'
+                direction: input
+                index: 0
+      created:
+        kind: wait
+        event:
+          $ref: '#/events/UserCreated'
+        timeout:
+          seconds: 30
+    transitions:
+      - from:
+          $ref: '#/workflows/CreateUserFlow'
+          step: create
+        to:
+          $ref: '#/workflows/CreateUserFlow'
+          step: created
+surfaces:
+  AdminWeb:
+    kind: web
+    tags:
+      - admin
+    group:
+      $ref: '#/groups/administration'
+    description: Administrative web application
+features:
+  core.UserManagement:
+    group:
+      $ref: '#/groups/core'
+    description: Browse and create users
+  administration.UserAdministration:
+    group:
+      $ref: '#/groups/administration'
+    description: Administrative user maintenance
+applications:
+  AdminConsole:
+    description: User administration console
+    facets:
+      http:
+        root: /api
+    groups:
+      - $ref: '#/groups/core'
+      - $ref: '#/groups/administration'
+    surfaces:
+      - $ref: '#/surfaces/AdminWeb'
