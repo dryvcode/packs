@@ -70,7 +70,7 @@ import Fluent
 {%- endmacro -%}
 
 {%- macro pk_supported(field) -%}
-{%- if field.array is none and (field.value.is.integer or field.value.is.uuid or field.value.is.string) -%}x{%- endif -%}
+{%- if field.array is none and not field.optional and not field.nullable and (field.value.is.integer or field.value.is.uuid or field.value.is.string) -%}x{%- endif -%}
 {%- endmacro -%}
 
 {%- set pk = namespace(count=0, supported=true, has_system_composite=false, system_unsupported=false) -%}
