@@ -1,0 +1,93 @@
+defmodule {{ pack.inputs.module_prefix }}.Http do
+  @moduledoc false
+
+  import Plug.Conn
+
+  def wire(nil), do: nil
+
+  def wire(%{__struct__: module} = value) do
+    cond do
+      function_exported?(module, :to_map, 1) -> module.to_map(value) |> wire()
+      function_exported?(module, :to_wire, 1) -> module.to_wire(value) |> wire()
+      true -> value |> Map.from_struct() |> wire()
+    end
+  end
+
+  def wire(value) when is_list(value), do: Enum.map(value, &wire/1)
+  def wire(value) when is_map(value), do: Map.new(value, fn {key, item} -> {key, wire(item)} end)
+  def wire(value), do: value
+
+  def decode(nil, _kind, _module), do: nil
+  def decode(value, :schema, module) when is_map(value), do: module.from_map!(value)
+  def decode(value, :enum, module), do: module.parse!(value)
+  def decode(value, :string, _module), do: to_string(value)
+  def decode(value, :integer, _module) when is_integer(value), do: value
+  def decode(value, :integer, _module) when is_binary(value), do: parse_integer!(value)
+  def decode(value, :number, _module) when is_number(value), do: value * 1.0
+  def decode(value, :number, _module) when is_binary(value), do: parse_float!(value)
+  def decode(value, :boolean, _module) when is_boolean(value), do: value
+  def decode("true", :boolean, _module), do: true
+  def decode("false", :boolean, _module), do: false
+  def decode(value, _kind, _module), do: value
+
+  def decode_many(values, kind, module) when is_list(values) do
+    Enum.map(values, &decode(&1, kind, module))
+  end
+
+  def query_values(conn, name) do
+    conn.query_string
+    |> URI.query_decoder()
+    |> Enum.reduce([], fn
+      {^name, value}, acc -> acc ++ [value]
+      {key, value}, acc when key == name <> "[]" -> acc ++ [value]
+      _, acc -> acc
+    end)
+  end
+
+  def query_value(conn, name), do: List.first(query_values(conn, name))
+  def query_has?(conn, name), do: query_values(conn, name) != []
+
+  def form_values(conn, name) do
+    case conn.body_params do
+      %Plug.Conn.Unfetched{} -> []
+      params when is_map(params) ->
+        case Map.get(params, name) do
+          nil -> []
+          values when is_list(values) -> values
+          value -> [value]
+        end
+    end
+  end
+
+  def form_value(conn, name), do: List.first(form_values(conn, name))
+  def form_has?(conn, name), do: form_values(conn, name) != []
+
+  def header_value(conn, name), do: conn |> get_req_header(name) |> List.first()
+
+  def cookie_value(conn, name) do
+    conn
+    |> fetch_cookies()
+    |> Map.fetch!(:req_cookies)
+    |> Map.get(name)
+  end
+
+  def body_map(%{body_params: %Plug.Conn.Unfetched{}}) do
+    raise ArgumentError, "Phoenix body params are unfetched; configure Plug.Parsers in the consuming application"
+  end
+
+  def body_map(%{body_params: params}) when is_map(params), do: params
+
+  defp parse_integer!(value) do
+    case Integer.parse(value) do
+      {parsed, ""} -> parsed
+      _ -> raise ArgumentError, "expected integer, got: #{inspect(value)}"
+    end
+  end
+
+  defp parse_float!(value) do
+    case Float.parse(value) do
+      {parsed, ""} -> parsed
+      _ -> raise ArgumentError, "expected number, got: #{inspect(value)}"
+    end
+  end
+end
