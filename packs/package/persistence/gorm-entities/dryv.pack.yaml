@@ -39,12 +39,26 @@ selections:
       all: { role: entity }
     scope: each
 
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
 templates:
   entity:
     $ref: "#/selections/entities"
     output:
       name: $(group.name.snake)_$(subject.name.snake)
       symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+  migrate:
+    $ref: "#/selections/all-entities"
+    output:
+      name: migrate
+      symbol: AutoMigrate
     imports:
       - $ref: "#/templates/entity"
 
