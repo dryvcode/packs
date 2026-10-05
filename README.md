@@ -4,11 +4,11 @@
   <a href="https://dryv.alidantech.org"><img src=".docs/badge/built-with-dryv.svg" alt="built with dryv"></a>
 </p>
 
-Official packs for [Dryv](https://dryv.alidantech.org): reusable templates that turn your Dryv project's meaning into real code for well-known packages and frameworks such as TypeORM, NestJS and zod.
+Official packs for [Dryv](https://dryv.alidantech.org): reusable templates that turn canonical Dryv meaning into generated code, packages, documentation, fixtures and project artifacts for real ecosystems.
 
 > **Status:** being set up. No packs are published yet.
 
-Packs live at `packs/<layout>/<purpose>/<name>`, for example `packs/inject/persistence/typeorm-entities` ([folder structure](.docs/folder-structure.md)). The manifest declares behavior; the folder path is for browsing and source selection.
+Packs live at `packs/<layout>/<purpose>/<name>`, for example `packs/inject/persistence/typeorm-entities`, `packs/inject/documentation/markdown-reference` and `packs/inject/testing/schema-examples` ([folder structure](.docs/folder-structure.md)). The manifest declares behavior; the folder path is for browsing and source selection.
 
 ## Official, local or private
 
