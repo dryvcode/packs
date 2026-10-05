@@ -1,0 +1,86 @@
+version: dryv.pack/v1alpha1
+key: backend.axum-backend
+layout: package
+package:
+  name: { $ref: "#/inputs.crate_name" }
+
+source: templates
+
+info:
+  title: Axum Backend
+  version: 0.1.0
+  description: Generates serde models, semantic service traits and Axum routers for HTTP operations.
+
+catalog:
+  purpose: backend
+  summary: Axum routers and service traits with serde models for Rust backends.
+  languages: [rust]
+  frameworks: [axum, serde]
+  tags: [backend, rest, http, rust]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  crate_name:
+    type: string
+    default: dryv_axum_backend
+    description: Cargo package name for the generated Rust library.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  router:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        router: build_$(group.name.snake)_$(feature.name.snake)_router
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  models-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  routers-index:
+    exports:
+      - $ref: "#/templates/router"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
