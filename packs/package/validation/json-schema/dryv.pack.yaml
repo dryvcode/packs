@@ -1,0 +1,40 @@
+version: dryv.pack/v1alpha1
+key: validation.json-schema
+layout: package
+package:
+  name: dryv-json-schema
+
+source: templates
+
+info:
+  title: JSON Schema
+  version: 0.1.0
+  description: Generates JSON Schema Draft 2020-12 validation documents from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Portable JSON Schema 2020-12 documents for Dryv schemas.
+  languages: [json]
+  frameworks: [json-schema-2020-12]
+  tags: [validation, schema, json, contract]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  schema:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/schema"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/schema"
