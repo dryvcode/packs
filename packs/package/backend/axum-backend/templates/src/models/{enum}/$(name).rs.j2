@@ -1,3 +1,6 @@
+{%- macro rust_variant(name) -%}
+{%- if name == 'Self' -%}SelfValue{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
 use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
@@ -6,7 +9,7 @@ use serde_json::{Value, json};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum {{ file.symbol }} {
 {%- for item in property.enum.values %}
-    {{ item.name.pascal }},
+    {{ rust_variant(item.name.pascal) }},
 {%- endfor %}
 }
 
@@ -17,7 +20,7 @@ impl Serialize for {{ file.symbol }} {
     {
         match self {
 {%- for item in property.enum.values %}
-            Self::{{ item.name.pascal }} => json!({{ item.value_json }}).serialize(serializer),
+            Self::{{ rust_variant(item.name.pascal) }} => json!({{ item.value_json }}).serialize(serializer),
 {%- endfor %}
         }
     }
@@ -31,7 +34,7 @@ impl<'de> Deserialize<'de> for {{ file.symbol }} {
         let value = Value::deserialize(deserializer)?;
 {%- for item in property.enum.values %}
         if value == json!({{ item.value_json }}) {
-            return Ok(Self::{{ item.name.pascal }});
+            return Ok(Self::{{ rust_variant(item.name.pascal) }});
         }
 {%- endfor %}
         Err(de::Error::custom(format!(
@@ -48,7 +51,7 @@ impl FromStr for {{ file.symbol }} {
             .unwrap_or_else(|_| Value::String(raw.to_owned()));
 {%- for item in property.enum.values %}
         if value == json!({{ item.value_json }}) {
-            return Ok(Self::{{ item.name.pascal }});
+            return Ok(Self::{{ rust_variant(item.name.pascal) }});
         }
 {%- endfor %}
         Err(format!("invalid {{ property.enum.name.local }} value: {raw}"))
@@ -59,7 +62,7 @@ impl fmt::Display for {{ file.symbol }} {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match self {
 {%- for item in property.enum.values %}
-            Self::{{ item.name.pascal }} => json!({{ item.value_json }}),
+            Self::{{ rust_variant(item.name.pascal) }} => json!({{ item.value_json }}),
 {%- endfor %}
         };
         match value {
