@@ -1,0 +1,80 @@
+version: dryv.pack/v1alpha1
+key: documentation.markdown-reference
+source: templates
+
+info:
+  title: Markdown Reference
+  version: 0.1.0
+  description: Generates portable Markdown reference documentation and Mermaid schema relationships from Dryv Runtime IR.
+
+catalog:
+  purpose: documentation
+  summary: Runtime-IR-driven Markdown catalogues for schemas, operations, policies, failures, events and workflows.
+  languages: [markdown]
+  frameworks: [mermaid]
+  tags: [documentation, reference, markdown, mermaid]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  schemas:
+    subject: schema
+    scope: all
+
+  operations:
+    subject: operation
+    scope: all
+
+  policies:
+    subject: policy
+    scope: all
+
+  failures:
+    subject: failure
+    scope: all
+
+  events:
+    subject: event
+    scope: all
+
+  workflows:
+    subject: workflow
+    scope: all
+
+templates:
+  schemas:
+    $ref: "#/selections/schemas"
+    output:
+      name: schemas
+
+  relationships:
+    $ref: "#/selections/schemas"
+    output:
+      name: relationships
+
+  operations:
+    $ref: "#/selections/operations"
+    output:
+      name: operations
+
+  policies:
+    $ref: "#/selections/policies"
+    output:
+      name: policies
+
+  failures:
+    $ref: "#/selections/failures"
+    output:
+      name: failures
+
+  events:
+    $ref: "#/selections/events"
+    output:
+      name: events
+
+  workflows:
+    $ref: "#/selections/workflows"
+    output:
+      name: workflows
