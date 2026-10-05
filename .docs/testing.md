@@ -57,7 +57,7 @@ Do not centralize files merely because they currently look similar. Centralize t
 
 Reusable generation-time assets are different from test fixtures.
 
-If several packs need the exact same template/support file, its canonical editable source belongs under `shared/`. `shared/assets.json` maps that source to the copies that must live inside standalone pack directories.
+If several packs need the exact same template/support file, its canonical editable source belongs under `shared/`. `shared/assets.json` maps whole-file copies. Repeated manifest policy blocks live under `shared/manifests/` and are mapped through `shared/fragments.json` into explicitly marked regions of complete standalone pack manifests.
 
 Run:
 
