@@ -1,0 +1,72 @@
+import Foundation
+
+public enum DryvJSONValue: Codable, Equatable, Sendable, CustomStringConvertible {
+    case null
+    case bool(Bool)
+    case int(Int64)
+    case double(Double)
+    case string(String)
+    case array([DryvJSONValue])
+    case object([String: DryvJSONValue])
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Int64.self) {
+            self = .int(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .double(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([DryvJSONValue].self) {
+            self = .array(value)
+        } else {
+            self = .object(try container.decode([String: DryvJSONValue].self))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        case .double(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        }
+    }
+
+    public static func literal(_ json: String) -> DryvJSONValue {
+        try! JSONDecoder().decode(DryvJSONValue.self, from: Data(json.utf8))
+    }
+
+    public var description: String {
+        switch self {
+        case .null:
+            return "null"
+        case .bool(let value):
+            return value ? "true" : "false"
+        case .int(let value):
+            return String(value)
+        case .double(let value):
+            return String(value)
+        case .string(let value):
+            return value
+        case .array, .object:
+            let data = try! JSONEncoder().encode(self)
+            return String(decoding: data, as: UTF8.self)
+        }
+    }
+}
