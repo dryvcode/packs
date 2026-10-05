@@ -94,14 +94,17 @@
   ],
   "templates/swift/json-value.swift.j2": [
     "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2"
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2",
+    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/DryvJSONValue.swift.j2"
   ],
   "templates/swift/wire-enum.swift.j2": [
     "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{enum}/$(name).swift.j2"
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{enum}/$(name).swift.j2",
+    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/Models/{enum}/$(name).swift.j2"
   ],
   "templates/swift/wire-model.swift.j2": [
     "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{model}/$(name).swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{model}/$(name).swift.j2"
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{model}/$(name).swift.j2",
+    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/Models/{model}/$(name).swift.j2"
   ]
 }
