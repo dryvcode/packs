@@ -2,39 +2,33 @@
 
 package {{ pack.inputs.package_name }}
 
-// {{ file.symbol }} represents {{ property.enum.description or property.enum.name.title }}.
-{%- for item in property.enum.values %}
+{%- for first in property.enum.values %}
 {%- if loop.first %}
-{%- if item.value is boolean %}
+// {{ file.symbol }} represents {{ property.enum.description or property.enum.name.title }}.
+{%- if first.value is boolean %}
 type {{ file.symbol }} bool
-{%- elif item.value is integer %}
+{%- elif first.value is integer %}
 type {{ file.symbol }} int64
-{%- elif item.value is number %}
+{%- elif first.value is number %}
 type {{ file.symbol }} float64
-{%- elif item.value is string %}
+{%- elif first.value is string %}
 type {{ file.symbol }} string
 {%- else %}
 type {{ file.symbol }} any
 {%- endif %}
-{%- endif %}
-{%- endfor %}
 
-{%- set scalar = namespace(constant=true) %}
-{%- for item in property.enum.values %}
-{%- if not (item.value is boolean or item.value is integer or item.value is number or item.value is string) %}
-{%- set scalar.constant = false %}
-{%- endif %}
-{%- endfor %}
-{% if scalar.constant %}
+{%- if first.value is boolean or first.value is integer or first.value is number or first.value is string %}
 const (
 {%- for item in property.enum.values %}
 	{{ file.symbol }}{{ item.name.pascal }} {{ file.symbol }} = {{ item.value_json }}
 {%- endfor %}
 )
-{% else %}
+{%- else %}
 var (
 {%- for item in property.enum.values %}
 	{{ file.symbol }}{{ item.name.pascal }} {{ file.symbol }} = {{ item.value_json }}
 {%- endfor %}
 )
-{% endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
