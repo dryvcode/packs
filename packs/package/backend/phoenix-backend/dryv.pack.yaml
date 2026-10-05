@@ -1,0 +1,78 @@
+version: dryv.pack/v1alpha1
+key: backend.phoenix-backend
+layout: package
+package:
+  name: dryv_phoenix_backend
+
+source: templates
+
+info:
+  title: Phoenix Backend
+  version: 0.1.0
+  description: Generates Phoenix 1.8 JSON controllers, explicit router macros and service behaviours.
+
+catalog:
+  purpose: backend
+  summary: Phoenix JSON transport with generated wire structs and explicit service-module bindings.
+  languages: [elixir]
+  frameworks: [phoenix]
+  tags: [backend, rest, http, elixir]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_prefix:
+    type: string
+    default: DryvGenerated.Backend
+    description: Root Elixir module for generated backend code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  routes:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        controller: $(group.name.pascal)$(feature.name.pascal)Controller
+        routes: $(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
