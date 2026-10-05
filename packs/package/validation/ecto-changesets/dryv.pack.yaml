@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.ecto-changesets
+layout: package
+package:
+  name: dryv_ecto_validation
+
+source: templates
+
+info:
+  title: Ecto Changeset Validation
+  version: 0.1.0
+  description: Generates Elixir wire structs and Ecto changeset validators from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Ecto changeset validators over generated Elixir wire structs.
+  languages: [elixir]
+  frameworks: [ecto]
+  tags: [validation, schema, dto, elixir]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_prefix:
+    type: string
+    default: DryvGenerated.Validation
+    description: Root Elixir module for generated models and validators.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
