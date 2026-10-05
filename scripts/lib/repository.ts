@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 
 export const REPO = resolve(import.meta.dir, "../..");
 export const PACKS = join(REPO, "packs");
