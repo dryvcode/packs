@@ -1,0 +1,79 @@
+version: dryv.pack/v1alpha1
+key: validation.go-validator-dtos
+layout: package
+package:
+  name: { $ref: "#/inputs.package_name" }
+
+source: templates
+
+info:
+  title: Go Validator DTOs
+  version: 0.1.0
+  description: Generates Go DTOs and enums with go-playground/validator v10 validation.
+
+catalog:
+  purpose: validation
+  summary: Go DTOs with validator tags and generated custom validators.
+  languages: [go]
+  frameworks: [go-playground-validator]
+  tags: [dto, validation, go]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: dryvvalidation
+    description: Go package identifier used by generated source files.
+  module_path:
+    type: string
+    default: example.com/dryvvalidation
+    description: Module path written to go.mod.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/dto"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
+
+# shared:go-actions:start
+actions:
+  files:
+    format:
+      extensions: [.go]
+      commands:
+        - run: [gofmt, -w, $(files)]
+  final:
+    install:
+      commands:
+        - run: [go, mod, tidy]
+# shared:go-actions:end
