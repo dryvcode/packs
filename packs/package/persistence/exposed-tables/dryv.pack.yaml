@@ -1,0 +1,63 @@
+version: dryv.pack/v1alpha1
+key: persistence.exposed-tables
+layout: package
+package:
+  name: dryv-exposed-tables
+
+source: templates
+
+info:
+  title: Exposed Tables
+  version: 0.1.0
+  description: Generates JetBrains Exposed 1.5 table definitions from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Exposed 1.5 tables with keys, indexes, foreign keys and portable column mappings.
+  languages: [kotlin]
+  frameworks: [exposed]
+  tags: [entities, database, orm, kotlin]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: org.dryv.generated.persistence
+    description: Kotlin package for generated persistence sources.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  table:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Table
+    imports:
+      - $ref: "#/templates/table"
+
+  registry:
+    $ref: "#/selections/all-entities"
+    output:
+      name: DryvTables
+      symbol: DryvTables
+    imports:
+      - $ref: "#/templates/table"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/table"
