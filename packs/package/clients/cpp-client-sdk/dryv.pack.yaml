@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: clients.cpp-client-sdk
+layout: package
+package:
+  name: dryv_cpp_client
+
+source: templates
+
+info:
+  title: C++ Client SDK
+  version: 0.1.0
+  description: Generates a C++20 cpr HTTP client SDK with nlohmann/json wire models and operations.
+
+catalog:
+  purpose: clients
+  summary: C++20 cpr client SDK with generated JSON models and typed operations.
+  languages: [cpp]
+  frameworks: [cpr, nlohmann-json]
+  tags: [client, sdk, cpp, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  namespace:
+    type: string
+    default: dryv::generated::client
+    description: C++ namespace for generated SDK code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
