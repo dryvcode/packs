@@ -1,0 +1,249 @@
+import Foundation
+import Fluent
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none -%}[{{ base_type(value) }}]
+{%- else -%}{{ base_type(value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}DryvJSONValue
+{%- elif value.is.boolean -%}Bool
+{%- elif value.is.integer -%}Int64
+{%- elif value.is.decimal or value.is.money -%}String
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.temporal and (value.is.date or value.is.time or value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}Date
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}DryvJSONValue
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro data_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none -%}.array(of: {{ scalar_data_type(value) }})
+{%- else -%}{{ scalar_data_type(value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro scalar_data_type(value) -%}
+{%- if value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}.json
+{%- elif value.is.boolean -%}.bool
+{%- elif value.is.integer -%}.int64
+{%- elif value.is.decimal or value.is.money -%}.string
+{%- elif value.is.number -%}.double
+{%- elif value.is.uuid -%}.uuid
+{%- elif value.is.temporal and value.is.date -%}.date
+{%- elif value.is.temporal and value.is.time -%}.time
+{%- elif value.is.temporal and (value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}.datetime
+{%- elif value.is.string or value.is.temporal -%}.string
+{%- else -%}.json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro fk_action(value) -%}
+{%- if value == 'cascade' -%}.cascade
+{%- elif value == 'restrict' -%}.restrict
+{%- elif value == 'detach' -%}.setNull
+{%- elif value == 'reset' -%}.setDefault
+{%- else -%}.noAction
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro id_generator(field) -%}
+{%- if field.mutation == 'system' and field.value.is.integer -%}.database
+{%- elif field.mutation == 'system' and field.value.is.uuid -%}.random
+{%- else -%}.user
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro pk_supported(field) -%}
+{%- if field.value.is.integer or field.value.is.uuid or field.value.is.string -%}x{%- endif -%}
+{%- endmacro -%}
+
+{%- set pk = namespace(count=0, supported=true, has_system_composite=false, system_unsupported=false) -%}
+{%- for field in schema.fields -%}
+{%- if field.storage is not none and field.storage.primary_key -%}
+{%- set pk.count = pk.count + 1 -%}
+{%- if not pk_supported(field) -%}{%- set pk.supported = false -%}{%- endif -%}
+{%- if field.mutation == 'system' and not (field.value.is.integer or field.value.is.uuid) -%}{%- set pk.system_unsupported = true -%}{%- endif -%}
+{%- if field.mutation == 'system' -%}{%- set pk.has_system_composite = true -%}{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+
+{%- if pk.count == 0 %}
+#error("Fluent persistence requires an explicit Dryv primary key for {{ schema.name.raw }}")
+public enum {{ file.symbols.entity }} {
+    public static let schema = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+    public static let space: String? = {% if schema.facets.storage and schema.facets.storage.namespace %}"{{ schema.facets.storage.namespace }}"{% else %}nil{% endif %}
+}
+{%- elif not pk.supported %}
+#error("Fluent persistence supports UUID, integer, or string Dryv primary keys for {{ schema.name.raw }}")
+public enum {{ file.symbols.entity }} {
+    public static let schema = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+    public static let space: String? = {% if schema.facets.storage and schema.facets.storage.namespace %}"{{ schema.facets.storage.namespace }}"{% else %}nil{% endif %}
+}
+{%- elif pk.count > 1 and pk.has_system_composite %}
+#error("Fluent composite identifiers cannot portably generate individual system-owned key fields for {{ schema.name.raw }}")
+public enum {{ file.symbols.entity }} {
+    public static let schema = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+    public static let space: String? = {% if schema.facets.storage and schema.facets.storage.namespace %}"{{ schema.facets.storage.namespace }}"{% else %}nil{% endif %}
+}
+{%- elif pk.system_unsupported %}
+#error("Fluent has no portable generator for the system-owned Dryv primary key on {{ schema.name.raw }}")
+public enum {{ file.symbols.entity }} {
+    public static let schema = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+    public static let space: String? = {% if schema.facets.storage and schema.facets.storage.namespace %}"{{ schema.facets.storage.namespace }}"{% else %}nil{% endif %}
+}
+{%- else %}
+public final class {{ file.symbols.entity }}: Model, @unchecked Sendable {
+    public static let schema = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+    public static let space: String? = {% if schema.facets.storage and schema.facets.storage.namespace %}"{{ schema.facets.storage.namespace }}"{% else %}nil{% endif %}
+
+{%- if pk.count == 1 %}
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+    @ID(custom: "{{ field.name.snake }}", generatedBy: {{ id_generator(field) }})
+    public var id: {{ field_type(field) }}?
+{%- if field.name.camel != 'id' %}
+
+    public var {{ field.name.camel }}: {{ field_type(field) }}? {
+        get { id }
+        set { id = newValue }
+    }
+{%- endif %}
+{%- endif %}{% endfor %}
+{%- else %}
+    public final class IDValue: Fields, Hashable, @unchecked Sendable {
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+        @Field(key: "{{ field.name.snake }}")
+        public var {{ field.name.camel }}: {{ field_type(field) }}
+{%- endif %}{% endfor %}
+
+        public init() {}
+
+        public init(
+{%- set init_state = namespace(first=true) %}
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+            {% if not init_state.first %},{% endif %}{{ field.name.camel }}: {{ field_type(field) }}{% set init_state.first = false %}
+{%- endif %}{% endfor %}
+        ) {
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+            self.{{ field.name.camel }} = {{ field.name.camel }}
+{%- endif %}{% endfor %}
+        }
+
+        public static func == (lhs: IDValue, rhs: IDValue) -> Bool {
+            {% set eq = namespace(first=true) %}{% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{% if not eq.first %} && {% endif %}lhs.{{ field.name.camel }} == rhs.{{ field.name.camel }}{% set eq.first = false %}{% endif %}{% endfor %}
+        }
+
+        public func hash(into hasher: inout Hasher) {
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+            hasher.combine({{ field.name.camel }})
+{%- endif %}{% endfor %}
+        }
+    }
+
+    @CompositeID
+    public var id: IDValue?
+{%- endif %}
+
+{%- for field in schema.fields %}
+{%- if field.related is none and not (field.storage is not none and field.storage.primary_key) %}
+{%- if field.optional or field.nullable %}
+    @OptionalField(key: "{{ field.name.snake }}")
+    public var {{ field.name.camel }}: {{ field_type(field) }}?
+{%- else %}
+    @Field(key: "{{ field.name.snake }}")
+    public var {{ field.name.camel }}: {{ field_type(field) }}
+{%- endif %}
+{%- if field.relation is not none %}
+
+    // Dryv relation targets {{ field.relation.target.schema.name.raw }}.{{ field.relation.target.field.raw }}.
+    // The scalar FK field remains authoritative; Fluent navigation is not double-mapped.
+{%- endif %}
+{%- elif field.related is not none %}
+
+    // Inverse relation "{{ field.name.raw }}" is derived navigation and is not persisted as a second field.
+{%- endif %}
+{%- endfor %}
+
+    public init() {}
+}
+
+public struct {{ file.symbols.migration }}: AsyncMigration {
+    public init() {}
+
+    public func prepare(on database: any Database) async throws {
+        let schema = database.schema(
+            {{ file.symbols.entity }}.schema,
+            space: {{ file.symbols.entity }}.space
+        )
+
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+        schema.field(
+            "{{ field.name.snake }}",
+            {{ data_type(field) }}{% if field.storage is not none and field.storage.primary_key and pk.count == 1 %},
+            .identifier(auto: {% if field.mutation == 'system' and field.value.is.integer %}true{% else %}false{% endif %}){% endif %}{% if not field.optional and not field.nullable %},
+            .required{% endif %}
+        )
+{%- endif %}
+{%- endfor %}
+
+{%- if pk.count > 1 %}
+        schema.compositeIdentifier(
+{%- set comp = namespace(first=true) %}
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+            {% if not comp.first %},{% endif %}"{{ field.name.snake }}"{% set comp.first = false %}
+{%- endif %}{% endfor %}
+        )
+{%- endif %}
+
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+{%- if index.unique %}
+        schema.unique(
+            on: {% for indexed in index.fields %}"{{ indexed.snake }}"{% if not loop.last %}, {% endif %}{% endfor %}{% if index.name %},
+            name: "{{ index.name }}"{% endif %}
+        )
+{%- else %}
+        // Fluent has no portable non-unique index builder for "{{ index.name or ('idx_' ~ schema.name.snake ~ '_' ~ loop.index) }}".
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+{%- for field in schema.fields %}
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+        schema.foreignKey(
+            "{{ field.name.snake }}",
+            references: {{ symbol_for(field.relation.target.schema) }}.schema,
+            inSpace: {{ symbol_for(field.relation.target.schema) }}.space,
+            "{{ field.relation.target.field.snake }}",
+            onDelete: {{ fk_action(field.relation.on_delete) }},
+            onUpdate: {{ fk_action(field.relation.on_update) }}
+        )
+{%- if field.relation.is.one_to_one %}
+        schema.unique(on: "{{ field.name.snake }}")
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+        try await schema.create()
+    }
+
+    public func revert(on database: any Database) async throws {
+        try await database.schema(
+            {{ file.symbols.entity }}.schema,
+            space: {{ file.symbols.entity }}.space
+        ).delete()
+    }
+}
+{%- endif %}
