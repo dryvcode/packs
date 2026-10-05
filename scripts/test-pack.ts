@@ -5,6 +5,11 @@
  *   bun scripts/test-pack.ts inject/persistence/typeorm-entities [...]
  *   bun scripts/test-pack.ts --all
  *   bun scripts/test-pack.ts --keep <pack>
+ *   bun scripts/test-pack.ts --clean --all
+ *   bun scripts/test-pack.ts --clean-only
+ *
+ * Runs are created under /tmp/dryv/<layout>/<purpose>/<name>/run-<id>/ by default.
+ * Override the root with DRYV_TMP_ROOT.
  *
  * Every pack test receives the same fixtures/dryv.ir.yaml. Pack-specific fixture files
  * remain under tests/fixture/. Reusable non-IR fixture mappings live centrally in
@@ -42,6 +47,7 @@ function cliCommand(): string[] {
 
 const CLI = cliCommand();
 const API_URL = process.env.DRYV_API_URL ?? "http://127.0.0.1:8750";
+const RUNS_ROOT = resolve(process.env.DRYV_TMP_ROOT ?? join(tmpdir(), "dryv"));
 const FIXTURE_MANIFEST = JSON.parse(
   readFileSync(join(FIXTURES, "manifest.json"), "utf8"),
 ) as FixtureManifest;
@@ -86,7 +92,9 @@ function prepare(pack: string): string {
     );
   }
 
-  const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replaceAll("/", "-")}-`));
+  const packRuns = join(RUNS_ROOT, pack);
+  mkdirSync(packRuns, { recursive: true });
+  const project = mkdtempSync(join(packRuns, "run-"));
   cpSync(fixture, project, { recursive: true });
   cpSync(join(FIXTURES, "dryv.ir.yaml"), join(project, "dryv.ir.yaml"));
   applySharedFixtures(pack, project);
@@ -108,13 +116,26 @@ function prepare(pack: string): string {
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const keep = args.includes("--keep");
+  const clean = args.includes("--clean");
+  const cleanOnly = args.includes("--clean-only");
+
+  if (clean || cleanOnly) {
+    rmSync(RUNS_ROOT, { recursive: true, force: true });
+    console.log(`✓ cleaned ${RUNS_ROOT}`);
+  }
+  if (cleanOnly) return 0;
+
   const named = args.filter((arg) => !arg.startsWith("--"));
   const packs = args.includes("--all") ? packIds() : named;
 
   if (packs.length === 0) {
-    console.error("usage: bun scripts/test-pack.ts <layout>/<purpose>/<name> [...] | --all");
+    console.error(
+      "usage: bun scripts/test-pack.ts [--clean] [--keep] <layout>/<purpose>/<name> [...] | --all | --clean-only",
+    );
     return 2;
   }
+
+  console.log(`Run root: ${RUNS_ROOT}`);
 
   const failures: string[] = [];
 
