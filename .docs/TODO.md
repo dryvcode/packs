@@ -77,6 +77,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [ ] [12 — Elixir](ecosystems/12-elixir.md)
 - [ ] [13 — C / C++](ecosystems/13-c-cpp.md)
 - [ ] [14 — Cross-ecosystem candidates](ecosystems/14-cross-ecosystem.md)
+- [ ] [15 — Other languages](ecosystems/15-other-languages.md)
 
 ## Current next step
 
