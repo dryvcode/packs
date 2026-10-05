@@ -1,5 +1,9 @@
 package {{ pack.inputs.package_name }}
 
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import kotlinx.serialization.json.Json
 
 class DryvBindingException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
@@ -24,4 +28,10 @@ object DryvKtor {
     fun double(raw: String, name: String): Double =
         raw.toDoubleOrNull()
             ?: throw DryvBindingException("Invalid number value for '$name'")
+}
+
+fun Application.installDryvContentNegotiation(json: Json = DryvKtor.json) {
+    install(ContentNegotiation) {
+        json(json)
+    }
 }
