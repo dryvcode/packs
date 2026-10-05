@@ -1,0 +1,206 @@
+package {{ pack.inputs.package_name }}.operations
+
+import io.ktor.client.call.body
+import io.ktor.client.request.header
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.client.request.forms.FormDataContent
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.Parameters
+import io.ktor.http.contentType
+import io.ktor.http.ContentType
+import io.ktor.http.encodeURLPathPart
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import {{ pack.inputs.package_name }}.DryvApiException
+import {{ pack.inputs.package_name }}.DryvClient
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.package_name }}.models.{{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+{%- macro kotlin_ident(name) -%}
+{%- if name in ['as','break','class','continue','do','else','false','for','fun','if','in','interface','is','null','object','package','return','super','this','throw','true','try','typealias','typeof','val','var','when','while','by','catch','constructor','delegate','dynamic','field','file','finally','get','import','init','param','property','receiver','set','setparam','where','actual','abstract','annotation','companion','const','crossinline','data','enum','expect','external','final','infix','inline','inner','internal','lateinit','noinline','open','operator','out','override','private','protected','public','reified','sealed','suspend','tailrec','vararg','field','it'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}JsonElement
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'JsonElement' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'JsonElement' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.number -%}Double
+{%- elif value.is.decimal or value.is.money or value.is.uuid or value.is.string or value.is.temporal -%}String
+{%- elif value.is.record -%}JsonObject
+{%- else -%}JsonElement
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operation_field_type(field) -%}
+{{- base_type(field.value) -}}{%- if field.optional -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro schema_field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ kotlin_ident(binding.port.field.camel) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_optional(operation, binding) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro append_parameter(target, name, expression, optional, array) -%}
+{%- if optional %}
+        {{ expression }}?.let { value ->
+{%- if array %}
+            value.forEach { item -> {{ target }}.append({{ name | tojson }}, DryvClient.wireString(item)) }
+{%- else %}
+            {{ target }}.append({{ name | tojson }}, DryvClient.wireString(value))
+{%- endif %}
+        }
+{%- else %}
+{%- if array %}
+        {{ expression }}.forEach { item -> {{ target }}.append({{ name | tojson }}, DryvClient.wireString(item)) }
+{%- else %}
+        {{ target }}.append({{ name | tojson }}, DryvClient.wireString({{ expression }}))
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+@Serializable
+data class {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+    @SerialName({{ field.name.raw | tojson }})
+    val {{ kotlin_ident(field.name.camel) }}: {{ operation_field_type(field) }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+{%- endif %}
+suspend fun {{ kotlin_ident(file.symbol) }}(
+    client: DryvClient{% if operation.input %},
+    input: {% if operation.input.kind == 'schema' %}{{ base_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %}{% endif %}
+): {% if operation.output %}{{ base_type(operation.output.value) }}{% else %}Unit{% endif %} {
+{%- if http.input_groups.multipart %}
+    throw DryvApiException(
+        status = 501,
+        message = "Multipart bindings require an explicit Kotlin semantic mapping.",
+    )
+{%- else %}
+    var path = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+{%- if binding_optional(operation, binding) %}
+    val pathValue{{ loop.index }} = {{ bound(binding) }}
+        ?: throw IllegalArgumentException("Missing path parameter {{ binding.name or binding.port.name.raw }}")
+    path = path.replace(
+        {{ ('{' ~ (binding.name or binding.port.name.raw) ~ '}') | tojson }},
+        DryvClient.wireString(pathValue{{ loop.index }}).encodeURLPathPart(),
+    )
+{%- else %}
+    path = path.replace(
+        {{ ('{' ~ (binding.name or binding.port.name.raw) ~ '}') | tojson }},
+        DryvClient.wireString({{ bound(binding) }}).encodeURLPathPart(),
+    )
+{%- endif %}
+{%- endfor %}
+
+    val query = Parameters.build {
+{%- for binding in http.input_groups.query %}
+{{ append_parameter('this', binding.name or binding.port.name.raw, bound(binding), binding_optional(operation, binding), false) }}
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+{%- if binding.port.value.is.schema %}
+        val queryObject = {{ bound(binding) }}
+{%- for field in binding.port.value.schema.fields %}
+{{ append_parameter('this', field.name.raw, 'queryObject.' ~ kotlin_ident(field.name.camel), field.optional or field.nullable, field.array is not none) }}
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+    }
+
+    val form = {% if http.input_groups.form %}Parameters.build {
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none and binding.port.value.is.schema %}
+        val formObject = {{ bound(binding) }}
+{%- for field in binding.port.value.schema.fields %}
+{{ append_parameter('this', field.name.raw, 'formObject.' ~ kotlin_ident(field.name.camel), field.optional or field.nullable, field.array is not none) }}
+{%- endfor %}
+{%- else %}
+{{ append_parameter('this', binding.name or binding.port.name.raw, bound(binding), binding_optional(operation, binding), false) }}
+{%- endif %}
+{%- endfor %}
+    }{% else %}null{% endif %}
+
+    val response = client.http.request {
+        method = HttpMethod.parse({{ http.method | tojson }})
+        url(client.baseUrl.trimEnd('/') + path)
+        query.forEach { name, values ->
+            values.forEach { value -> url.parameters.append(name, value) }
+        }
+{%- for binding in http.input_groups.header %}
+{%- if binding_optional(operation, binding) %}
+        {{ bound(binding) }}?.let { value ->
+            header({{ (binding.name or binding.port.name.raw) | tojson }}, DryvClient.wireString(value))
+        }
+{%- else %}
+        header({{ (binding.name or binding.port.name.raw) | tojson }}, DryvClient.wireString({{ bound(binding) }}))
+{%- endif %}
+{%- endfor %}
+{%- if http.input_groups.cookie %}
+        val cookieParts = buildList {
+{%- for binding in http.input_groups.cookie %}
+{%- if binding_optional(operation, binding) %}
+            {{ bound(binding) }}?.let { value ->
+                add({{ (binding.name or binding.port.name.raw) | tojson }} + "=" + DryvClient.wireString(value))
+            }
+{%- else %}
+            add({{ (binding.name or binding.port.name.raw) | tojson }} + "=" + DryvClient.wireString({{ bound(binding) }}))
+{%- endif %}
+{%- endfor %}
+        }
+        if (cookieParts.isNotEmpty()) {
+            header(HttpHeaders.Cookie, cookieParts.joinToString("; "))
+        }
+{%- endif %}
+{%- for binding in http.input_groups.body %}
+{%- if binding_optional(operation, binding) %}
+        {{ bound(binding) }}?.let { bodyValue ->
+            contentType(ContentType.Application.Json)
+            setBody(bodyValue)
+        }
+{%- else %}
+        contentType(ContentType.Application.Json)
+        setBody({{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+{%- if http.input_groups.form %}
+        contentType(ContentType.Application.FormUrlEncoded)
+        setBody(FormDataContent(form!!))
+{%- endif %}
+    }
+
+    client.ensureSuccess(response)
+{%- if operation.output %}
+    return response.body<{{ base_type(operation.output.value) }}>()
+{%- else %}
+    return Unit
+{%- endif %}
+{%- endif %}
+}
