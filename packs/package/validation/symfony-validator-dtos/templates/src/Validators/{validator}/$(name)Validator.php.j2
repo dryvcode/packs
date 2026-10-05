@@ -1,0 +1,214 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Validators;
+
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+{%- if dependency.symbol[-9:] != 'Validator' %}
+use {{ pack.inputs.root_namespace }}\Models\{{ dependency.symbol }};
+{%- endif %}
+{%- endif %}{% endfor %}
+use Symfony\Component\Validator\ConstraintViolationListInterface;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+
+{%- macro dto_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-3:] == 'Dto' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] == 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro enum_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-3:] != 'Dto' and dependency.symbol[-9:] != 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_regex(primitive) -%}
+{%- if primitive.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif primitive.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif primitive.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif primitive.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif primitive.is.hex -%}^[0-9a-fA-F]+$
+{%- elif primitive.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif primitive.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif primitive.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif primitive.is.country_code -%}^[A-Z]{2}$
+{%- elif primitive.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro primitive_constraints(value) -%}
+{%- if value.is.boolean %}
+                new Assert\Type('bool'),
+{%- elif value.is.integer %}
+                new Assert\Type('int'),
+{%- elif value.is.number %}
+                new Assert\Type(['int', 'float']),
+{%- elif value.is.decimal or value.is.money %}
+                new Assert\Type('string'),
+                new Assert\Regex(pattern: '#^-?\d+(?:\.\d+)?$#'),
+{%- elif value.is.string %}
+                new Assert\Type('string'),
+{%- endif %}
+{%- if value.is.enum and enum_for(value.property.enum) %}
+                new Assert\Choice(choices: {{ enum_for(value.property.enum) }}::values()),
+{%- endif %}
+{%- if value.is.primitive %}
+{%- set primitive = value.property.primitive %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %}
+                new Assert\Length(exactly: {{ constraints.length.exact }}),
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %}
+                new Assert\Length(min: {{ constraints.length.min }}),
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %}
+                new Assert\Length(max: {{ constraints.length.max }}),
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+                new Assert\Email(),
+{%- elif primitive.is.url or primitive.is.uri %}
+                new Assert\Url(),
+{%- elif primitive.is.uuid %}
+                new Assert\Uuid(),
+{%- elif format_regex(primitive) %}
+                new Assert\Regex(pattern: '#{{ format_regex(primitive) | replace('#', '\\#') }}#'),
+{%- endif %}
+{%- if constraints.pattern is not none %}
+{%- for expression in constraints.pattern.match %}
+                new Assert\Regex(pattern: '#{{ expression | replace('#', '\\#') }}#'),
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %}
+                new Assert\GreaterThanOrEqual(value: {{ constraints.range.min }}),
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %}
+                new Assert\LessThanOrEqual(value: {{ constraints.range.max }}),
+{%- endif %}
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro has_item_constraints(field) -%}
+{%- if field.value.is.enum or field.value.is.primitive -%}x{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_constraints(field) -%}
+{%- if not field.nullable %}
+                new Assert\NotNull(),
+{%- endif %}
+{%- if field.array is not none %}
+                new Assert\Type('array'),
+{%- if field.array.has_min or field.array.has_max %}
+                new Assert\Count({% if field.array.has_min %}min: {{ field.array.min }}{% if field.array.has_max %}, {% endif %}{% endif %}{% if field.array.has_max %}max: {{ field.array.max }}{% endif %}),
+{%- endif %}
+{%- if has_item_constraints(field) %}
+                new Assert\All([
+{{ primitive_constraints(field.value) }}
+                ]),
+{%- endif %}
+{%- elif not field.value.is.schema %}
+{{ primitive_constraints(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro php_operand(operand, variable) -%}
+{%- if operand.is.field -%}{{ variable }}->{{ operand.field.camel }}
+{%- elif operand.is.literal -%}{{ operand.value_json }}
+{%- else -%}({% for term in operand.terms %}{% if term.kind == 'field' %}{{ variable }}->{{ term.field.camel }}{% else %}{{ term.value_json }}{% endif %}{% if not loop.last %} {% if operand.operator == 'add' %}+{% elif operand.operator == 'subtract' %}-{% elif operand.operator == 'multiply' %}*{% else %}/{% endif %} {% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro php_operator(operator) -%}
+{%- if operator == 'equal' -%}===
+{%- elif operator == 'not-equal' -%}!==
+{%- elif operator == 'less-than' -%}<
+{%- elif operator == 'less-than-or-equal' -%}<=
+{%- elif operator == 'greater-than' -%}>
+{%- else -%}>=
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_expression(invariant, variable) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{{ php_operand(comparison.left, variable) }} {{ php_operator(comparison.operator) }} {{ php_operand(comparison.right, variable) }}{% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+final class {{ file.symbol }}
+{
+    public function __construct(
+        private readonly ValidatorInterface $validator,
+    ) {
+    }
+
+    public function validate({{ dto_for(schema) }} $value): ConstraintViolationListInterface
+    {
+        $violations = $this->validator->validate($value->toArray(), self::constraints());
+
+{%- for invariant in schema.invariants %}
+{%- if not invariant.form.is.opaque %}
+        $violations->addAll($this->validator->validate(
+            $value,
+            new Assert\Callback(
+                static function ({{ dto_for(schema) }} $object, ExecutionContextInterface $context): void {
+                    if (!({{ invariant_expression(invariant, '$object') }})) {
+                        $context->buildViolation({% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %})
+                            ->addViolation();
+                    }
+                },
+            ),
+        ));
+{%- endif %}
+{%- endfor %}
+
+{%- for field in schema.fields %}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+{%- if field.array is not none %}
+        if ($value->{{ field.name.camel }} !== null) {
+            $nestedValidator = new {{ validator_for(field.value.schema) }}($this->validator);
+            foreach ($value->{{ field.name.camel }} as $item) {
+                $violations->addAll($nestedValidator->validate($item));
+            }
+        }
+{%- else %}
+        if ($value->{{ field.name.camel }} !== null) {
+            $violations->addAll(
+                (new {{ validator_for(field.value.schema) }}($this->validator))
+                    ->validate($value->{{ field.name.camel }}),
+            );
+        }
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+        return $violations;
+    }
+
+    public static function constraints(): Assert\Collection
+    {
+        return new Assert\Collection(
+            fields: [
+{%- for field in schema.fields %}
+                {{ field.name.raw | tojson }} => new Assert\{% if field.optional %}Optional{% else %}Required{% endif %}([
+{{ field_constraints(field) }}
+                ]),
+{%- endfor %}
+            ],
+            allowExtraFields: false,
+            allowMissingFields: false,
+        );
+    }
+}
