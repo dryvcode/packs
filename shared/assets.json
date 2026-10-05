@@ -83,9 +83,11 @@
     "packs/package/clients/python-client-sdk/templates/src/dryv_client/models/{models-index}/__init__.py.j2"
   ],
   "templates/php/wire-enum.php.j2": [
-    "packs/package/clients/php-client-sdk/templates/src/Models/{enum}/$(name).php.j2"
+    "packs/package/clients/php-client-sdk/templates/src/Models/{enum}/$(name).php.j2",
+    "packs/package/backend/symfony-backend/templates/src/Models/{enum}/$(name).php.j2"
   ],
   "templates/php/wire-model.php.j2": [
-    "packs/package/clients/php-client-sdk/templates/src/Models/{model}/$(name).php.j2"
+    "packs/package/clients/php-client-sdk/templates/src/Models/{model}/$(name).php.j2",
+    "packs/package/backend/symfony-backend/templates/src/Models/{model}/$(name).php.j2"
   ]
 }
