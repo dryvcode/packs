@@ -68,8 +68,9 @@ public sealed class {{ file.symbol }}Configuration : IEntityTypeConfiguration<{{
 {%- endif %}{% endfor %}
 {%- elif pk.count > 1 %}
         builder.HasKey(entity => new {
+{%- set key_state = namespace(first=true) %}
 {%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
-            entity.{{ cs_ident(field.name.pascal) }}{% if not loop.last %},{% endif %}
+            {% if not key_state.first %},{% endif %}entity.{{ cs_ident(field.name.pascal) }}{% set key_state.first = false %}
 {%- endif %}{% endfor %}
         });
 {%- endif %}
@@ -92,8 +93,11 @@ public sealed class {{ file.symbol }}Configuration : IEntityTypeConfiguration<{{
 {%- if field.array is not none or field.value.is.schema or field.value.is.record or field.value.is.unknown or field.value.is.dynamic or field.value.is.generic or field.value.is.composite or field.value.is.union or field.value.is.tuple or field.value.is.literal or field.value.is.enum %}
         property{{ field.name.pascal }}.HasColumnType("text");
 {%- endif %}
-{%- if field.storage is not none and field.storage.primary_key and field.mutation == 'system' %}
+{%- if field.storage is not none and field.storage.primary_key and field.mutation == 'system' and (field.value.is.integer or field.value.is.uuid) %}
         property{{ field.name.pascal }}.ValueGeneratedOnAdd();
+{%- endif %}
+{%- if field.mutation == 'create-only' %}
+        property{{ field.name.pascal }}.Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Throw);
 {%- endif %}
 
 {%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
