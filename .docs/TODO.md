@@ -53,11 +53,11 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ### Go
 
-- [ ] Go Client SDK — implemented on `develop`, awaiting fixture/toolchain verification
+- [x] Go Client SDK
 
 ### Missing language coverage
 
-- [ ] Go — first client pack is in progress; ecosystem coverage is not verified yet
+- [x] Go — client SDK verified; broader Go ecosystem remains planned
 - [ ] Rust
 - [ ] Java
 - [ ] .NET / C#
@@ -89,4 +89,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-Finish repository-wide duplication cleanup and verify `package/clients/go-client-sdk` against the shared fixture. Then continue the already approved first batch with Jakarta Validation DTOs and Axum backend.
+Run the full public-pack suite against the shared fixture. Then continue the approved batch with Jakarta Validation DTOs and Axum backend.
