@@ -110,10 +110,12 @@
   ],
   "templates/kotlin/kotlinx-enum.kt.j2": [
     "packs/package/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
-    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{enum}/$(name).kt.j2"
+    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
+    "packs/package/validation/kotlinx-validation/templates/src/main/kotlin/models/{enum}/$(name).kt.j2"
   ],
   "templates/kotlin/kotlinx-model.kt.j2": [
     "packs/package/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
-    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{model}/$(name).kt.j2"
+    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
+    "packs/package/validation/kotlinx-validation/templates/src/main/kotlin/models/{dto}/$(name).kt.j2"
   ]
 }
