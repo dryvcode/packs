@@ -1,0 +1,10 @@
+actions:
+  files:
+    format:
+      extensions: [.go]
+      commands:
+        - run: [gofmt, -w, $(files)]
+  final:
+    install:
+      commands:
+        - run: [go, mod, tidy]
