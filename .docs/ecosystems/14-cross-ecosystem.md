@@ -1,12 +1,12 @@
 # Cross-ecosystem candidates
 
-Status: research backlog only. No new purpose or contract is approved by this file.
+Status: active cross-ecosystem roadmap. The `documentation` purpose is now proven by `inject/documentation/markdown-reference`; other new purposes still require a real pack design.
 
 These candidates cut across languages. A new repository purpose must only be introduced when a real pack justifies it.
 
 ## Contracts and API descriptions
 
-- [ ] OpenAPI document pack
+- [ ] OpenAPI document pack — blocked on canonical effective HTTP path resolution (application root + group chain + operation-local path) and explicit schema-artifact composition; do not approximate it
 - [x] JSON Schema 2020-12 — `package/validation/json-schema`
 - [ ] AsyncAPI research
 - [ ] GraphQL schema pack research
@@ -16,20 +16,20 @@ Questions:
 
 - [x] JSON Schema target is generated validation output; Runtime IR remains semantic authority
 - [x] generated contract artifacts must never replace Canonical Runtime IR inside Dryv
-- [ ] define trace from Runtime IR items to generated contract artifacts
+- [x] generated artifacts use the normal Dryv plan/file trace; Runtime IR remains authority
 - [ ] decide whether the pack is `inject` or `package`
 
 ## Documentation
 
-- [ ] API reference documentation pack
-- [ ] Markdown schema catalogue
-- [ ] operation catalogue
-- [ ] Mermaid relationship diagrams
+- [x] API reference documentation pack — `inject/documentation/markdown-reference`
+- [x] Markdown schema catalogue
+- [x] operation catalogue
+- [x] Mermaid relationship diagrams
 - [ ] architecture/reference site fragments
 - [ ] client SDK usage docs
 - [ ] generated examples from operation input/output semantics
 
-Potential future purpose: `documentation`, only if approved when a real pack is designed.
+`documentation` is now an approved/proven purpose because a real portable pack exists. New documentation packs must still consume Runtime IR/context rather than maintain a second semantic model.
 
 ## Testing
 
