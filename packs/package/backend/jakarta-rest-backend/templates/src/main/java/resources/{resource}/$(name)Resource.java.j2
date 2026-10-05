@@ -1,0 +1,240 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'record', 'sealed', 'permits', 'yield', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro java_type(value) -%}
+{%- if value is none -%}Object
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}OffsetDateTime
+{%- elif value.is.temporal and value.is.duration -%}Duration
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay
+{%- elif value.is.record -%}Map<String, Object>
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro whole_group(http, kind) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and ((kind == 'body' and binding.is.body) or (kind == 'query_object' and binding.is.query_object) or (kind == 'form' and binding.is.form)) -%}x{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro binding_variable(binding) -%}
+{%- if binding.is.path -%}path_{{ binding.port.name.camel }}
+{%- elif binding.is.query -%}query_{{ binding.port.name.camel }}
+{%- elif binding.is.query_object -%}query_object_{{ binding.port.name.camel }}
+{%- elif binding.is.header -%}header_{{ binding.port.name.camel }}
+{%- elif binding.is.cookie -%}cookie_{{ binding.port.name.camel }}
+{%- elif binding.is.body -%}{% if binding.port.field is none %}input{% else %}body_{{ binding.port.name.camel }}{% endif %}
+{%- elif binding.is.form -%}form_{{ binding.port.name.camel }}
+{%- else -%}unsupported_{{ binding.port.name.camel }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_source(operation, http, field) -%}
+{%- if whole_group(http, 'query_object') -%}query_object_{{ java_ident(field.name.camel) }}
+{%- elif whole_group(http, 'form') -%}form_{{ java_ident(field.name.camel) }}
+{%- else -%}
+{%- set state = namespace(found=false) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.found = true -%}{{ binding_variable(binding) }}
+{%- endif -%}
+{%- endfor -%}
+{%- if not state.found -%}null{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro service_params(operation) -%}
+{%- if operation.input and operation.input.kind == 'schema' -%}{{ java_type(operation.input.value) }} input
+{%- elif operation.input -%}
+{%- for field in operation.input.fields -%}{{ java_type(field.value) }} {{ java_ident(field.name.camel) }}{% if not loop.last %}, {% endif %}{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro service_result(operation) -%}
+{%- if operation.output -%}{{ java_type(operation.output.value) }}{%- else -%}void{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+{%- macro http_annotation(http) -%}
+{%- if http.is.get -%}@GET
+{%- elif http.is.post -%}@POST
+{%- elif http.is.put -%}@PUT
+{%- elif http.is.patch -%}@PATCH
+{%- elif http.is.delete -%}@DELETE
+{%- elif http.is.head -%}@HEAD
+{%- elif http.is.options -%}@OPTIONS
+{%- else -%}@TraceMethod
+{%- endif -%}
+{%- endmacro -%}
+
+package {{ pack.inputs.java_package }}.resources;
+
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.java_package }}.models.{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.CookieParam;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HEAD;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.OPTIONS;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.util.Map;
+
+@Path("/")
+public final class {{ file.symbol }} {
+    private final Service service;
+
+    public {{ file.symbol }}(Service service) {
+        this.service = service;
+    }
+
+    public interface Service {
+{%- for operation in operations %}
+        {{ service_result(operation) }} {{ java_ident(operation.name.camel) }}({{ service_params(operation) }});
+{%- endfor %}
+    }
+
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @HttpMethod("TRACE")
+    public @interface TraceMethod {}
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    {{ http_annotation(http) }}
+    @Path("{{ http.path.local }}")
+{%- if http.input_groups.body %}
+    @Consumes(MediaType.APPLICATION_JSON)
+{%- elif http.input_groups.form %}
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+{%- endif %}
+{%- if operation.output %}
+    @Produces(MediaType.APPLICATION_JSON)
+{%- endif %}
+    public Response {{ java_ident(operation.name.camel) }}(
+{%- set params = namespace(first=true) %}
+{%- for binding in http.input_groups.path %}
+        {% if not params.first %},{% endif %}@PathParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endfor %}
+{%- for binding in http.input_groups.query %}
+        {% if not params.first %},{% endif %}@QueryParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+{%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
+{%- for field in operation.input.fields %}
+        {% if not params.first %},{% endif %}@QueryParam("{{ field.name.raw }}") {{ java_type(field.value) }} query_object_{{ java_ident(field.name.camel) }}{% set params.first=false %}
+{%- endfor %}
+{%- else %}
+        {% if not params.first %},{% endif %}@QueryParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.header %}
+        {% if not params.first %},{% endif %}@HeaderParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endfor %}
+{%- for binding in http.input_groups.cookie %}
+        {% if not params.first %},{% endif %}@CookieParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endfor %}
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
+{%- for field in operation.input.fields %}
+        {% if not params.first %},{% endif %}@FormParam("{{ field.name.raw }}") {{ java_type(field.value) }} form_{{ java_ident(field.name.camel) }}{% set params.first=false %}
+{%- endfor %}
+{%- else %}
+        {% if not params.first %},{% endif %}@FormParam("{{ binding.name or binding.port.name.raw }}") {{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.body %}
+        {% if not params.first %},{% endif %}{{ java_type(binding.port.value) }} {{ binding_variable(binding) }}{% set params.first=false %}
+{%- endfor %}
+    ) {
+{%- if http.input_groups.multipart %}
+        return Response.status(Response.Status.NOT_IMPLEMENTED)
+                .entity("multipart bindings require an explicit Java semantic mapping")
+                .type(MediaType.TEXT_PLAIN)
+                .build();
+{%- else %}
+{%- if operation.input and operation.input.kind == 'schema' and not whole_group(http, 'body') %}
+        {{ java_type(operation.input.value) }} serviceInput = new {{ java_type(operation.input.value) }}();
+{%- for field in operation.input.fields %}
+        serviceInput.{{ java_ident(field.name.camel) }} = {{ field_source(operation, http, field) }};
+{%- endfor %}
+{%- endif %}
+{%- if operation.output %}
+        {{ java_type(operation.output.value) }} output = service.{{ java_ident(operation.name.camel) }}(
+{%- if operation.input and operation.input.kind == 'schema' %}
+            {% if whole_group(http, 'body') %}input{% else %}serviceInput{% endif %}
+{%- elif operation.input %}
+{%- for field in operation.input.fields %}
+            {{ field_source(operation, http, field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+        );
+        return Response.status({{ success_status(http) }}).entity(output).build();
+{%- else %}
+        service.{{ java_ident(operation.name.camel) }}(
+{%- if operation.input and operation.input.kind == 'schema' %}
+            {% if whole_group(http, 'body') %}input{% else %}serviceInput{% endif %}
+{%- elif operation.input %}
+{%- for field in operation.input.fields %}
+            {{ field_source(operation, http, field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+        );
+        return Response.status({{ success_status(http) }}).build();
+{%- endif %}
+{%- endif %}
+    }
+
+{%- endfor %}
+}
