@@ -1,0 +1,23 @@
+# Schema Relationships
+
+This diagram projects explicit owning relations from schema fields. Inverse relation fields are not emitted again, avoiding duplicate edges.
+
+```mermaid
+erDiagram
+{% set state = namespace(edges=0) %}
+{% for schema in schemas %}
+{% for field in schema.fields %}
+{% if field.relation %}
+{% set state.edges = state.edges + 1 %}
+    {{ schema.name.pascal }} {% if field.relation.is.one_to_one %}||--||{% elif field.relation.is.one_to_many %}||--o{{% elif field.relation.is.many_to_many %}}o--o{{{% else %}}o--||{% endif %} {{ field.relation.target.schema.name.pascal }} : "{{ field.name.raw }}"
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% if state.edges == 0 %}
+    EMPTY {
+        string note "No explicit schema relations"
+    }
+{% endif %}
+```
+
+The diagram is semantic documentation only. Database-specific foreign-key names, junction tables, and ORM navigation details belong to persistence packs.
