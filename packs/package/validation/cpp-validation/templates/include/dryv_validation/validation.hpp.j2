@@ -1,0 +1,38 @@
+#pragma once
+
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace {{ pack.inputs.namespace }} {
+
+struct ValidationIssue {
+    std::string path;
+    std::string message;
+};
+
+struct ValidationResult {
+    std::vector<ValidationIssue> issues{};
+
+    [[nodiscard]] bool ok() const noexcept {
+        return issues.empty();
+    }
+
+    void add(std::string path, std::string message) {
+        issues.push_back(ValidationIssue{std::move(path), std::move(message)});
+    }
+
+    void merge(const ValidationResult& other, const std::string& prefix = {}) {
+        for (const auto& issue : other.issues) {
+            if (prefix.empty()) {
+                issues.push_back(issue);
+            } else if (issue.path.empty()) {
+                issues.push_back(ValidationIssue{prefix, issue.message});
+            } else {
+                issues.push_back(ValidationIssue{prefix + "." + issue.path, issue.message});
+            }
+        }
+    }
+};
+
+} // namespace {{ pack.inputs.namespace }}
