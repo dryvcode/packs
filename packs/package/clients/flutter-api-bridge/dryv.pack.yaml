@@ -101,8 +101,10 @@ provides:
   property.enum.types:
     $ref: '#/templates/enum'
 
+# shared:dart-tool:start
 choose:
   dart.tool: { options: [flutter, dart] }
+# shared:dart-tool:end
 
 actions:
   final:
