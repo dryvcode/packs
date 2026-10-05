@@ -1,0 +1,126 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }};
+
+use Symfony\Component\HttpFoundation\Request;
+
+final class DryvHttp
+{
+    /** @return array<string, mixed> */
+    public static function jsonObject(Request $request): array
+    {
+        $content = $request->getContent();
+        if ($content === '') {
+            return [];
+        }
+
+        $decoded = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+        if (!is_array($decoded)) {
+            throw new \InvalidArgumentException('Expected a JSON object request body.');
+        }
+
+        return $decoded;
+    }
+
+    public static function decode(mixed $raw, string $kind, ?string $class = null): mixed
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        if ($kind === 'schema') {
+            if (!is_array($raw) || $class === null) {
+                throw new \InvalidArgumentException('Expected an object value.');
+            }
+
+            return $class::fromArray($raw);
+        }
+
+        if ($kind === 'enum') {
+            if ($class === null) {
+                throw new \InvalidArgumentException('Enum class is required.');
+            }
+
+            return $class::from($raw);
+        }
+
+        return match ($kind) {
+            'bool' => self::boolean($raw),
+            'int' => self::integer($raw),
+            'float' => self::number($raw),
+            'string' => (string) $raw,
+            default => $raw,
+        };
+    }
+
+    /** @param list<mixed> $values @return list<mixed> */
+    public static function decodeMany(array $values, string $kind, ?string $class = null): array
+    {
+        return array_map(
+            static fn (mixed $value): mixed => self::decode($value, $kind, $class),
+            $values,
+        );
+    }
+
+    public static function wire(mixed $value): mixed
+    {
+        if ($value instanceof \JsonSerializable) {
+            return self::wire($value->jsonSerialize());
+        }
+
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $key => $item) {
+                $result[$key] = self::wire($item);
+            }
+
+            return $result;
+        }
+
+        return $value;
+    }
+
+    private static function boolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $result = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($result === null) {
+            throw new \InvalidArgumentException('Expected a boolean value.');
+        }
+
+        return $result;
+    }
+
+    private static function integer(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        $result = filter_var($value, FILTER_VALIDATE_INT);
+        if ($result === false) {
+            throw new \InvalidArgumentException('Expected an integer value.');
+        }
+
+        return $result;
+    }
+
+    private static function number(mixed $value): float
+    {
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        $result = filter_var($value, FILTER_VALIDATE_FLOAT);
+        if ($result === false) {
+            throw new \InvalidArgumentException('Expected a numeric value.');
+        }
+
+        return (float) $result;
+    }
+}
