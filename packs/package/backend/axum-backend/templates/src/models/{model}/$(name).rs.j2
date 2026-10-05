@@ -1,3 +1,9 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
+{%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
@@ -34,6 +40,6 @@ use crate::models::{{ dependency.symbol }};
 pub struct {{ file.symbol }} {
 {%- for field in schema.fields %}
     #[serde(rename = "{{ field.name.raw }}"{% if field.optional %}, default, skip_serializing_if = "Option::is_none"{% endif %})]
-    pub {{ field.name.snake }}: {{ field_type(field) }},
+    pub {{ rust_ident(field.name.snake) }}: {{ field_type(field) }},
 {%- endfor %}
 }
