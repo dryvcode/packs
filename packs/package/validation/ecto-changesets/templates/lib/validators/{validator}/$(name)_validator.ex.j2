@@ -77,10 +77,10 @@ defmodule {{ pack.inputs.module_prefix }}.Validators.{{ file.symbol }} do
     changeset =
       {%{}, @types}
       |> cast(params, @fields)
-{%- set required = [] %}
-{%- for field in schema.fields %}{% if not field.optional and not field.nullable %}{% set required = required + [field.name.snake] %}{% endif %}{% endfor %}
-{%- if required %}
-      |> validate_required([{% for name in required %}:{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}])
+{%- set required = namespace(names=[]) %}
+{%- for field in schema.fields %}{% if not field.optional and not field.nullable %}{% set required.names = required.names + [field.name.snake] %}{% endif %}{% endfor %}
+{%- if required.names %}
+      |> validate_required([{% for name in required.names %}:{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}])
 {%- endif %}
 {%- for field in schema.fields %}
 {%- if field.array is not none %}
