@@ -1,0 +1,128 @@
+{%- macro cs_ident(name) -%}
+{%- if name in ['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','false','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','null','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','true','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','virtual','void','volatile','while','record','required','file','scoped'] -%}@{{ name }}{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value, array) -%}
+{%- if array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}string
+{%- elif value.is.enum -%}string
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}long
+{%- elif value.is.decimal or value.is.money -%}decimal
+{%- elif value.is.number -%}double
+{%- elif value.is.uuid -%}Guid
+{%- elif value.is.temporal and value.is.date -%}DateOnly
+{%- elif value.is.temporal and value.is.time -%}TimeOnly
+{%- elif value.is.temporal and value.is.date_time -%}DateTime
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}DateTimeOffset
+{%- elif value.is.temporal and value.is.duration -%}TimeSpan
+{%- elif value.is.string -%}string
+{%- else -%}string
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{{- base_type(field.value, field.array) -}}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+{%- macro delete_behavior(value) -%}
+{%- if value == 'cascade' -%}DeleteBehavior.Cascade
+{%- elif value == 'restrict' -%}DeleteBehavior.Restrict
+{%- elif value == 'detach' -%}DeleteBehavior.SetNull
+{%- else -%}DeleteBehavior.NoAction
+{%- endif -%}
+{%- endmacro -%}
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace {{ pack.inputs.root_namespace }}.Entities;
+
+public sealed class {{ file.symbol }}
+{
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    public {{ field_type(field) }} {{ cs_ident(field.name.pascal) }} { get; set; }
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+    public {{ symbol_for(field.relation.target.schema) }}? {{ cs_ident(field.name.pascal ~ 'Relation') }} { get; set; }
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+}
+
+public sealed class {{ file.symbol }}Configuration : IEntityTypeConfiguration<{{ file.symbol }}>
+{
+    public void Configure(EntityTypeBuilder<{{ file.symbol }}> builder)
+    {
+        builder.ToTable(
+            "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"{% if schema.facets.storage and schema.facets.storage.namespace %},
+            "{{ schema.facets.storage.namespace }}"{% endif %}
+        );
+
+{%- set pk = namespace(count=0) %}
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{% set pk.count = pk.count + 1 %}{% endif %}{% endfor %}
+{%- if pk.count == 1 %}
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+        builder.HasKey(entity => entity.{{ cs_ident(field.name.pascal) }});
+{%- endif %}{% endfor %}
+{%- elif pk.count > 1 %}
+        builder.HasKey(entity => new {
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+            entity.{{ cs_ident(field.name.pascal) }}{% if not loop.last %},{% endif %}
+{%- endif %}{% endfor %}
+        });
+{%- endif %}
+
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+        var property{{ field.name.pascal }} = builder.Property(entity => entity.{{ cs_ident(field.name.pascal) }})
+            .HasColumnName("{{ field.name.snake }}");
+{%- if not field.optional and not field.nullable %}
+        property{{ field.name.pascal }}.IsRequired();
+{%- endif %}
+{%- if field.value.is.string and field.value.property.primitive.constraints.length is not none and field.value.property.primitive.constraints.length.has_max %}
+        property{{ field.name.pascal }}.HasMaxLength({{ field.value.property.primitive.constraints.length.max }});
+{%- elif field.value.is.string and field.value.property.primitive.constraints.length is not none and field.value.property.primitive.constraints.length.has_exact %}
+        property{{ field.name.pascal }}.HasMaxLength({{ field.value.property.primitive.constraints.length.exact }});
+{%- endif %}
+{%- if (field.value.is.decimal or field.value.is.money) and field.value.property.primitive.constraints.has_precision and field.value.property.primitive.constraints.has_scale %}
+        property{{ field.name.pascal }}.HasPrecision({{ field.value.property.primitive.constraints.precision }}, {{ field.value.property.primitive.constraints.scale }});
+{%- endif %}
+{%- if field.array is not none or field.value.is.schema or field.value.is.record or field.value.is.unknown or field.value.is.dynamic or field.value.is.generic or field.value.is.composite or field.value.is.union or field.value.is.tuple or field.value.is.literal or field.value.is.enum %}
+        property{{ field.name.pascal }}.HasColumnType("text");
+{%- endif %}
+{%- if field.storage is not none and field.storage.primary_key and field.mutation == 'system' %}
+        property{{ field.name.pascal }}.ValueGeneratedOnAdd();
+{%- endif %}
+
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+        builder.HasOne(entity => entity.{{ cs_ident(field.name.pascal ~ 'Relation') }})
+            .With{% if field.relation.is.one_to_one %}One{% else %}Many{% endif %}()
+            .HasForeignKey{% if field.relation.is.one_to_one %}<{{ file.symbol }}>{% endif %}(entity => entity.{{ cs_ident(field.name.pascal) }})
+            .HasPrincipalKey{% if field.relation.is.one_to_one %}<{{ symbol_for(field.relation.target.schema) }}>{% endif %}(entity => entity.{{ cs_ident(field.relation.target.field.pascal) }})
+{%- if field.relation.on_delete is not none and field.relation.on_delete != 'reset' %}
+            .OnDelete({{ delete_behavior(field.relation.on_delete) }})
+{%- endif %}
+            ;
+{%- if field.relation.on_delete == 'reset' %}
+        // Dryv on_delete=reset requires database SET DEFAULT semantics; EF Core has no portable DeleteBehavior equivalent.
+{%- endif %}
+{%- if field.relation.on_update is not none %}
+        // Dryv on_update={{ field.relation.on_update }} is a database FK action and is intentionally left to a migration/schema pack.
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+        builder.HasIndex(entity => new {
+{%- for indexed in index.fields %}
+            entity.{{ cs_ident(indexed.pascal) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        }){% if index.unique %}.IsUnique(){% endif %}{% if index.name %}.HasDatabaseName("{{ index.name }}"){% endif %};
+{%- endfor %}
+{%- endif %}
+    }
+}
