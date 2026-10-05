@@ -1,0 +1,143 @@
+package {{ pack.inputs.java_package }};
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class DryvClient {
+    private final String baseUrl;
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final Map<String, String> headers = new LinkedHashMap<>();
+
+    public DryvClient(String baseUrl) {
+        this(baseUrl, HttpClient.newHttpClient(), new ObjectMapper().findAndRegisterModules());
+    }
+
+    public DryvClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper) {
+        this.baseUrl = stripTrailingSlash(baseUrl);
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+    }
+
+    public DryvClient header(String name, String value) {
+        headers.put(name, value);
+        return this;
+    }
+
+    public ObjectMapper objectMapper() {
+        return objectMapper;
+    }
+
+    public HttpRequest.Builder request(String path) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path));
+        headers.forEach(builder::header);
+        return builder;
+    }
+
+    public <T> T send(HttpRequest request, Class<T> type) {
+        HttpResponse<String> response = exchange(request);
+        if (type == Void.class || response.body() == null || response.body().isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(response.body(), type);
+        } catch (JsonProcessingException error) {
+            throw new IllegalStateException("invalid JSON response", error);
+        }
+    }
+
+    public void sendEmpty(HttpRequest request) {
+        exchange(request);
+    }
+
+    public String json(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException error) {
+            throw new IllegalArgumentException("cannot encode JSON request body", error);
+        }
+    }
+
+    public String form(Map<String, ?> values) {
+        StringBuilder result = new StringBuilder();
+        for (Map.Entry<String, ?> entry : values.entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
+            if (result.length() > 0) {
+                result.append('&');
+            }
+            result.append(urlEncode(entry.getKey()))
+                    .append('=')
+                    .append(urlEncode(String.valueOf(entry.getValue())));
+        }
+        return result.toString();
+    }
+
+    public String appendQuery(String path, Map<String, ?> values) {
+        String encoded = form(values);
+        if (encoded.isEmpty()) {
+            return path;
+        }
+        return path + (path.contains("?") ? "&" : "?") + encoded;
+    }
+
+    @SuppressWarnings("unchecked")
+    public String appendQueryObject(String path, Object value) {
+        Map<String, Object> values = objectMapper.convertValue(value, Map.class);
+        return appendQuery(path, values);
+    }
+
+    public static String replacePath(String path, String name, Object value) {
+        return path.replace("{" + name + "}", urlEncode(String.valueOf(value)));
+    }
+
+    private HttpResponse<String> exchange(HttpRequest request) {
+        final HttpResponse<String> response;
+        try {
+            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException error) {
+            throw new IllegalStateException("HTTP request failed", error);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("HTTP request interrupted", error);
+        }
+
+        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+            return response;
+        }
+
+        JsonNode payload = null;
+        String message = response.body() == null ? "" : response.body().trim();
+        if (!message.isEmpty()) {
+            try {
+                payload = objectMapper.readTree(message);
+                if (payload.has("message") && payload.get("message").isTextual()) {
+                    message = payload.get("message").asText();
+                }
+            } catch (JsonProcessingException ignored) {
+                // Keep the raw body as the message.
+            }
+        }
+        throw new ApiException(response.statusCode(), message, payload);
+    }
+
+    private static String stripTrailingSlash(String value) {
+        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    }
+
+    private static String urlEncode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+    }
+}
