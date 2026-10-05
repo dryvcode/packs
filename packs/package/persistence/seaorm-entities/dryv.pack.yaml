@@ -1,0 +1,53 @@
+version: dryv.pack/v1alpha1
+key: persistence.seaorm-entities
+layout: package
+package:
+  name: { $ref: "#/inputs.crate_name" }
+
+source: templates
+
+info:
+  title: SeaORM Entities
+  version: 0.1.0
+  description: Generates SeaORM 2.x dense entity models from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: SeaORM 2.x entity models with primary keys and canonical relations.
+  languages: [rust]
+  frameworks: [seaorm]
+  tags: [entities, database, orm, rust]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  crate_name:
+    type: string
+    default: dryv_entities
+    description: Cargo package name for generated entities.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+  entities-index:
+    exports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
