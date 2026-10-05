@@ -48,7 +48,7 @@ public static class {{ file.symbol }}
     }
 
 {%- endif %}
-    public static async Task<{% if operation.output %}{{ cs_type(operation.output.value) }}{% else %}bool{% endif %}> ExecuteAsync(
+    public static async Task{% if operation.output %}<{{ cs_type(operation.output.value) }}>{% endif %} ExecuteAsync(
         DryvClient client{% if operation.input %},
         {% if operation.input.kind == 'schema' %}{{ cs_type(operation.input.value) }}{% else %}Input{% endif %} input{% endif %},
         CancellationToken cancellationToken = default)
@@ -112,7 +112,6 @@ public static class {{ file.symbol }}
         return await client.SendAsync<{{ cs_type(operation.output.value) }}>(request, cancellationToken).ConfigureAwait(false);
 {%- else %}
         await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        return true;
 {%- endif %}
 {%- endif %}
     }
