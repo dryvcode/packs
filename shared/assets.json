@@ -61,5 +61,17 @@
     "packs/package/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2",
     "packs/package/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2",
     "packs/package/validation/fluentvalidation-dtos/templates/Models/{dto}/$(name).cs.j2"
+  ],
+  "templates/python/pydantic-enum.py.j2": [
+    "packs/package/backend/fastapi-backend/templates/models/{enum}/$(name).py.j2"
+  ],
+  "templates/python/pydantic-model.py.j2": [
+    "packs/package/backend/fastapi-backend/templates/models/{model}/$(name).py.j2"
+  ],
+  "templates/python/pydantic-generic.py.j2": [
+    "packs/package/backend/fastapi-backend/templates/models/{generic}/$(name).py.j2"
+  ],
+  "templates/python/pydantic-index.py.j2": [
+    "packs/package/backend/fastapi-backend/templates/models/{models-index}/__init__.py.j2"
   ]
 }
