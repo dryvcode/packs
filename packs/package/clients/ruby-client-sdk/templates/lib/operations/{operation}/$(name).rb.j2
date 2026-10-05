@@ -1,0 +1,109 @@
+# frozen_string_literal: true
+
+module {{ pack.inputs.module_name }}
+{%- macro ruby_ident(name) -%}
+{%- if name in ['BEGIN','END','alias','and','begin','break','case','class','def','defined','do','else','elsif','end','ensure','false','for','if','in','module','next','nil','not','or','redo','rescue','retry','return','self','super','then','true','undef','unless','until','when','while','yield'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ ruby_ident(binding.port.field.snake) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_output(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}.from_h({{ expression }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}.parse({{ expression }})
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+  {{ operation.name.pascal }}Input = Struct.new(
+{%- for field in operation.input.fields %}
+    :{{ ruby_ident(field.name.snake) }}{% if not loop.last %},{% endif %}
+{%- endfor %},
+    keyword_init: true,
+  )
+
+{%- endif %}
+  class {{ file.symbol }}
+    def self.execute(client{% if operation.input %}, input{% endif %})
+{%- if http.input_groups.multipart %}
+      raise NotImplementedError, "multipart bindings require an explicit Ruby semantic mapping"
+{%- else %}
+      path = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+      path = path.gsub(
+        "{#{ {{ (binding.name or binding.port.name.raw) | tojson }} }}",
+        URI.encode_www_form_component(DryvClient.wire({{ bound(binding) }}).to_s),
+      )
+{%- endfor %}
+
+      query = []
+{%- for binding in http.input_groups.query %}
+      DryvClient.append_pair(query, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+      query_object = DryvClient.wire({{ bound(binding) }})
+      if query_object.is_a?(Hash)
+        query_object.each { |name, value| DryvClient.append_pair(query, name.to_s, value) }
+      end
+{%- endfor %}
+      path += (path.include?("?") ? "&" : "?") + URI.encode_www_form(query) unless query.empty?
+
+      headers = {}
+{%- for binding in http.input_groups.header %}
+      headers[{{ (binding.name or binding.port.name.raw) | tojson }}] = DryvClient.wire({{ bound(binding) }}).to_s unless {{ bound(binding) }}.nil?
+{%- endfor %}
+
+      cookies = {}
+{%- for binding in http.input_groups.cookie %}
+      cookies[{{ (binding.name or binding.port.name.raw) | tojson }}] = DryvClient.wire({{ bound(binding) }}).to_s unless {{ bound(binding) }}.nil?
+{%- endfor %}
+
+      has_json_body = false
+      json_body = nil
+{%- for binding in http.input_groups.body %}
+      has_json_body = true
+      json_body = {{ bound(binding) }}
+{%- endfor %}
+
+      form = nil
+{%- if http.input_groups.form %}
+      form = []
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+      form_object = DryvClient.wire({{ bound(binding) }})
+      if form_object.is_a?(Hash)
+        form_object.each { |name, value| DryvClient.append_pair(form, name.to_s, value) }
+      end
+{%- else %}
+      DryvClient.append_pair(form, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+      payload = client.request(
+        {{ http.method | tojson }},
+        path,
+        headers: headers,
+        cookies: cookies,
+        json_body: json_body,
+        has_json_body: has_json_body,
+        form: form,
+      )
+{%- if operation.output %}
+      {{ decode_output(operation.output.value, 'payload') }}
+{%- else %}
+      nil
+{%- endif %}
+{%- endif %}
+    end
+  end
+end
