@@ -148,6 +148,10 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Markdown Reference — `inject/documentation/markdown-reference`; verification deferred
 - [ ] OpenAPI — blocked on canonical effective HTTP path resolution; do not approximate
 
+### Testing
+
+- [x] Schema Examples — `inject/testing/schema-examples`; verification deferred
+
 ## Ecosystem research
 
 - [x] [00 — Current audit](ecosystems/00-audit.md)
