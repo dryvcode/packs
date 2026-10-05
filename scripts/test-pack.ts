@@ -7,8 +7,9 @@
  *   bun scripts/test-pack.ts --keep <pack>     # keep the rendered project to inspect it
  *
  * For each pack under packs/<layout>/<purpose>/<name> with tests/check.sh:
- *   1. copy tests/fixture/ into a temporary project, with the whole packs/ tree under
- *      packs/ and tests/dryv.ir.yaml as dryv.ir.yaml (unless the fixture brings its own);
+ *   1. copy tests/fixture/ into a temporary project, copy the repository-wide
+ *      fixtures/dryv.ir.yaml as the one shared Runtime IR fixture, and place the whole
+ *      packs/ tree under packs/;
  *   2. run `dryv generate --yes` against the engine at DRYV_API_URL;
  *   3. run tests/check.sh inside the project; a non-zero exit fails the pack.
  *
@@ -22,6 +23,7 @@ import { join, relative, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 const PACKS = join(REPO, "packs");
+const FIXTURES = join(REPO, "fixtures");
 const CLI = process.env.DRYV_CLI?.trim()
   ? process.env.DRYV_CLI.trim().split(/\s+/).map((part) =>
       part.startsWith(".") && existsSync(resolve(REPO, part)) ? resolve(REPO, part) : part
@@ -50,8 +52,17 @@ function run(command: string[], cwd: string): number {
 }
 
 function prepare(pack: string): string {
+  const fixture = join(PACKS, pack, "tests", "fixture");
+  const privateIr = join(fixture, "dryv.ir.yaml");
+  if (existsSync(privateIr)) {
+    throw new Error(
+      `${pack}: pack-local dryv.ir.yaml is forbidden; extend fixtures/dryv.ir.yaml instead`,
+    );
+  }
+
   const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replaceAll("/", "-")}-`));
-  cpSync(join(PACKS, pack, "tests", "fixture"), project, { recursive: true });
+  cpSync(fixture, project, { recursive: true });
+  cpSync(join(FIXTURES, "dryv.ir.yaml"), join(project, "dryv.ir.yaml"));
   cpSync(PACKS, join(project, "packs"), {
     recursive: true,
     filter: (path) => {
@@ -60,9 +71,6 @@ function prepare(pack: string): string {
       return !(parts[3] === "tests" || (parts.length === 4 && parts[3] === "dryv.yaml"));
     },
   });
-  if (!existsSync(join(project, "dryv.ir.yaml"))) {
-    cpSync(join(REPO, "tests", "dryv.ir.yaml"), join(project, "dryv.ir.yaml"));
-  }
   // The CLI loads the workspace through git, so the project must be a repository.
   run(["git", "init", "-q"], project);
   run(["git", "add", "-A"], project);
