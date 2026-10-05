@@ -1,3 +1,6 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'record', 'sealed', 'permits', 'yield', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
@@ -38,7 +41,7 @@
 {%- if primitive.is.email %}
 {{ indent }}@Email
 {%- elif primitive.is.uuid %}
-{{ indent }}@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+{{ indent }}@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 {%- elif primitive.is.ulid %}
 {{ indent }}@Pattern(regexp = "^[0-9A-HJKMNP-TV-Z]{26}$")
 {%- elif primitive.is.e164 %}
@@ -89,7 +92,7 @@ List<{{ value_constraints(field.value, '') | trim | replace('\n', ' ') }}{% if f
 {%- endmacro -%}
 
 {%- macro operand(value) -%}
-{%- if value.is.field -%}value.{{ value.field.camel }}
+{%- if value.is.field -%}value.{{ java_ident(value.field.camel) }}
 {%- elif value.is.literal -%}{{ value.value_json }}
 {%- else -%}null
 {%- endif -%}
@@ -112,7 +115,7 @@ compare({{ operand(comparison.left) }}, {{ operand(comparison.right) }}, "{{ com
 {%- endfor -%}
 {%- endmacro -%}
 
-package {{ pack.inputs.java_package }}.{{ group.name.snake }};
+package {{ pack.inputs.java_package }}.group_{{ group.name.snake }};
 
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
@@ -170,10 +173,10 @@ public class {{ file.symbol }} {
 {%- elif field.value is not none %}
 {{ value_constraints(field.value, '    ') }}
 {%- endif %}
-{%- if field.value is not none and field.value.is.schema %}
+{%- if field.value is not none and field.value.is.schema and field.array is none %}
     @Valid
 {%- endif %}
-    public {{ field_type(field) }} {{ field.name.camel }};
+    public {{ field_type(field) }} {{ java_ident(field.name.camel) }};
 {%- endfor %}
 }
 
