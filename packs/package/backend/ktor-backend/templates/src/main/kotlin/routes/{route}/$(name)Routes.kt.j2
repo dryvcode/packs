@@ -1,0 +1,259 @@
+{%- macro kotlin_ident(name) -%}
+{%- if name in ['as','break','class','continue','do','else','false','for','fun','if','in','interface','is','null','object','package','return','super','this','throw','true','try','typealias','typeof','val','var','when','while','by','catch','constructor','delegate','dynamic','field','file','finally','get','import','init','param','property','receiver','set','setparam','where','actual','abstract','annotation','companion','const','crossinline','data','enum','expect','external','final','infix','inline','inner','internal','lateinit','noinline','open','operator','out','override','private','protected','public','reified','sealed','suspend','tailrec','vararg','field','it'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}JsonElement
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'JsonElement' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'JsonElement' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.number -%}Double
+{%- elif value.is.decimal or value.is.money or value.is.uuid or value.is.string or value.is.temporal -%}String
+{%- elif value.is.record -%}JsonObject
+{%- else -%}JsonElement
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro schema_field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operation_field_type(field) -%}
+{{- base_type(field.value) -}}{%- if field.optional -%}?{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_scalar(value, raw, name, json_name='json') -%}
+{%- if value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}.parseWire({{ raw }})
+        ?: throw DryvBindingException("Invalid {{ name }}")
+{%- elif value.is.boolean -%}DryvKtor.boolean({{ raw }}, "{{ name }}")
+{%- elif value.is.integer -%}DryvKtor.long({{ raw }}, "{{ name }}")
+{%- elif value.is.number -%}DryvKtor.double({{ raw }}, "{{ name }}")
+{%- elif value.is.schema and symbol_for(value.schema) -%}{{ json_name }}.decodeFromString<{{ symbol_for(value.schema) }}>({{ raw }})
+{%- elif value.is.record -%}{{ json_name }}.parseToJsonElement({{ raw }}).jsonObject
+{%- elif value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}{{ json_name }}.parseToJsonElement({{ raw }})
+{%- else -%}{{ raw }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_field_from_parameters(field, bag, json_name='json') -%}
+{%- if field.array is not none %}
+{%- if field.optional %}
+{{ bag }}.getAll({{ field.name.raw | tojson }})?.map { raw ->
+    {{ parse_scalar(field.value, 'raw', field.name.raw, json_name) }}
+}
+{%- else %}
+({{ bag }}.getAll({{ field.name.raw | tojson }})
+    ?: throw DryvBindingException("Missing required value '{{ field.name.raw }}'"))
+    .map { raw ->
+        {{ parse_scalar(field.value, 'raw', field.name.raw, json_name) }}
+    }
+{%- endif %}
+{%- else %}
+{%- if field.optional %}
+{{ bag }}[{{ field.name.raw | tojson }}]?.let { raw ->
+    {{ parse_scalar(field.value, 'raw', field.name.raw, json_name) }}
+}
+{%- else %}
+{{ parse_scalar(field.value, 'DryvKtor.required(' ~ bag ~ '[' ~ (field.name.raw | tojson) ~ '], ' ~ (field.name.raw | tojson) ~ ')', field.name.raw, json_name) }}
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro construct_schema(value, bag, json_name='json') -%}
+{{ base_type(value) }}(
+{%- for field in value.schema.fields %}
+    {{ kotlin_ident(field.name.camel) }} = {{ parse_field_from_parameters(field, bag, json_name) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+{%- endmacro -%}
+
+{%- macro binding_for_field(operation, field) -%}
+{%- set state = namespace(kind='', binding=none) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.kind = binding.kind -%}
+{%- set state.binding = binding -%}
+{%- endif -%}
+{%- endfor -%}
+{{- state.kind -}}
+{%- endmacro -%}
+
+{%- macro bound_field_expression(operation, field, json_name='json') -%}
+{%- set state = namespace(binding=none) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.binding = binding -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if state.binding is none -%}
+{%- if field.optional -%}null{%- else -%}throw DryvBindingException("No HTTP binding for required field '{{ field.name.raw }}'"){%- endif -%}
+{%- elif state.binding.is.body -%}
+call.receive<{{ schema_field_type(field) }}>()
+{%- elif state.binding.is.query_object and field.value.is.schema -%}
+{{ construct_schema(field.value, 'call.request.queryParameters', json_name) }}
+{%- elif state.binding.is.form and state.binding.port.value.is.schema -%}
+{{ construct_schema(field.value, 'formParameters', json_name) }}
+{%- else -%}
+{%- if state.binding.is.path -%}{%- set raw = 'call.parameters[' ~ ((state.binding.name or state.binding.port.name.raw) | tojson) ~ ']' -%}
+{%- elif state.binding.is.query -%}{%- set raw = 'call.request.queryParameters[' ~ ((state.binding.name or state.binding.port.name.raw) | tojson) ~ ']' -%}
+{%- elif state.binding.is.header -%}{%- set raw = 'call.request.headers[' ~ ((state.binding.name or state.binding.port.name.raw) | tojson) ~ ']' -%}
+{%- elif state.binding.is.cookie -%}{%- set raw = 'call.request.cookies[' ~ ((state.binding.name or state.binding.port.name.raw) | tojson) ~ ']' -%}
+{%- elif state.binding.is.form -%}{%- set raw = 'formParameters[' ~ ((state.binding.name or state.binding.port.name.raw) | tojson) ~ ']' -%}
+{%- else -%}{%- set raw = 'null' -%}
+{%- endif -%}
+{%- if field.optional -%}
+{{ raw }}?.let { rawValue -> {{ parse_scalar(field.value, 'rawValue', field.name.raw, json_name) }} }
+{%- else -%}
+{{ parse_scalar(field.value, 'DryvKtor.required(' ~ raw ~ ', ' ~ (field.name.raw | tojson) ~ ')', field.name.raw, json_name) }}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+package {{ pack.inputs.package_name }}.routes
+
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.ContentTransformationException
+import io.ktor.server.request.receive
+import io.ktor.server.request.receiveParameters
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.handle
+import io.ktor.server.routing.route
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import {{ pack.inputs.package_name }}.DryvBindingException
+import {{ pack.inputs.package_name }}.DryvKtor
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.package_name }}.models.{{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+{%- for operation in operations %}
+{%- if operation.input and operation.input.kind != 'schema' %}
+@Serializable
+data class {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+    val {{ kotlin_ident(field.name.camel) }}: {{ operation_field_type(field) }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+{%- endif %}
+{%- endfor %}
+interface {{ file.symbols.service }} {
+{%- for operation in operations %}
+    suspend fun {{ kotlin_ident(operation.name.camel) }}(
+{%- if operation.input %}
+        input: {% if operation.input.kind == 'schema' %}{{ base_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %}
+{%- endif %}
+    ): {% if operation.output %}{{ base_type(operation.output.value) }}{% else %}Unit{% endif %}
+{%- endfor %}
+}
+
+fun Route.{{ file.symbols.register }}(
+    service: {{ file.symbols.service }},
+    json: Json = DryvKtor.json,
+) {
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    route({{ http.path.local | tojson }}, HttpMethod.parse({{ http.method | tojson }})) {
+        handle {
+{%- if http.input_groups.multipart %}
+            call.respond(
+                HttpStatusCode.NotImplemented,
+                mapOf("message" to "Multipart bindings require an explicit Kotlin semantic mapping."),
+            )
+            return@handle
+{%- else %}
+{%- if operation.input %}
+            val input = try {
+{%- if http.input_groups.form %}
+                val formParameters = call.receiveParameters()
+{%- endif %}
+{%- if operation.input.kind == 'schema' %}
+{%- set whole = namespace(kind='') %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is none and binding.is.body %}{% set whole.kind='body' %}{% endif %}
+{%- if binding.port.field is none and binding.is.query_object %}{% set whole.kind='query' %}{% endif %}
+{%- if binding.port.field is none and binding.is.form %}{% set whole.kind='form' %}{% endif %}
+{%- endfor %}
+{%- if whole.kind == 'body' %}
+                call.receive<{{ base_type(operation.input.value) }}>()
+{%- elif whole.kind == 'query' %}
+                {{ construct_schema(operation.input.value, 'call.request.queryParameters') }}
+{%- elif whole.kind == 'form' %}
+                {{ construct_schema(operation.input.value, 'formParameters') }}
+{%- else %}
+                {{ base_type(operation.input.value) }}(
+{%- for field in operation.input.value.schema.fields %}
+                    {{ kotlin_ident(field.name.camel) }} = {{ bound_field_expression(operation, field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+                )
+{%- endif %}
+{%- else %}
+                {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+{%- set state = namespace(binding=none) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}{% set state.binding=binding %}{% endif %}
+{%- endfor %}
+{%- if state.binding is none %}
+                    {{ kotlin_ident(field.name.camel) }} = {% if field.optional %}null{% else %}throw DryvBindingException("No HTTP binding for required field '{{ field.name.raw }}'"){% endif %}{% if not loop.last %},{% endif %}
+{%- else %}
+{%- if state.binding.is.path %}{% set raw='call.parameters[' ~ ((state.binding.name or state.binding.port.name.raw)|tojson) ~ ']' %}
+{%- elif state.binding.is.query %}{% set raw='call.request.queryParameters[' ~ ((state.binding.name or state.binding.port.name.raw)|tojson) ~ ']' %}
+{%- elif state.binding.is.header %}{% set raw='call.request.headers[' ~ ((state.binding.name or state.binding.port.name.raw)|tojson) ~ ']' %}
+{%- elif state.binding.is.cookie %}{% set raw='call.request.cookies[' ~ ((state.binding.name or state.binding.port.name.raw)|tojson) ~ ']' %}
+{%- elif state.binding.is.form %}{% set raw='formParameters[' ~ ((state.binding.name or state.binding.port.name.raw)|tojson) ~ ']' %}
+{%- else %}{% set raw='null' %}
+{%- endif %}
+                    {{ kotlin_ident(field.name.camel) }} = {% if state.binding.is.body %}call.receive<{{ operation_field_type(field) }}>(){% elif field.optional %}{{ raw }}?.let { rawValue -> {{ parse_scalar(field.value, 'rawValue', field.name.raw) }} }{% else %}{{ parse_scalar(field.value, 'DryvKtor.required(' ~ raw ~ ', ' ~ (field.name.raw|tojson) ~ ')', field.name.raw) }}{% endif %}{% if not loop.last %},{% endif %}
+{%- endif %}
+{%- endfor %}
+                )
+{%- endif %}
+            } catch (error: DryvBindingException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to (error.message ?: "Invalid request")))
+                return@handle
+            } catch (error: SerializationException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to (error.message ?: "Invalid request body")))
+                return@handle
+            } catch (error: ContentTransformationException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to (error.message ?: "Invalid request body")))
+                return@handle
+            } catch (error: BadRequestException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to (error.message ?: "Invalid request")))
+                return@handle
+            }
+{%- endif %}
+
+{%- if operation.output %}
+            val output = service.{{ kotlin_ident(operation.name.camel) }}({% if operation.input %}input{% endif %})
+            call.respond(HttpStatusCode.fromValue({{ success_status(http) }}), output)
+{%- else %}
+            service.{{ kotlin_ident(operation.name.camel) }}({% if operation.input %}input{% endif %})
+            call.respond(HttpStatusCode.fromValue({{ success_status(http) }}))
+{%- endif %}
+{%- endif %}
+        }
+    }
+{%- endfor %}
+}
