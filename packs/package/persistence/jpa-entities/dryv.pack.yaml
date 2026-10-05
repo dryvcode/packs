@@ -1,0 +1,57 @@
+version: dryv.pack/v1alpha1
+key: persistence.jpa-entities
+layout: package
+package:
+  name: { $ref: "#/inputs.artifact_id" }
+
+source: templates
+
+info:
+  title: JPA Entities
+  version: 0.1.0
+  description: Generates portable Jakarta Persistence 3.2 entity classes from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Portable Jakarta Persistence entities with keys, indexes and relations.
+  languages: [java]
+  frameworks: [jakarta-persistence]
+  tags: [entities, database, orm, java, jpa]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  group_id:
+    type: string
+    default: org.dryv.generated
+    description: Maven groupId for generated entities.
+  artifact_id:
+    type: string
+    default: dryv-entities
+    description: Maven artifactId and Dryv package identity.
+  java_package:
+    type: string
+    default: org.dryv.generated.persistence
+    description: Base Java package for generated entities.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
