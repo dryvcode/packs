@@ -1,3 +1,7 @@
+{%- macro go_ident(name) -%}
+{%- if name in ['break', 'default', 'func', 'interface', 'select', 'case', 'defer', 'go', 'map', 'struct', 'chan', 'else', 'goto', 'package', 'switch', 'const', 'fallthrough', 'if', 'range', 'type', 'continue', 'for', 'import', 'return', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
@@ -267,7 +271,7 @@ import (
 
 type {{ file.symbols.service }} interface {
 {%- for operation in operations %}
-	{{ operation.name.pascal }}(ctx context.Context{% if operation.input and operation.input.kind == 'schema' %}, input {{ go_type(operation.input.value) }}{% elif operation.input %}{% for field in operation.input.fields %}, {{ field.name.camel }} {% if field.optional %}*{% endif %}{{ go_type(field.value) }}{% endfor %}{% endif %}) {% if operation.output %}({{ go_type(operation.output.value) }}, error){% else %}error{% endif %}
+	{{ operation.name.pascal }}(ctx context.Context{% if operation.input and operation.input.kind == 'schema' %}, input {{ go_type(operation.input.value) }}{% elif operation.input %}{% for field in operation.input.fields %}, {{ go_ident(field.name.camel) }} {% if field.optional %}*{% endif %}{{ go_type(field.value) }}{% endfor %}{% endif %}) {% if operation.output %}({{ go_type(operation.output.value) }}, error){% else %}error{% endif %}
 {%- endfor %}
 }
 
