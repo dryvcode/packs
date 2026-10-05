@@ -9,8 +9,7 @@
  * For each pack under packs/<layout>/<purpose>/<name> with tests/check.sh:
  *   1. copy tests/fixture/ into a temporary project, with the whole packs/ tree under
  *      packs/ and tests/dryv.ir.yaml as dryv.ir.yaml (unless the fixture brings its own);
- *   2. run `dryv generate --yes --no-actions` against the engine at DRYV_API_URL (each
- *      check.sh installs what it needs, so pack actions don't run here);
+ *   2. run `dryv generate --yes` against the engine at DRYV_API_URL;
  *   3. run tests/check.sh inside the project; a non-zero exit fails the pack.
  *
  * DRYV_API_URL defaults to http://127.0.0.1:8750 (CI runs the engine image there).
@@ -89,7 +88,7 @@ async function main(): Promise<number> {
     }
     console.log(`\n▶ ${pack}`);
     const project = prepare(pack);
-    const generated = run([...CLI, "generate", "--yes", "--no-actions", "--api", API_URL], project);
+    const generated = run([...CLI, "generate", "--yes", "--api", API_URL], project);
     const checked = generated === 0 ? run(["bash", checks], project) : generated;
     if (checked === 0) {
       console.log(`✓ ${pack}${keep ? ` (project kept at ${project})` : ""}`);
