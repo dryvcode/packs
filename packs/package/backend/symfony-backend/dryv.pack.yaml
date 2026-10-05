@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: backend.symfony-backend
+layout: package
+package:
+  name: dryv/generated-backend
+
+source: templates
+
+info:
+  title: Symfony Backend
+  version: 0.1.0
+  description: Generates Symfony 8.1 route controllers, typed DTOs and feature service interfaces.
+
+catalog:
+  purpose: backend
+  summary: Symfony controllers with typed DTOs and separated service boundaries.
+  languages: [php]
+  frameworks: [symfony]
+  tags: [backend, rest, http, php]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_namespace:
+    type: string
+    default: 'Dryv\Generated\Backend'
+    description: Root PHP namespace for generated backend code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  controller:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        controller: $(group.name.pascal)$(feature.name.pascal)Controller
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
