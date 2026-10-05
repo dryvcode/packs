@@ -1,0 +1,17 @@
+# Failure Catalogue
+
+{% for failure in failures %}
+## {{ failure.name.title }}
+
+{% if failure.description %}{{ failure.description }}
+
+{% endif %}- **ID:** `{{ failure.id }}`
+- **Qualified name:** `{{ failure.name.qualified }}`
+- **Code:** `{{ failure.code }}`
+- **Group:** {% if failure.group %}`{{ failure.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if failure.feature %}`{{ failure.feature.name.qualified }}`{% else %}—{% endif %}
+- **Payload:** {% if failure.payload %}`{{ failure.payload.kind }}`{% else %}none{% endif %}
+{% if failure.tags %}- **Tags:** {% for tag in failure.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+---
+{% endfor %}
