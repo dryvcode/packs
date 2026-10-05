@@ -1,26 +1,26 @@
 # PHP ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: Symfony backend, Doctrine ORM persistence, Symfony Validator DTOs and Guzzle client SDK are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 ## Coverage
 
-- [ ] backend pack
-- [ ] persistence pack
-- [ ] validation pack
-- [ ] API client SDK
+- [x] backend pack
+- [x] persistence pack
+- [x] validation pack
+- [x] API client SDK
 - [ ] project pack
 
 ## Backends
 
 - [ ] Laravel controllers/routes
-- [ ] Symfony controllers
+- [x] `package/backend/symfony-backend` — implementation present; verification deferred
 - [ ] Slim backend
 - [ ] Mezzio backend research
 - [ ] API Platform compatibility research
-- [ ] generated HTTP layer separated from business services
-- [ ] route/query/body binding
-- [ ] response/status mapping
-- [ ] feature/group organization
+- [x] generated HTTP layer separated from business services
+- [x] path/query/query-object/body/header/cookie/form binding
+- [x] response/status mapping
+- [x] feature/group organization
 - [ ] validation capability composition
 
 Models:
@@ -30,45 +30,45 @@ Models:
 
 ## Persistence
 
-- [ ] Doctrine ORM entities
+- [x] `package/persistence/doctrine-orm-entities` — implementation present; verification deferred
 - [ ] Laravel Eloquent models
 - [ ] Cycle ORM research
-- [ ] primary/generated keys
-- [ ] table/schema naming
-- [ ] indexes and uniqueness
+- [x] primary/generated keys
+- [x] table/schema naming
+- [x] indexes and uniqueness
 - [ ] relations
 - [ ] delete behavior
-- [ ] enums
-- [ ] temporal types
-- [ ] decimal/money
+- [x] enums
+- [x] temporal types
+- [x] decimal/money
 - [ ] defaults/checks
 
 Primary model: `typeorm-entities`.
 
 ## Validation/schema
 
-- [ ] Symfony Validator DTOs
+- [x] `package/validation/symfony-validator-dtos` — implementation present; verification deferred
 - [ ] Laravel validation request classes
 - [ ] Respect/Validation research
-- [ ] nested validation
-- [ ] arrays/collections
-- [ ] enums
-- [ ] range/length/pattern
-- [ ] common formats
-- [ ] cross-field invariants
+- [x] nested validation
+- [x] arrays/collections
+- [x] enums
+- [x] range/length/pattern
+- [x] common formats
+- [x] cross-field invariants
 
 Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [ ] `package/clients/php-client-sdk`
+- [x] `package/clients/php-client-sdk` — implementation present; verification deferred
 - [ ] PSR-18 compatible baseline research
-- [ ] Guzzle implementation
-- [ ] typed DTOs/enums
-- [ ] path/query/body binding
-- [ ] response decoding
-- [ ] typed error model
-- [ ] provide operation/type/enum capabilities
+- [x] Guzzle 8.2 implementation
+- [x] typed DTOs/enums
+- [x] path/query/query-object/body/header/cookie/form binding
+- [x] response decoding
+- [x] typed error model
+- [x] provide operation/type/enum capabilities
 
 Models:
 
@@ -95,8 +95,8 @@ Models:
 
 ## Context questions to verify
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] auth/security
-- [ ] PHP union/nullable type mapping
+- [x] PHP union/nullable type mapping
