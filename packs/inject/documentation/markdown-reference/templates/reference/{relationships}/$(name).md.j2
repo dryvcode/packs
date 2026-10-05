@@ -9,7 +9,7 @@ erDiagram
 {% for field in schema.fields %}
 {% if field.relation %}
 {% set state.edges = state.edges + 1 %}
-    {{ schema.name.pascal }} {% if field.relation.is.one_to_one %}||--||{% elif field.relation.is.one_to_many %}||--o{{% elif field.relation.is.many_to_many %}}o--o{{{% else %}}o--||{% endif %} {{ field.relation.target.schema.name.pascal }} : "{{ field.name.raw }}"
+    {{ schema.name.pascal }} {% if field.relation.is.one_to_one %}||--||{% elif field.relation.is.one_to_many %}{{ '||--o{' }}{% elif field.relation.is.many_to_many %}{{ '}o--o{' }}{% else %}{{ '}o--||' }}{% endif %} {{ field.relation.target.schema.name.pascal }} : "{{ field.name.raw }}"
 {% endif %}
 {% endfor %}
 {% endfor %}
