@@ -1,0 +1,78 @@
+version: dryv.pack/v1alpha1
+key: validation.dry-validation-contracts
+layout: package
+package:
+  name: dryv-ruby-validation
+
+source: templates
+
+info:
+  title: dry-validation Contracts
+  version: 0.1.0
+  description: Generates Ruby wire models and dry-validation 1.11 contracts from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Ruby models with dry-validation contracts and generated constraint rules.
+  languages: [ruby]
+  frameworks: [dry-validation]
+  tags: [dto, validation, ruby]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvGeneratedValidation
+    description: Root Ruby module for generated validation code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+  contract:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Contract
+    imports:
+      - $ref: "#/templates/dto"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/contract"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+      - $ref: "#/templates/contract"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/contract"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
