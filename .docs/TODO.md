@@ -72,12 +72,19 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] JPA entities — implementation present; verification deferred
 - [x] Jakarta REST backend — implementation present; verification deferred
 
+### .NET / C#
+
+- [x] ASP.NET Core backend — implementation present; verification deferred
+- [x] C# Client SDK — implementation present; verification deferred
+- [x] EF Core entities — implementation present; verification deferred
+- [x] FluentValidation DTOs — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
 - [x] Rust — backend, client, persistence and validation represented
 - [x] Java — backend, client, persistence and validation represented
-- [ ] .NET / C#
+- [x] .NET / C# — backend, client, persistence and validation represented
 - [ ] PHP
 - [ ] Swift
 - [ ] Kotlin-specific ecosystem
