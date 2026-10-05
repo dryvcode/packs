@@ -1,0 +1,81 @@
+version: dryv.pack/v1alpha1
+key: clients.csharp-client-sdk
+layout: package
+package:
+  name: { $ref: "#/inputs.project_name" }
+
+source: templates
+
+info:
+  title: C# Client SDK
+  version: 0.1.0
+  description: Generates a typed .NET 10 HttpClient SDK with System.Text.Json models and operations.
+
+catalog:
+  purpose: clients
+  summary: Typed .NET 10 HttpClient SDK using System.Text.Json.
+  languages: [csharp]
+  frameworks: [dotnet, httpclient, system-text-json]
+  tags: [client, sdk, csharp, dotnet, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  project_name:
+    type: string
+    default: Dryv.Client
+    description: Generated .NET project name.
+  root_namespace:
+    type: string
+    default: Dryv.Generated.Client
+    description: Root C# namespace for generated code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
