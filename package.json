@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "shared:sync": "bun scripts/sync-shared.ts",
+    "shared:check": "bun scripts/sync-shared.ts --check && bun scripts/audit-duplication.ts",
+    "catalog:check": "bun scripts/catalog.ts --check",
     "test:packs": "bun scripts/test-pack.ts --all"
   },
   "devDependencies": {
