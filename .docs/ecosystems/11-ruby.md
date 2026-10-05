@@ -1,25 +1,25 @@
 # Ruby ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: Sinatra backend, Active Record persistence, dry-validation contracts and Net::HTTP client SDK are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 ## Coverage
 
-- [ ] backend pack
-- [ ] persistence pack
-- [ ] validation pack
-- [ ] API client SDK
+- [x] backend pack
+- [x] persistence pack
+- [x] validation pack
+- [x] API client SDK
 - [ ] project pack
 
 ## Backends
 
 - [ ] Rails API controllers/routes
-- [ ] Sinatra backend
+- [x] `package/backend/sinatra-backend` — implementation present; verification deferred
 - [ ] Hanami backend
 - [ ] Roda research
-- [ ] generated HTTP layer separated from domain/services
-- [ ] route/query/body binding
-- [ ] response/status mapping
-- [ ] feature/group organization
+- [x] generated HTTP layer separated from domain/services
+- [x] path/query/query-object/header/cookie/body/form binding
+- [x] response/status mapping
+- [x] feature/group organization
 
 Models:
 
@@ -28,16 +28,16 @@ Models:
 
 ## Persistence
 
-- [ ] Active Record models
+- [x] `package/persistence/active-record-models` — implementation present; verification deferred
 - [ ] Sequel models
 - [ ] ROM research
-- [ ] primary/generated keys
-- [ ] table naming
-- [ ] indexes/uniqueness
-- [ ] relations
-- [ ] delete behavior
-- [ ] enums
-- [ ] temporal/decimal types
+- [x] primary/generated keys
+- [x] table naming
+- [ ] indexes/uniqueness — migration-layer concern
+- [x] relations
+- [ ] database delete/update behavior — migration-layer concern
+- [x] enums
+- [x] temporal/decimal types
 - [ ] defaults/check constraints
 
 Primary model: `typeorm-entities`.
@@ -45,25 +45,25 @@ Primary model: `typeorm-entities`.
 ## Validation/schema
 
 - [ ] ActiveModel validations
-- [ ] dry-validation contracts
+- [x] `package/validation/dry-validation-contracts` — implementation present; verification deferred
 - [ ] dry-schema research
-- [ ] nested/collection validation
-- [ ] enum validation
-- [ ] range/length/pattern
-- [ ] common string formats
-- [ ] cross-field invariant mapping
+- [x] nested/collection validation
+- [x] enum validation
+- [x] range/length/pattern
+- [x] common string formats
+- [x] cross-field invariant mapping
 
 Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [ ] `package/clients/ruby-client-sdk`
-- [ ] Net::HTTP baseline
+- [x] `package/clients/ruby-client-sdk` — implementation present; verification deferred
+- [x] Net::HTTP baseline
 - [ ] Faraday-backed implementation research
-- [ ] typed-ish model strategy
-- [ ] path/query/body binding
-- [ ] response decoding
-- [ ] error model
+- [x] typed-ish generated wire models
+- [x] path/query/query-object/header/cookie/body/form binding
+- [x] response decoding
+- [x] structured API error model
 
 ## Projects
 
@@ -83,7 +83,7 @@ Primary model: `class-validator-dtos`.
 
 ## Context questions to verify
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] auth/security
