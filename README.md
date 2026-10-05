@@ -19,7 +19,7 @@ Your project chooses its packs explicitly. Official packs from this repo, local 
 Declare the collection once in `dryv.yaml`, then activate the pack by path:
 
 ```yaml
-version: dryv.usage/v1alpha1
+version: dryv/v1alpha1
 
 sources:
   authoring:

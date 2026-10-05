@@ -1,4 +1,4 @@
-version: dryv.usage/v1alpha1
+version: dryv/v1alpha1
 
 sources:
   authoring:
