@@ -1,0 +1,167 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'record', 'sealed', 'permits', 'yield', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro java_type(value, array) -%}
+{%- if array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}Object
+{%- elif value.is.enum -%}String
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}OffsetDateTime
+{%- elif value.is.temporal -%}String
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro json_backed(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}x{%- endif -%}
+{%- endmacro -%}
+
+{%- macro column(field) -%}
+{%- set value = field.value -%}
+    @Column(
+        name = "{{ field.name.snake }}",
+        nullable = {% if field.optional or field.nullable %}true{% else %}false{% endif %}{% if field.mutation == 'create-only' %},
+        updatable = false{% endif %}{% if value is not none and value.is.string and value.property.primitive.constraints.length is not none and value.property.primitive.constraints.length.has_exact %},
+        length = {{ value.property.primitive.constraints.length.exact }}{% elif value is not none and value.is.string and value.property.primitive.constraints.length is not none and value.property.primitive.constraints.length.has_max %},
+        length = {{ value.property.primitive.constraints.length.max }}{% endif %}{% if value is not none and (value.is.decimal or value.is.money) and value.property.primitive.constraints.has_precision %},
+        precision = {{ value.property.primitive.constraints.precision }}{% endif %}{% if value is not none and (value.is.decimal or value.is.money) and value.property.primitive.constraints.has_scale %},
+        scale = {{ value.property.primitive.constraints.scale }}{% endif %}
+    )
+{%- endmacro -%}
+
+{%- set storage = schema.facets.storage -%}
+{%- set primary_count = storage.primary_key | length if storage is not none else 0 -%}
+package {{ pack.inputs.java_package }}.entities;
+
+import {{ pack.inputs.java_package }}.JsonAttributeConverter;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+@Entity
+@Table(
+    name = "{% if storage is not none and storage.name is not none %}{{ storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"{% if storage is not none and storage.namespace is not none %},
+    schema = "{{ storage.namespace }}"{% endif %}{% if storage is not none and storage.indexes %},
+    indexes = {
+{%- for index in storage.indexes %}
+        @Index({% if index.name is not none %}name = "{{ index.name }}", {% endif %}columnList = "{% for field_name in index.fields %}{{ field_name.snake }}{% if not loop.last %},{% endif %}{% endfor %}", unique = {% if index.unique %}true{% else %}false{% endif %}){% if not loop.last %},{% endif %}
+{%- endfor %}
+    }{% endif %}
+)
+{%- if primary_count > 1 %}
+@IdClass({{ file.symbol }}.Key.class)
+{%- endif %}
+public class {{ file.symbol }} {
+{%- for field in schema.fields %}
+{%- if field.related is not none %}
+{%- if symbol_for(field.related.via.schema) and field.related.cardinality == 'one-to-one' %}
+
+    @OneToOne(mappedBy = "{{ java_ident(field.related.via.field.camel ~ 'Relation') }}")
+    public {{ symbol_for(field.related.via.schema) }} {{ java_ident(field.name.camel) }};
+{%- elif symbol_for(field.related.via.schema) and field.related.cardinality == 'one-to-many' %}
+
+    @OneToMany(mappedBy = "{{ java_ident(field.related.via.field.camel ~ 'Relation') }}")
+    public List<{{ symbol_for(field.related.via.schema) }}> {{ java_ident(field.name.camel) }} = new ArrayList<>();
+{%- else %}
+
+    // This inverse relation needs an explicit many-to-many/junction mapping.
+    @Transient
+    public Object {{ java_ident(field.name.camel) }};
+{%- endif %}
+{%- else %}
+
+{%- if field.storage is not none and field.storage.primary_key %}
+    @Id
+{%- if primary_count == 1 and field.mutation == 'system' and field.value.is.uuid %}
+    @GeneratedValue(strategy = GenerationType.UUID)
+{%- elif primary_count == 1 and field.mutation == 'system' and field.value.is.integer %}
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+{%- endif %}
+{%- endif %}
+{%- if json_backed(field) %}
+    @Lob
+    @Convert(converter = JsonAttributeConverter.class)
+{%- endif %}
+{{ column(field) }}
+    public {{ java_type(field.value, field.array) }} {{ java_ident(field.name.camel) }};
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+
+    @{% if field.relation.is.one_to_one %}OneToOne{% else %}ManyToOne{% endif %}(optional = {% if field.optional or field.nullable %}true{% else %}false{% endif %})
+    @JoinColumn(
+        name = "{{ field.name.snake }}",
+        referencedColumnName = "{{ field.relation.target.field.snake }}",
+        insertable = false,
+        updatable = false
+    )
+    public {{ symbol_for(field.relation.target.schema) }} {{ java_ident(field.name.camel ~ 'Relation') }};
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+{%- if primary_count > 1 %}
+    public static class Key implements Serializable {
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+        public {{ java_type(field.value, field.array) }} {{ java_ident(field.name.camel) }};
+{%- endif %}{% endfor %}
+
+        public Key() {}
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof Key value)) {
+                return false;
+            }
+            return {% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}Objects.equals({{ java_ident(field.name.camel) }}, value.{{ java_ident(field.name.camel) }}){% if not loop.last %} && {% endif %}{% endif %}{% endfor %};
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash({% for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}{{ java_ident(field.name.camel) }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %});
+        }
+    }
+{%- endif %}
+}
