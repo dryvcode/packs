@@ -48,10 +48,6 @@ public enum DryvJSONValue: Codable, Equatable, Sendable, CustomStringConvertible
         }
     }
 
-    public static func literal(_ json: String) -> DryvJSONValue {
-        try! JSONDecoder().decode(DryvJSONValue.self, from: Data(json.utf8))
-    }
-
     public var description: String {
         switch self {
         case .null:
