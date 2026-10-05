@@ -868,6 +868,7 @@ operations:
         $ref: '#/properties/primitives/Count'
   forms.FormCreateUser:
     group: { $ref: "#/groups/forms" }
+    feature: { $ref: "#/features/forms.UserManagement" }
     role: create
     description: Create a user.
     facets:
@@ -886,6 +887,7 @@ operations:
 
   forms.FormUpdateUser:
     group: { $ref: "#/groups/forms" }
+    feature: { $ref: "#/features/forms.UserManagement" }
     role: update
     description: Update a user.
     facets:
@@ -904,6 +906,7 @@ operations:
 
   forms.FormGetUser:
     group: { $ref: "#/groups/forms" }
+    feature: { $ref: "#/features/forms.UserManagement" }
     role: detail
     description: This operation must not produce a form.
     facets:
@@ -1014,6 +1017,10 @@ surfaces:
       $ref: '#/groups/administration'
     description: Administrative web application
 features:
+  forms.UserManagement:
+    group:
+      $ref: '#/groups/forms'
+    description: User-management CRUD form operations
   core.UserManagement:
     group:
       $ref: '#/groups/core'
