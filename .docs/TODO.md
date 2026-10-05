@@ -54,12 +54,27 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 ### Go
 
 - [x] Go Client SDK
+- [x] Go net/http backend — implementation present; verification deferred
 
-### Missing language coverage
+### Rust
 
-- [x] Go — client SDK verified; broader Go ecosystem remains planned
-- [x] Rust — Axum backend package implemented; verification deferred
-- [x] Java — Jakarta Validation DTO package implemented; verification deferred
+- [x] Axum backend — implementation present; verification deferred
+- [x] Rust Client SDK — implementation present; verification deferred
+- [x] SeaORM entities — implementation present; verification deferred
+- [x] validator DTOs — implementation present; verification deferred
+
+### Java / JVM
+
+- [x] Jakarta Validation DTOs — implementation present; verification deferred
+- [x] Java Client SDK — implementation present; verification deferred
+- [x] JPA entities — implementation present; verification deferred
+- [x] Jakarta REST backend — implementation present; verification deferred
+
+### Language coverage
+
+- [x] Go — client SDK verified; standard-library backend implemented
+- [x] Rust — backend, client, persistence and validation represented
+- [x] Java — backend, client, persistence and validation represented
 - [ ] .NET / C#
 - [ ] PHP
 - [ ] Swift
@@ -89,4 +104,10 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-Approved first batch is implemented: Go Client SDK, Jakarta Validation DTOs, and Axum backend. Runtime/toolchain verification for the new Java/Rust packs is deferred while the Dryv Engine is under maintenance.
+The multi-language expansion batch is implemented on `develop`:
+
+- Go client + standard-library backend;
+- Rust Axum backend + reqwest client + SeaORM persistence + validator DTOs;
+- Java Jakarta REST backend + HttpClient SDK + JPA persistence + Jakarta Validation DTOs.
+
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target remaining ecosystem gaps rather than duplicating these baselines.
