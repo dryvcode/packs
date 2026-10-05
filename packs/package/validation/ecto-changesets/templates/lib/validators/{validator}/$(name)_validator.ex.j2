@@ -4,11 +4,7 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-{%- macro model_symbol() -%}
-{%- for dependency in file.dependencies -%}
-{%- if dependency.target.id == schema.id and dependency.symbol and not dependency.symbol.endswith('Validator') -%}{{ dependency.symbol }}{%- endif -%}
-{%- endfor -%}
-{%- endmacro -%}
+{%- macro model_symbol() -%}{{ group.name.pascal }}{{ schema.name.pascal }}{%- endmacro -%}
 
 {%- macro ecto_base_type(value) -%}
 {%- if value is none or value.is.schema or value.is.enum or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}:any
