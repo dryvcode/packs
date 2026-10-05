@@ -2,4 +2,4 @@
 
 ## 0.1.0
 
-- First release.
+- Initial Flutter API Bridge pack release.
