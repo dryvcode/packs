@@ -1,0 +1,66 @@
+version: dryv.pack/v1alpha1
+key: persistence.gorm-entities
+layout: package
+package:
+  name: { $ref: "#/inputs.package_name" }
+
+source: templates
+
+info:
+  title: GORM Entities
+  version: 0.1.0
+  description: Generates GORM v1.31 entity models from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Go GORM entities with storage names, keys, indexes and relations.
+  languages: [go]
+  frameworks: [gorm]
+  tags: [entities, database, orm, go]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: dryventities
+    description: Go package identifier used by generated entity files.
+  module_path:
+    type: string
+    default: example.com/dryventities
+    description: Module path written to go.mod.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
+
+# shared:go-actions:start
+actions:
+  files:
+    format:
+      extensions: [.go]
+      commands:
+        - run: [gofmt, -w, $(files)]
+  final:
+    install:
+      commands:
+        - run: [go, mod, tidy]
+# shared:go-actions:end
