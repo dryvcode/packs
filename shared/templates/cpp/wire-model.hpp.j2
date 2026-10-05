@@ -1,0 +1,99 @@
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include <nlohmann/json.hpp>
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+#include "{{ dependency.path.relative | replace('include/', '') }}"
+{%- endif %}{% endfor %}
+
+namespace {{ pack.inputs.namespace }} {
+
+{%- macro cpp_ident(name) -%}
+{%- if name in ['alignas','alignof','and','and_eq','asm','atomic_cancel','atomic_commit','atomic_noexcept','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','reflexpr','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','synchronized','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}nlohmann::json
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'nlohmann::json' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'nlohmann::json' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}std::int64_t
+{%- elif value.is.number -%}double
+{%- elif value.is.decimal or value.is.money -%}std::string
+{%- elif value.is.record -%}nlohmann::json
+{%- elif value.is.string or value.is.temporal -%}std::string
+{%- else -%}nlohmann::json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro inner_type(field) -%}
+{%- if field.array is not none -%}std::vector<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable -%}std::optional<{{ inner_type(field) }}>{%- else -%}{{ inner_type(field) }}{%- endif -%}
+{%- endmacro -%}
+
+struct {{ file.symbol }} {
+{%- for field in schema.fields %}
+    {{ field_type(field) }} {{ cpp_ident(field.name.snake) }}{};
+{%- endfor %}
+};
+
+inline void to_json(nlohmann::json& json, const {{ file.symbol }}& value) {
+    json = nlohmann::json::object();
+{%- for field in schema.fields %}
+{%- if field.optional %}
+    if (value.{{ cpp_ident(field.name.snake) }}.has_value()) {
+        json[{{ field.name.raw | tojson }}] = *value.{{ cpp_ident(field.name.snake) }};
+    }
+{%- elif field.nullable %}
+    if (value.{{ cpp_ident(field.name.snake) }}.has_value()) {
+        json[{{ field.name.raw | tojson }}] = *value.{{ cpp_ident(field.name.snake) }};
+    } else {
+        json[{{ field.name.raw | tojson }}] = nullptr;
+    }
+{%- else %}
+    json[{{ field.name.raw | tojson }}] = value.{{ cpp_ident(field.name.snake) }};
+{%- endif %}
+{%- endfor %}
+}
+
+inline void from_json(const nlohmann::json& json, {{ file.symbol }}& value) {
+    if (!json.is_object()) {
+        throw std::invalid_argument("expected JSON object for {{ file.symbol }}");
+    }
+{%- for field in schema.fields %}
+{%- if field.optional %}
+    if (json.contains({{ field.name.raw | tojson }}) && !json.at({{ field.name.raw | tojson }}).is_null()) {
+        value.{{ cpp_ident(field.name.snake) }} = json.at({{ field.name.raw | tojson }}).get<{{ inner_type(field) }}>();
+    } else {
+        value.{{ cpp_ident(field.name.snake) }} = std::nullopt;
+    }
+{%- elif field.nullable %}
+    if (!json.contains({{ field.name.raw | tojson }})) {
+        throw std::out_of_range("missing required field {{ field.name.raw }}");
+    }
+    if (json.at({{ field.name.raw | tojson }}).is_null()) {
+        value.{{ cpp_ident(field.name.snake) }} = std::nullopt;
+    } else {
+        value.{{ cpp_ident(field.name.snake) }} = json.at({{ field.name.raw | tojson }}).get<{{ inner_type(field) }}>();
+    }
+{%- else %}
+    value.{{ cpp_ident(field.name.snake) }} = json.at({{ field.name.raw | tojson }}).get<{{ inner_type(field) }}>();
+{%- endif %}
+{%- endfor %}
+}
+
+} // namespace {{ pack.inputs.namespace }}
