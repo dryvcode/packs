@@ -51,7 +51,7 @@ templates:
     output:
       name: $(subject.name.pascal)
       path:
-        - $(group.name.snake)
+        - group_$(group.name.snake)
       symbol: $(subject.name.pascal)
 
   dto:
@@ -59,7 +59,7 @@ templates:
     output:
       name: $(subject.name.pascal)
       path:
-        - $(group.name.snake)
+        - group_$(group.name.snake)
       symbol: $(subject.name.pascal)Dto
     imports:
       - $ref: "#/templates/enum"
