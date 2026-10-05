@@ -1,0 +1,18 @@
+{
+  "templates/typescript/enum.ts.j2": [
+    "packs/inject/persistence/mongoose-models/templates/enums/{enum}/$(name).enum.ts.j2",
+    "packs/inject/persistence/typeorm-entities/templates/common/entities/enums/{enum}/$(name).enum.ts.j2",
+    "packs/inject/validation/class-validator-dtos/templates/common/dto/enums/{enum}/$(name).enum.ts.j2",
+    "packs/package/clients/next-api-bridge/templates/types/enums/{enum}/$(name).ts.j2",
+    "packs/package/clients/ts-api-client/templates/src/enums/{enum}/$(name).ts.j2",
+    "packs/project/frontend/nextjs-app/templates/lib/types/{enum}/$(name).enum.ts.j2"
+  ],
+  "templates/typescript/export-index.ts.j2": [
+    "packs/inject/validation/joi-schemas/templates/{index}/index.ts.j2",
+    "packs/inject/validation/zod-schemas/templates/{index}/index.ts.j2"
+  ],
+  "templates/typescript/export-index.ts.hbs": [
+    "packs/inject/backend/nestjs-backend/templates/{feature-index}/index.ts.hbs",
+    "packs/inject/backend/nestjs-backend/templates/{root-index}/index.ts.hbs"
+  ]
+}
