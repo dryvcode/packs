@@ -14,7 +14,7 @@
 {%- endif -%}
 {%- endmacro -%}
 {%- macro input_field_type(field) -%}
-{%- if field.optional or field.nullable %}*{% endif -%}
+{%- if field.optional %}*{% endif -%}
 {%- if field.array is not none %}[]{% endif -%}
 {{- go_type(field.value) -}}
 {%- endmacro -%}
