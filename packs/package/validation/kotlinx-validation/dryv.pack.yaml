@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.kotlinx-validation
+layout: package
+package:
+  name: dryv-kotlin-validation
+
+source: templates
+
+info:
+  title: Kotlinx Validation
+  version: 0.1.0
+  description: Generates kotlinx.serialization DTOs and deterministic validation helpers for Kotlin/JVM.
+
+catalog:
+  purpose: validation
+  summary: Kotlin serializable DTOs with generated validation objects and invariant checks.
+  languages: [kotlin]
+  frameworks: [kotlinx-serialization]
+  tags: [dto, validation, kotlin, serialization]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: org.dryv.generated.validation
+    description: Kotlin package for generated validation sources.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/dto"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
