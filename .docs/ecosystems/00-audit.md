@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **61 pack manifests**.
+The repository currently contains **62 pack manifests**.
 
 ### Inject
 
@@ -32,6 +32,10 @@ Validation:
 Documentation:
 
 - [x] `inject/documentation/markdown-reference`
+
+Testing:
+
+- [x] `inject/testing/schema-examples`
 
 ### Package
 
@@ -132,6 +136,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
 - documentation/reference → `markdown-reference`
+- testing/fixtures → `schema-examples`
 
 ## Current thin areas
 
