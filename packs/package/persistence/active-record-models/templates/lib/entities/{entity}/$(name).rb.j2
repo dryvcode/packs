@@ -1,0 +1,78 @@
+# frozen_string_literal: true
+
+require "active_record"
+
+module {{ pack.inputs.module_name }}
+{%- macro ruby_ident(name) -%}
+{%- if name in ['BEGIN','END','alias','and','begin','break','case','class','def','defined','do','else','elsif','end','ensure','false','for','if','in','module','next','nil','not','or','redo','rescue','retry','return','self','super','then','true','undef','unless','until','when','while','yield'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ar_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}:json
+{%- elif value.is.boolean -%}:boolean
+{%- elif value.is.integer -%}:integer
+{%- elif value.is.decimal or value.is.money -%}:decimal
+{%- elif value.is.number -%}:float
+{%- elif value.is.temporal and value.is.date -%}:date
+{%- elif value.is.temporal and value.is.time -%}:time
+{%- elif value.is.temporal and (value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}:datetime
+{%- else -%}:string
+{%- endif -%}
+{%- endmacro -%}
+
+  class {{ file.symbol }} < ActiveRecord::Base
+    self.table_name = "{% if schema.facets.storage and schema.facets.storage.namespace %}{{ schema.facets.storage.namespace }}.{% endif %}{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+
+{%- set pk = namespace(names=[]) %}
+{%- for field in schema.fields %}
+{%- if field.storage is not none and field.storage.primary_key %}
+{%- set pk.names = pk.names + [field.name.snake] %}
+{%- endif %}
+{%- endfor %}
+{%- if pk.names | length == 1 %}
+    self.primary_key = {{ pk.names[0] | tojson }}
+{%- elif pk.names | length > 1 %}
+    self.primary_key = [{% for name in pk.names %}:{{ ruby_ident(name) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- endif %}
+
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    attribute :{{ ruby_ident(field.name.snake) }}, {{ ar_type(field) }}{% if field.value.is.decimal or field.value.is.money %}{% set constraints = field.value.property.primitive.constraints %}{% if constraints.has_precision %}, precision: {{ constraints.precision }}{% endif %}{% if constraints.has_scale %}, scale: {{ constraints.scale }}{% endif %}{% endif %}
+{%- if field.mutation == 'create-only' %}
+    attr_readonly :{{ ruby_ident(field.name.snake) }}
+{%- endif %}
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+    belongs_to :{{ ruby_ident(field.name.snake ~ '_relation') }},
+      class_name: "{{ pack.inputs.module_name }}::{{ symbol_for(field.relation.target.schema) }}",
+      foreign_key: :{{ ruby_ident(field.name.snake) }},
+      primary_key: :{{ ruby_ident(field.relation.target.field.snake) }},
+      optional: {% if field.optional or field.nullable %}true{% else %}false{% endif %}
+{%- if field.relation.on_delete is not none or field.relation.on_update is not none %}
+    # Dryv FK lifecycle actions belong to database constraints/migrations; Active Record association callbacks are not equivalent.
+{%- endif %}
+{%- endif %}
+{%- elif field.related is not none and symbol_for(field.related.via.schema) %}
+{%- if field.related.cardinality == 'one-to-many' %}
+    has_many :{{ ruby_ident(field.name.snake) }},
+      class_name: "{{ pack.inputs.module_name }}::{{ symbol_for(field.related.via.schema) }}",
+      foreign_key: :{{ ruby_ident(field.related.via.field.snake) }},
+      primary_key: :{{ ruby_ident(field.related.inverse.field.snake if field.related.inverse is not none else 'id') }}
+{%- elif field.related.cardinality == 'one-to-one' %}
+    has_one :{{ ruby_ident(field.name.snake) }},
+      class_name: "{{ pack.inputs.module_name }}::{{ symbol_for(field.related.via.schema) }}",
+      foreign_key: :{{ ruby_ident(field.related.via.field.snake) }},
+      primary_key: :{{ ruby_ident(field.related.inverse.field.snake if field.related.inverse is not none else 'id') }}
+{%- else %}
+    # Related field "{{ field.name.raw }}" requires an explicit junction/many-to-many mapping.
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+  end
+end
