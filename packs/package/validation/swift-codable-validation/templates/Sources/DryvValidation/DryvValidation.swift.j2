@@ -1,0 +1,36 @@
+import Foundation
+
+public struct DryvValidationError: Error, Equatable, Sendable, CustomStringConvertible {
+    public let path: String
+    public let message: String
+
+    public init(path: String, message: String) {
+        self.path = path
+        self.message = message
+    }
+
+    public var description: String {
+        path.isEmpty ? message : "\(path): \(message)"
+    }
+}
+
+public enum DryvValidation {
+    public static func matches(_ pattern: String, _ value: String) -> Bool {
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return false
+        }
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        return expression.firstMatch(in: value, range: range) != nil
+    }
+
+    public static func isEmail(_ value: String) -> Bool {
+        matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", value)
+    }
+
+    public static func isURL(_ value: String) -> Bool {
+        guard let components = URLComponents(string: value) else {
+            return false
+        }
+        return components.scheme != nil && components.host != nil
+    }
+}
