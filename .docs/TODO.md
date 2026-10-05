@@ -117,6 +117,13 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Ecto schemas — implementation present; verification deferred
 - [x] Ecto changesets — implementation present; verification deferred
 
+### C++
+
+- [x] C++ Client SDK — implementation present; verification deferred
+- [x] Crow backend — implementation present; verification deferred
+- [x] sqlite_orm models — implementation present; verification deferred
+- [x] C++ validation — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
@@ -129,7 +136,8 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Kotlin — backend, client, persistence and validation represented
 - [x] Ruby — backend, client, persistence and validation represented
 - [x] Elixir — backend, client, persistence and validation represented
-- [ ] C / C++
+- [x] C++ — backend, client, persistence and validation represented
+- [ ] Plain C — research-only; no baseline approved
 
 ## Ecosystem research
 
@@ -152,6 +160,6 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby and Elixir across backend, client, persistence and validation baselines.
+The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir and C++ across backend, client, persistence and validation baselines.
 
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target C/C++ and cross-ecosystem gaps rather than duplicating existing baselines.
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Next implementation work should target cross-ecosystem capabilities, project composition and remaining semantic gaps rather than duplicating existing baselines.
