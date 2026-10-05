@@ -1,0 +1,67 @@
+version: dryv.pack/v1alpha1
+key: validation.validator-dtos
+layout: package
+package:
+  name: { $ref: "#/inputs.crate_name" }
+
+source: templates
+
+info:
+  title: Rust Validator DTOs
+  version: 0.1.0
+  description: Generates serde DTOs with validator 0.21 constraints from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Rust serde DTOs with derive-based validator constraints.
+  languages: [rust]
+  frameworks: [validator, serde]
+  tags: [dto, validation, rust]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  crate_name:
+    type: string
+    default: dryv_validation
+    description: Cargo package name for generated validation types.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+  index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/dto"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"
