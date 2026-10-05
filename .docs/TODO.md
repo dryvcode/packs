@@ -58,7 +58,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 ### Missing language coverage
 
 - [x] Go — client SDK verified; broader Go ecosystem remains planned
-- [ ] Rust
+- [x] Rust — Axum backend package implemented; verification deferred
 - [x] Java — Jakarta Validation DTO package implemented; verification deferred
 - [ ] .NET / C#
 - [ ] PHP
@@ -89,4 +89,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-Continue the approved batch with the Axum backend. Runtime/toolchain verification is deferred while the Dryv Engine is under maintenance.
+Approved first batch is implemented: Go Client SDK, Jakarta Validation DTOs, and Axum backend. Runtime/toolchain verification for the new Java/Rust packs is deferred while the Dryv Engine is under maintenance.
