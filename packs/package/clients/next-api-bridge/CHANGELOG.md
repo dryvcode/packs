@@ -2,4 +2,4 @@
 
 ## 0.1.0
 
-- First release.
+- Initial Next API Bridge pack release.
