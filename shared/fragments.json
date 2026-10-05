@@ -1,0 +1,35 @@
+{
+  "manifests/js-package-manager.yaml": {
+    "marker": "js-package-manager",
+    "targets": [
+      "packs/inject/backend/nestjs-backend/dryv.pack.yaml",
+      "packs/inject/frontend/react-crud-forms/dryv.pack.yaml",
+      "packs/inject/persistence/mongoose-models/dryv.pack.yaml",
+      "packs/inject/persistence/typeorm-entities/dryv.pack.yaml",
+      "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
+      "packs/inject/validation/joi-schemas/dryv.pack.yaml",
+      "packs/inject/validation/zod-schemas/dryv.pack.yaml",
+      "packs/package/clients/ts-api-client/dryv.pack.yaml",
+      "packs/project/frontend/nextjs-app/dryv.pack.yaml",
+      "packs/project/frontend/react-native-app/dryv.pack.yaml"
+    ]
+  },
+  "manifests/dart-tool.yaml": {
+    "marker": "dart-tool",
+    "targets": [
+      "packs/package/clients/flutter-api-bridge/dryv.pack.yaml",
+      "packs/project/frontend/flutter-app/dryv.pack.yaml"
+    ]
+  },
+  "manifests/js-prettier-actions.yaml": {
+    "marker": "js-prettier-actions",
+    "targets": [
+      "packs/inject/backend/nestjs-backend/dryv.pack.yaml",
+      "packs/inject/persistence/mongoose-models/dryv.pack.yaml",
+      "packs/inject/persistence/typeorm-entities/dryv.pack.yaml",
+      "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
+      "packs/inject/validation/joi-schemas/dryv.pack.yaml",
+      "packs/inject/validation/zod-schemas/dryv.pack.yaml"
+    ]
+  }
+}
