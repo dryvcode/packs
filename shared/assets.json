@@ -95,7 +95,8 @@
   "templates/swift/json-value.swift.j2": [
     "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2",
     "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2",
-    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/DryvJSONValue.swift.j2"
+    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/DryvJSONValue.swift.j2",
+    "packs/package/persistence/fluent-models/templates/Sources/DryvPersistence/DryvJSONValue.swift.j2"
   ],
   "templates/swift/wire-enum.swift.j2": [
     "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2",
