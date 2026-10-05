@@ -72,6 +72,42 @@ Do not make a pack reference `shared/` at generation time. Release archives cont
 
 The duplication audit targets risky generated/template/test assets. Pack-owned history such as changelogs may naturally contain identical text and is not treated as shared behavior.
 
+## Inspectable temporary runs
+
+Pack test projects are created under:
+
+`/tmp/dryv/<layout>/<purpose>/<name>/run-<id>/`
+
+For example:
+
+`/tmp/dryv/project/frontend/react-native-app/run-a1b2c3/`
+
+Open the whole test workspace tree in VS Code with:
+
+`code /tmp/dryv/`
+
+Behavior:
+
+- failed runs are always preserved;
+- successful runs are removed by default;
+- `--keep` preserves successful runs too;
+- `--clean` removes all previous Dryv pack-test runs before starting;
+- `--clean-only` removes old runs and exits;
+- `DRYV_TMP_ROOT` overrides `/tmp/dryv` when another root is desired.
+
+Useful commands:
+
+```bash
+# Fresh full suite; keep only failures.
+bun scripts/test-pack.ts --clean --all
+
+# Fresh full suite; preserve every generated project for inspection.
+bun scripts/test-pack.ts --clean --keep --all
+
+# Remove old runs without running tests.
+bun scripts/test-pack.ts --clean-only
+```
+
 ## Test workflow
 
 The AI implementation agent does not run pack fixture tests.
