@@ -16,6 +16,9 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Keep Runtime IR as the only semantic authority.
 - [x] Keep framework/library mapping inside packs.
 - [x] Use one shared Runtime IR fixture at `fixtures/dryv.ir.yaml`; pack-local IR copies are prohibited.
+- [x] Keep exact reusable portable assets under `shared/` with synchronized pack-local copies.
+- [x] Reject unmanaged duplicate templates/fixtures with repository checks.
+- [x] Derive catalogue entries from `dryv.pack.yaml`; never maintain a second pack list.
 - [ ] Audit a candidate before implementation.
 - [ ] Confirm renderer, selections, slots, dependencies and fixture strategy before implementation.
 - [ ] Report context/Engine gaps instead of hiding them in templates.
@@ -48,9 +51,13 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 - [x] FastAPI backend
 
+### Go
+
+- [ ] Go Client SDK — implemented on `develop`, awaiting fixture/toolchain verification
+
 ### Missing language coverage
 
-- [ ] Go
+- [ ] Go — first client pack is in progress; ecosystem coverage is not verified yet
 - [ ] Rust
 - [ ] Java
 - [ ] .NET / C#
@@ -82,6 +89,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-Review and correct the task structure in `.docs/ecosystems/`.
-
-Do **not** begin pack implementation until the structure and first implementation batch are explicitly approved.
+Finish repository-wide duplication cleanup and verify `package/clients/go-client-sdk` against the shared fixture. Then continue the already approved first batch with Jakarta Validation DTOs and Axum backend.
