@@ -48,6 +48,26 @@ Keep a file pack-local when its content really belongs to that pack, for example
 
 Do not centralize files merely because they currently look similar. Centralize them when they represent one shared source of truth.
 
+
+## Portable shared template/support assets
+
+Reusable generation-time assets are different from test fixtures.
+
+If several packs need the exact same template/support file, its canonical editable source belongs under `shared/`. `shared/assets.json` maps that source to the copies that must live inside standalone pack directories.
+
+Run:
+
+```bash
+bun run shared:sync
+bun run shared:check
+```
+
+The first command synchronizes pack-local portable copies. The second verifies synchronization and runs the unmanaged-duplication audit.
+
+Do not make a pack reference `shared/` at generation time. Release archives contain the pack directory, so synchronized copies are intentional portability artifacts rather than independent sources of truth.
+
+The duplication audit targets risky generated/template/test assets. Pack-owned history such as changelogs may naturally contain identical text and is not treated as shared behavior.
+
 ## Test workflow
 
 The AI implementation agent does not run pack fixture tests.
