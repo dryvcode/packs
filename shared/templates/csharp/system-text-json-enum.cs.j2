@@ -1,0 +1,77 @@
+{%- macro cs_ident(name) -%}
+{%- if name in ['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','false','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','null','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','true','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','virtual','void','volatile','while','record','required','file','scoped'] -%}@{{ name }}{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace {{ pack.inputs.root_namespace }}.Models;
+
+[JsonConverter(typeof({{ file.symbol }}JsonConverter))]
+public readonly record struct {{ file.symbol }}(string Json) : IParsable<{{ file.symbol }}>
+{
+{%- for item in property.enum.values %}
+    public static readonly {{ file.symbol }} {{ cs_ident(item.name.pascal) }} = new({{ item.value_json | tojson }});
+{%- endfor %}
+
+    public bool IsValid => Json switch
+    {
+{%- for item in property.enum.values %}
+        {{ item.value_json | tojson }} => true,
+{%- endfor %}
+        _ => false,
+    };
+
+    public override string ToString()
+    {
+        using var document = JsonDocument.Parse(Json);
+        return document.RootElement.ValueKind == JsonValueKind.String
+            ? document.RootElement.GetString() ?? string.Empty
+            : document.RootElement.GetRawText();
+    }
+
+    public static {{ file.symbol }} Parse(string value, IFormatProvider? provider)
+    {
+        if (TryParse(value, provider, out var result))
+        {
+            return result;
+        }
+        throw new FormatException($"Invalid {{ property.enum.name.local }} value: {value}");
+    }
+
+    public static bool TryParse(string? value, IFormatProvider? provider, out {{ file.symbol }} result)
+    {
+{%- for item in property.enum.values %}
+        if (string.Equals(value, {{ cs_ident(item.name.pascal) }}.ToString(), StringComparison.Ordinal))
+        {
+            result = {{ cs_ident(item.name.pascal) }};
+            return true;
+        }
+{%- endfor %}
+        result = default;
+        return false;
+    }
+}
+
+public sealed class {{ file.symbol }}JsonConverter : JsonConverter<{{ file.symbol }}>
+{
+    public override {{ file.symbol }} Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var document = JsonDocument.ParseValue(ref reader);
+        var value = new {{ file.symbol }}(document.RootElement.GetRawText());
+        if (!value.IsValid)
+        {
+            throw new JsonException("Invalid {{ property.enum.name.local }} value");
+        }
+        return value;
+    }
+
+    public override void Write(Utf8JsonWriter writer, {{ file.symbol }} value, JsonSerializerOptions options)
+    {
+        if (!value.IsValid)
+        {
+            throw new JsonException("Invalid {{ property.enum.name.local }} value");
+        }
+        using var document = JsonDocument.Parse(value.Json);
+        document.RootElement.WriteTo(writer);
+    }
+}
