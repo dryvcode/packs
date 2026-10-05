@@ -184,7 +184,9 @@ async fn {{ operation.name.snake }}(
 {%- endif %}
 {%- if http.input_groups.form %}
 {%- if binds_whole(http) %}
-    Form(input): Form<{{ rust_type(http.input_groups.form[0].port.value) }}>,
+{%- for binding in http.input_groups.form %}{% if binding.port.field is none %}
+    Form(input): Form<{{ rust_type(binding.port.value) }}>,
+{%- endif %}{% endfor %}
 {%- else %}
     Form(form): Form<{{ operation.name.pascal }}Form>,
 {%- endif %}
