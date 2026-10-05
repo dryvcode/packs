@@ -38,5 +38,12 @@
       "packs/inject/frontend/react-crud-forms/dryv.pack.yaml",
       "packs/project/frontend/nextjs-app/dryv.pack.yaml"
     ]
+  },
+  "manifests/go-actions.yaml": {
+    "marker": "go-actions",
+    "targets": [
+      "packs/package/clients/go-client-sdk/dryv.pack.yaml",
+      "packs/package/backend/go-net-http-backend/dryv.pack.yaml"
+    ]
   }
 }
