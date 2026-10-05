@@ -12,7 +12,7 @@ When a pack needs another semantic case, extend this shared fixture with a small
 
 The shared IR should remain broad enough to exercise reusable Dryv semantics across ecosystems:
 
-- HTTP operations and bindings
+- HTTP operations and bindings (HTTP operations are feature-owned, matching the current Runtime IR validator)
 - schemas and enums
 - create/update UI inputs
 - validation constraints
