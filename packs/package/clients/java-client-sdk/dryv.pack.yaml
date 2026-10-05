@@ -1,0 +1,85 @@
+version: dryv.pack/v1alpha1
+key: clients.java-client-sdk
+layout: package
+package:
+  name: { $ref: "#/inputs.artifact_id" }
+
+source: templates
+
+info:
+  title: Java Client SDK
+  version: 0.1.0
+  description: Generates a typed Java HTTP client SDK using java.net.http.HttpClient and Jackson.
+
+catalog:
+  purpose: clients
+  summary: Typed Java HTTP client SDK using the standard HttpClient and Jackson.
+  languages: [java]
+  frameworks: [java-http-client, jackson]
+  tags: [client, sdk, java, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  group_id:
+    type: string
+    default: org.dryv.generated
+    description: Maven groupId for the generated SDK.
+  artifact_id:
+    type: string
+    default: dryv-client
+    description: Maven artifactId and Dryv package identity.
+  java_package:
+    type: string
+    default: org.dryv.generated.client
+    description: Base Java package for generated client code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
