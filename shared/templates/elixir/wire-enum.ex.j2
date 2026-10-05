@@ -42,6 +42,6 @@ defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
 
   defimpl String.Chars do
     def to_string(%{value: value}) when is_binary(value), do: value
-    def to_string(%{value: value}), do: Jason.encode!(value)
+    def to_string(%{value: value}), do: inspect(value)
   end
 end
