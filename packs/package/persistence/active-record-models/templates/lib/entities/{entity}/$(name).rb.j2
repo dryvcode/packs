@@ -58,20 +58,23 @@ module {{ pack.inputs.module_name }}
     # Dryv FK lifecycle actions belong to database constraints/migrations; Active Record association callbacks are not equivalent.
 {%- endif %}
 {%- endif %}
-{%- elif field.related is not none and symbol_for(field.related.via.schema) %}
+{%- elif field.related is not none and symbol_for(field.related.via.schema) and field.related.inverse is not none %}
 {%- if field.related.cardinality == 'one-to-many' %}
     has_many :{{ ruby_ident(field.name.snake) }},
       class_name: "{{ pack.inputs.module_name }}::{{ symbol_for(field.related.via.schema) }}",
       foreign_key: :{{ ruby_ident(field.related.via.field.snake) }},
-      primary_key: :{{ ruby_ident(field.related.inverse.field.snake if field.related.inverse is not none else 'id') }}
+      primary_key: :{{ ruby_ident(field.related.inverse.field.snake) }}
 {%- elif field.related.cardinality == 'one-to-one' %}
     has_one :{{ ruby_ident(field.name.snake) }},
       class_name: "{{ pack.inputs.module_name }}::{{ symbol_for(field.related.via.schema) }}",
       foreign_key: :{{ ruby_ident(field.related.via.field.snake) }},
-      primary_key: :{{ ruby_ident(field.related.inverse.field.snake if field.related.inverse is not none else 'id') }}
+      primary_key: :{{ ruby_ident(field.related.inverse.field.snake) }}
 {%- else %}
     # Related field "{{ field.name.raw }}" requires an explicit junction/many-to-many mapping.
 {%- endif %}
+{%- elif field.related is not none %}
+    # Related field "{{ field.name.raw }}" has no explicit inverse key; navigation is not guessed.
+
 {%- endif %}
 {%- endfor %}
   end
