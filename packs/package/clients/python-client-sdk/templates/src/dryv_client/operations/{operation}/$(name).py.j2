@@ -1,0 +1,140 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro value_type(value) -%}
+{%- if value is none -%}Any
+{%- elif value.is.unknown -%}object
+{%- elif value.is.dynamic -%}Any
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Any' }}
+{%- elif value.is.primitive -%}
+  {%- if value.property.primitive.is.boolean -%}bool
+  {%- elif value.property.primitive.is.integer -%}int
+  {%- elif value.property.primitive.is_decimal or value.property.primitive.is_money -%}Decimal
+  {%- elif value.property.primitive.is.number -%}float
+  {%- elif value.property.primitive.is.uuid -%}UUID
+  {%- else -%}str
+  {%- endif -%}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Any' }}
+{%- elif value.is.temporal -%}
+  {%- if value.property.temporal.is.date -%}date
+  {%- elif value.property.temporal.is.time -%}time
+  {%- elif value.property.temporal.is.duration or value.property.temporal.is.interval -%}timedelta
+  {%- else -%}datetime
+  {%- endif -%}
+{%- elif value.is.record -%}dict[str, Any]
+{%- elif value.is.tuple -%}tuple[Any, ...]
+{%- elif value.is.generic -%}{{ value.property.generic.name.pascal }}
+{%- else -%}Any
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}list[{{ value_type(field.value) }}]{%- else -%}{{ value_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%} | None{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ value_type(operation.input.value) }}{%- else -%}{{ operation.name.pascal }}Input{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ binding.port.field.snake }}{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+from __future__ import annotations
+
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from typing import Any
+from urllib.parse import quote
+from uuid import UUID
+
+from pydantic import BaseModel
+
+from ..client import DryvClient, append_param, to_wire
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+from ..models import {{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+{%- if operation.input and operation.input.kind != 'schema' %}
+class {{ operation.name.pascal }}Input(BaseModel):
+{%- for field in operation.input.fields %}
+    {{ field.name.snake }}: {{ field_type(field) }}{% if field.optional %} = None{% endif %}
+{%- endfor %}
+
+{%- endif %}
+async def {{ file.symbol }}(
+    client: DryvClient{% if operation.input %},
+    input: {{ input_type(operation) }}{% endif %}
+) -> {% if operation.output %}{{ value_type(operation.output.value) }}{% else %}None{% endif %}:
+{%- if http.input_groups.multipart %}
+    raise NotImplementedError("Multipart bindings require an explicit Python semantic mapping.")
+{%- else %}
+    path = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+    path = path.replace(
+        "{" + {{ (binding.name or binding.port.name.raw) | tojson }} + "}",
+        quote(str(to_wire({{ bound(binding) }})), safe=""),
+    )
+{%- endfor %}
+
+    params: list[tuple[str, Any]] = []
+{%- for binding in http.input_groups.query %}
+    append_param(params, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+    query_object = to_wire({{ bound(binding) }})
+    if isinstance(query_object, dict):
+        for name, value in query_object.items():
+            append_param(params, name, value)
+{%- endfor %}
+
+    headers: dict[str, str] = {}
+{%- for binding in http.input_groups.header %}
+    if {{ bound(binding) }} is not None:
+        headers[{{ (binding.name or binding.port.name.raw) | tojson }}] = str(to_wire({{ bound(binding) }}))
+{%- endfor %}
+
+    cookies: dict[str, str] = {}
+{%- for binding in http.input_groups.cookie %}
+    if {{ bound(binding) }} is not None:
+        cookies[{{ (binding.name or binding.port.name.raw) | tojson }}] = str(to_wire({{ bound(binding) }}))
+{%- endfor %}
+
+    has_json_body = False
+    json_body: Any = None
+{%- for binding in http.input_groups.body %}
+    has_json_body = True
+    json_body = {{ bound(binding) }}
+{%- endfor %}
+
+    form: list[tuple[str, Any]] | None = None
+{%- if http.input_groups.form %}
+    form = []
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+    form_object = to_wire({{ bound(binding) }})
+    if isinstance(form_object, dict):
+        for name, value in form_object.items():
+            append_param(form, name, value)
+{%- else %}
+    append_param(form, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+    return await client.send(
+        {{ http.method | tojson }},
+        path,
+        output_type={% if operation.output %}{{ value_type(operation.output.value) }}{% else %}None{% endif %},
+        params=params,
+        headers=headers,
+        cookies=cookies,
+        json_body=json_body,
+        has_json_body=has_json_body,
+        form=form,
+    )
+{%- endif %}
