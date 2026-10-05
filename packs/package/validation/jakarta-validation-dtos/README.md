@@ -30,6 +30,6 @@ Unsupported or target-specific semantics are left visible rather than approximat
 
 ## Package structure
 
-The generated unit owns a Maven `pom.xml`. DTOs and enums are grouped physically by Dryv group and declared under `<java_package>.<group>`.
+The generated unit owns a Maven `pom.xml`. DTOs and enums are grouped physically by Dryv group and declared under `<java_package>.group_<group>`, keeping Java package segments valid even when a semantic group name collides with a Java keyword. Java member keywords are suffixed in generated identifiers; Runtime IR names remain unchanged.
 
 Verification is intentionally deferred while the Dryv Engine is under maintenance.
