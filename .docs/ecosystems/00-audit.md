@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **46 pack manifests**.
+The repository currently contains **51 pack manifests**.
 
 ### Inject
 
@@ -100,7 +100,7 @@ A baseline means backend + API client + persistence + validation are represented
 - [x] PHP — Symfony, Guzzle, Doctrine ORM, Symfony Validator
 - [x] Swift — Vapor, URLSession, Fluent, Codable validation
 - [x] Kotlin — Ktor, Ktor Client, Exposed, generated validation
-- [ ] Ruby
+- [x] Ruby — Sinatra, Net::HTTP, Active Record, dry-validation
 - [ ] Elixir
 - [ ] C / C++
 
@@ -108,19 +108,19 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 
 ## Proven pack patterns to reuse
 
-- SQL persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`
+- SQL persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`
 - document persistence → `mongoose-models`
-- validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`
+- validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`
-- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`
+- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`
+- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
 
 ## Current thin areas
 
-- Ruby, Elixir and C/C++ baseline coverage
+- Elixir and C/C++ baseline coverage
 - backend/project application packs
 - explicit backend project composition capability contracts
 - multipart/file semantics
