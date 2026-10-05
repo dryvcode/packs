@@ -18,7 +18,8 @@
   ],
   "templates/rust/serde-enum.rs.j2": [
     "packs/package/backend/axum-backend/templates/src/models/{enum}/$(name).rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/models/{enum}/$(name).rs.j2"
+    "packs/package/clients/rust-client-sdk/templates/src/models/{enum}/$(name).rs.j2",
+    "packs/package/validation/validator-dtos/templates/src/{enum}/$(name).rs.j2"
   ],
   "templates/rust/serde-model.rs.j2": [
     "packs/package/backend/axum-backend/templates/src/models/{model}/$(name).rs.j2",
@@ -27,6 +28,7 @@
   "templates/rust/export-mod.rs.j2": [
     "packs/package/backend/axum-backend/templates/src/models/{models-index}/mod.rs.j2",
     "packs/package/clients/rust-client-sdk/templates/src/models/{models-index}/mod.rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/operations/{operations-index}/mod.rs.j2"
+    "packs/package/clients/rust-client-sdk/templates/src/operations/{operations-index}/mod.rs.j2",
+    "packs/package/validation/validator-dtos/templates/src/{index}/mod.rs.j2"
   ]
 }
