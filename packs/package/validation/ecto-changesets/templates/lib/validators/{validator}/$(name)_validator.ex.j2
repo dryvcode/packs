@@ -1,0 +1,203 @@
+{%- macro symbol_for(link, suffix='') -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and (not suffix or dependency.symbol.endswith(suffix)) -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro model_symbol() -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == schema.id and dependency.symbol and not dependency.symbol.endswith('Validator') -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ecto_base_type(value) -%}
+{%- if value is none or value.is.schema or value.is.enum or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}:any
+{%- elif value.is.boolean -%}:boolean
+{%- elif value.is.integer -%}:integer
+{%- elif value.is.decimal or value.is.money -%}:decimal
+{%- elif value.is.number -%}:float
+{%- elif value.is.temporal and value.is.date -%}:date
+{%- elif value.is.temporal and value.is.time -%}:time
+{%- elif value.is.temporal and (value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}:utc_datetime_usec
+{%- else -%}:string
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro ecto_type(field) -%}
+{%- if field.array is not none -%}{:array, {{ ecto_base_type(field.value) }}}{%- else -%}{{ ecto_base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro format_regex(value) -%}
+{%- if value.is.uuid -%}~r/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+{%- elif value.is.ulid -%}~r/^[0-9A-HJKMNP-TV-Z]{26}$/
+{%- elif value.is.e164 -%}~r/^\+[1-9][0-9]{1,14}$/
+{%- elif value.is.phone -%}~r/^\+?[0-9 ().-]{7,20}$/
+{%- elif value.is.slug -%}~r/^[a-z0-9]+(?:-[a-z0-9]+)*$/
+{%- elif value.is.hex_color -%}~r/^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+{%- elif value.is.hex -%}~r/^[0-9a-fA-F]+$/
+{%- elif value.is.jwt -%}~r/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/
+{%- elif value.is.semver -%}~r/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+{%- elif value.is.country_code -%}~r/^[A-Z]{2}$/
+{%- elif value.is.currency_code -%}~r/^[A-Z]{3}$/
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro ex_literal(value_json) -%}
+{%- if value_json == 'null' -%}nil{%- else -%}{{ value_json }}{%- endif -%}
+{%- endmacro -%}
+
+defmodule {{ pack.inputs.module_prefix }}.Validators.{{ file.symbol }} do
+  @moduledoc false
+
+  import Ecto.Changeset
+
+  alias {{ pack.inputs.module_prefix }}.Models.{{ model_symbol() }}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol.endswith('Validator') and dependency.symbol != file.symbol %}
+  alias {{ pack.inputs.module_prefix }}.Validators.{{ dependency.symbol }}
+{%- elif dependency.symbol and not dependency.symbol.endswith('Validator') and dependency.symbol != model_symbol() %}
+  alias {{ pack.inputs.module_prefix }}.Models.{{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+  @fields [
+{%- for field in schema.fields %}
+    :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+
+  @types %{
+{%- for field in schema.fields %}
+    {{ field.name.snake }}: {{ ecto_type(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  }
+
+  @spec changeset({{ model_symbol() }}.t()) :: Ecto.Changeset.t()
+  def changeset(%{{ model_symbol() }}{} = value) do
+    params = Map.from_struct(value)
+
+    changeset =
+      {%{}, @types}
+      |> cast(params, @fields)
+{%- set required = [] %}
+{%- for field in schema.fields %}{% if not field.optional and not field.nullable %}{% set required = required + [field.name.snake] %}{% endif %}{% endfor %}
+{%- if required %}
+      |> validate_required([{% for name in required %}:{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}])
+{%- endif %}
+{%- for field in schema.fields %}
+{%- if field.array is not none %}
+{%- if field.array.has_min %}
+      |> validate_length(:{{ field.name.snake }}, min: {{ field.array.min }})
+{%- endif %}
+{%- if field.array.has_max %}
+      |> validate_length(:{{ field.name.snake }}, max: {{ field.array.max }})
+{%- endif %}
+{%- elif field.value.is.primitive %}
+{%- set primitive = field.value.property.primitive %}
+{%- if primitive.is.string %}
+{%- set length = primitive.constraints.length %}
+{%- if length is not none and length.has_exact %}
+      |> validate_length(:{{ field.name.snake }}, is: {{ length.exact }})
+{%- else %}
+{%- if length is not none and length.has_min %}
+      |> validate_length(:{{ field.name.snake }}, min: {{ length.min }})
+{%- endif %}
+{%- if length is not none and length.has_max %}
+      |> validate_length(:{{ field.name.snake }}, max: {{ length.max }})
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+      |> validate_format(:{{ field.name.snake }}, ~r/^[^@\s]+@[^@\s]+\.[^@\s]+$/)
+{%- elif primitive.is.url or primitive.is.uri %}
+      |> validate_format(:{{ field.name.snake }}, ~r/^[A-Za-z][A-Za-z0-9+.-]*:\/\/\S+$/)
+{%- elif format_regex(primitive) %}
+      |> validate_format(:{{ field.name.snake }}, {{ format_regex(primitive) }})
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match_json %}
+      |> validate_format(:{{ field.name.snake }}, Regex.compile!({{ expression }}))
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- set range = primitive.constraints.range %}
+{%- if range is not none and range.has_min %}
+      |> validate_number(:{{ field.name.snake }}, greater_than_or_equal_to: {{ range.min }})
+{%- endif %}
+{%- if range is not none and range.has_max %}
+      |> validate_number(:{{ field.name.snake }}, less_than_or_equal_to: {{ range.max }})
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+    changeset
+{%- for field in schema.fields %}
+{%- if field.value.is.enum and symbol_for(field.value.property.enum) %}
+    |> validate_change(:{{ field.name.snake }}, fn :{{ field.name.snake }}, field_value ->
+      values = if is_list(field_value), do: field_value, else: [field_value]
+
+      if Enum.all?(values, &{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(field.value.property.enum) }}.valid?/1) do
+        []
+      else
+        [{{ field.name.snake }}: "contains an invalid enum value"]
+      end
+    end)
+{%- endif %}
+{%- if field.value.is.schema and symbol_for(field.value.schema, 'Validator') %}
+    |> validate_nested(:{{ field.name.snake }}, value.{{ field.name.snake }}, {{ pack.inputs.module_prefix }}.Validators.{{ symbol_for(field.value.schema, 'Validator') }})
+{%- endif %}
+{%- endfor %}
+{%- for invariant in schema.invariants %}
+{%- if not invariant.form.is.opaque %}
+{%- set supported = namespace(ok=true) %}
+{%- for comparison in invariant.form.comparisons %}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic %}{% set supported.ok=false %}{% endif %}
+{%- endfor %}
+{%- if supported.ok %}
+    |> validate_invariant(value, {{ invariant.name.raw | tojson }}, fn ->
+      {% for comparison in invariant.form.comparisons -%}
+      compare(
+        {{ 'value.' ~ comparison.left.field.snake if comparison.left.is.field else ex_literal(comparison.left.value_json) }},
+        {{ 'value.' ~ comparison.right.field.snake if comparison.right.is.field else ex_literal(comparison.right.value_json) }},
+        {{ comparison.operator | tojson }}
+      ){% if not loop.last %}{% if invariant.form.is.all %} and {% else %} or {% endif %}{% endif %}
+      {%- endfor %}
+    end)
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+  end
+
+  defp validate_nested(changeset, _field, nil, _validator), do: changeset
+
+  defp validate_nested(changeset, field, values, validator) when is_list(values) do
+    if Enum.all?(values, &(validator.changeset(&1).valid?)) do
+      changeset
+    else
+      add_error(changeset, field, "contains an invalid nested value")
+    end
+  end
+
+  defp validate_nested(changeset, field, value, validator) do
+    if validator.changeset(value).valid? do
+      changeset
+    else
+      add_error(changeset, field, "is invalid")
+    end
+  end
+
+  defp validate_invariant(changeset, _value, _name, predicate) do
+    if predicate.() do
+      changeset
+    else
+      add_error(changeset, :base, "schema invariant failed")
+    end
+  end
+
+  defp compare(nil, _right, _operator), do: true
+  defp compare(_left, nil, _operator), do: true
+  defp compare(left, right, "equal"), do: left == right
+  defp compare(left, right, "not-equal"), do: left != right
+  defp compare(left, right, "less-than"), do: left < right
+  defp compare(left, right, "less-than-or-equal"), do: left <= right
+  defp compare(left, right, "greater-than"), do: left > right
+  defp compare(left, right, "greater-than-or-equal"), do: left >= right
+end
