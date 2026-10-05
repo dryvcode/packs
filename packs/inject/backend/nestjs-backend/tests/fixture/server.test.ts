@@ -20,6 +20,23 @@ const created = {
   createdAt: "2026-09-25T08:00:00Z",
 };
 
+type SearchUsersInput = {
+  status: string;
+  limit: number;
+  traceId: string;
+  session: string;
+};
+
+function searchResult(input: SearchUsersInput) {
+  if (input.status !== "active") throw new Error(`status = ${input.status}, want active`);
+  if (input.limit !== 25) throw new Error(`limit = ${String(input.limit)}, want 25`);
+  if (input.traceId !== created.id) throw new Error(`traceId = ${input.traceId}, want ${created.id}`);
+  if (input.session !== "session-1") {
+    throw new Error(`session = ${input.session}, want session-1`);
+  }
+  return { ...created, displayName: "Search" } as never;
+}
+
 class InMemoryClassValidatorUsers extends ClassValidatorService {
   async createUser(request: object) {
     return { ...created, ...request } as never;
@@ -29,6 +46,9 @@ class InMemoryClassValidatorUsers extends ClassValidatorService {
   }
   async listUsers() {
     return { items: [created], total: 1 };
+  }
+  async searchUsers(input: SearchUsersInput) {
+    return searchResult(input);
   }
 }
 
@@ -41,6 +61,9 @@ class InMemoryZodUsers extends ZodService {
   }
   async listUsers() {
     return { items: [created], total: 1 };
+  }
+  async searchUsers(input: SearchUsersInput) {
+    return searchResult(input);
   }
 }
 
@@ -88,6 +111,17 @@ describe("generated NestJS server over class-validator", () => {
     const response = await fetch(`${base}/users/${created.id}`);
     expect(response.status).toBe(200);
     expect((await response.json()).displayName).toBe("Ada");
+  });
+
+  test("binds query, header and cookie inputs", async () => {
+    const response = await fetch(`${base}/users/search?status=active&limit=25`, {
+      headers: {
+        "X-Trace-Id": created.id,
+        Cookie: "session=session-1",
+      },
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).displayName).toBe("Search");
   });
 });
 
