@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: clients.php-client-sdk
+layout: package
+package:
+  name: dryv/generated-client
+
+source: templates
+
+info:
+  title: PHP Client SDK
+  version: 0.1.0
+  description: Generates a typed PHP 8.4+ Guzzle client SDK with plain DTOs and canonical enum wrappers.
+
+catalog:
+  purpose: clients
+  summary: Typed PHP Guzzle client SDK with generated DTOs and HTTP operations.
+  languages: [php]
+  frameworks: [guzzle]
+  tags: [client, sdk, php, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_namespace:
+    type: string
+    default: 'Dryv\Generated\Client'
+    description: Root PHP namespace for generated SDK code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
