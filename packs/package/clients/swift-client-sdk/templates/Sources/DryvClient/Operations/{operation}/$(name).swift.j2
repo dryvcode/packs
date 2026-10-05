@@ -119,13 +119,13 @@ public func {{ swift_ident(file.symbol) }}(
 {%- if binding_optional(operation, binding) %}
     if let queryObject = {{ bound(binding) }} {
 {%- for field in binding.port.value.schema.fields %}
-{{ append_item('queryItems', field.name.raw, 'queryObject.' ~ swift_ident(field.name.camel), field.optional, field.array is not none) | indent(4, true) }}
+{{ append_item('queryItems', field.name.raw, 'queryObject.' ~ swift_ident(field.name.camel), field.optional or field.nullable, field.array is not none) | indent(4, true) }}
 {%- endfor %}
     }
 {%- else %}
     let queryObject = {{ bound(binding) }}
 {%- for field in binding.port.value.schema.fields %}
-{{ append_item('queryItems', field.name.raw, 'queryObject.' ~ swift_ident(field.name.camel), field.optional, field.array is not none) }}
+{{ append_item('queryItems', field.name.raw, 'queryObject.' ~ swift_ident(field.name.camel), field.optional or field.nullable, field.array is not none) }}
 {%- endfor %}
 {%- endif %}
 {%- endif %}
@@ -178,13 +178,13 @@ public func {{ swift_ident(file.symbol) }}(
 {%- if binding_optional(operation, binding) %}
     if let formObject = {{ bound(binding) }} {
 {%- for field in binding.port.value.schema.fields %}
-{{ append_item('formItems', field.name.raw, 'formObject.' ~ swift_ident(field.name.camel), field.optional, field.array is not none) | indent(4, true) }}
+{{ append_item('formItems', field.name.raw, 'formObject.' ~ swift_ident(field.name.camel), field.optional or field.nullable, field.array is not none) | indent(4, true) }}
 {%- endfor %}
     }
 {%- else %}
     let formObject = {{ bound(binding) }}
 {%- for field in binding.port.value.schema.fields %}
-{{ append_item('formItems', field.name.raw, 'formObject.' ~ swift_ident(field.name.camel), field.optional, field.array is not none) }}
+{{ append_item('formItems', field.name.raw, 'formObject.' ~ swift_ident(field.name.camel), field.optional or field.nullable, field.array is not none) }}
 {%- endfor %}
 {%- endif %}
 {%- else %}
