@@ -29,8 +29,15 @@ jobs:
           --health-interval 5s --health-retries 24
     env:
       DRYV_API_URL: http://127.0.0.1:8750
+      DRYV_CLI: bun .dryv-source/source/apps/cli/bin/dryv.ts
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout matching Dryv source
+        uses: actions/checkout@v4
+        with:
+          repository: dryvcode/dryv
+          ref: main
+          path: .dryv-source
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
