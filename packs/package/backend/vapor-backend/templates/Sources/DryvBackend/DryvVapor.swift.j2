@@ -1,0 +1,36 @@
+import Foundation
+import Vapor
+
+public enum DryvVapor {
+    public static func decodeWire<T: Decodable>(
+        _ raw: String,
+        as type: T.Type,
+        name: String
+    ) throws -> T {
+        let decoder = JSONDecoder()
+
+        if let direct = try? decoder.decode(T.self, from: Data(raw.utf8)) {
+            return direct
+        }
+
+        let quoted = try JSONEncoder().encode(raw)
+        if let decoded = try? decoder.decode(T.self, from: quoted) {
+            return decoded
+        }
+
+        throw Abort(.badRequest, reason: "Invalid value for \(name)")
+    }
+
+    public static func jsonResponse<T: Encodable>(
+        status: Int,
+        value: T
+    ) throws -> Response {
+        let response = Response(status: HTTPResponseStatus(statusCode: status))
+        try response.content.encode(value, as: .json)
+        return response
+    }
+
+    public static func emptyResponse(status: Int) -> Response {
+        Response(status: HTTPResponseStatus(statusCode: status))
+    }
+}
