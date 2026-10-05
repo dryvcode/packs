@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **59 pack manifests**.
+The repository currently contains **60 pack manifests**.
 
 ### Inject
 
@@ -69,6 +69,7 @@ Validation:
 - [x] `package/validation/kotlinx-validation`
 - [x] `package/validation/ecto-changesets`
 - [x] `package/validation/cpp-validation`
+- [x] `package/validation/json-schema`
 
 Clients:
 
@@ -137,6 +138,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - auth/security generation contracts
 - cross-language contract/documentation packs
 - additional UI ecosystems and native/mobile application packs
+- portable JSON Schema 2020-12 is now represented by `package/validation/json-schema`
 - database migration/schema packs for defaults, checks and target-specific DDL semantics that ORMs cannot express portably
 
 ## Audit checklist for future candidates
