@@ -1,0 +1,153 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro module_for(value) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.schema) }}
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ pack.inputs.module_prefix }}.Models.{{ symbol_for(value.property.enum) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ binding.port.field.snake }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_output(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ module_for(value) }}.from_map({{ expression }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ module_for(value) }}.parse({{ expression }})
+{%- else -%}{:ok, {{ expression }}}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+defmodule {{ pack.inputs.module_prefix }}.Operations.{{ file.symbol }} do
+  @moduledoc false
+
+  alias {{ pack.inputs.module_prefix }}.Client
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+  alias {{ pack.inputs.module_prefix }}.Models.{{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+{%- if operation.input and operation.input.kind != 'schema' %}
+  defmodule Input do
+    @moduledoc false
+
+    defstruct [
+{%- for field in operation.input.fields %}
+      :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ]
+
+    @type t :: %__MODULE__{
+{%- for field in operation.input.fields %}
+            {{ field.name.snake }}: term(){% if not loop.last %},{% endif %}
+{%- endfor %}
+          }
+  end
+
+{%- endif %}
+  @spec execute(Client.t(){% if operation.input %}, term(){% endif %}) ::
+          {:ok, term()} | {:error, term()}
+  def execute(client{% if operation.input %}, input{% endif %}) do
+{%- if http.input_groups.multipart %}
+    {:error, %ArgumentError{message: "multipart bindings require an explicit Elixir semantic mapping"}}
+{%- else %}
+    path = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+    path =
+      String.replace(
+        path,
+        {{ ('{' ~ (binding.name or binding.port.name.raw) ~ '}') | tojson }},
+        {{ bound(binding) }} |> Client.wire() |> to_string() |> URI.encode_www_form()
+      )
+{%- endfor %}
+
+    params = []
+{%- for binding in http.input_groups.query %}
+    params = Client.append_pair(params, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+    params =
+      case Client.wire({{ bound(binding) }}) do
+        value when is_map(value) ->
+          Enum.reduce(value, params, fn {name, item}, acc ->
+            Client.append_pair(acc, to_string(name), item)
+          end)
+
+        _ ->
+          params
+      end
+{%- endfor %}
+
+    headers = []
+{%- for binding in http.input_groups.header %}
+    headers =
+      case {{ bound(binding) }} do
+        nil -> headers
+        value -> [{ {{ (binding.name or binding.port.name.raw) | tojson }}, value |> Client.wire() |> to_string() } | headers]
+      end
+{%- endfor %}
+
+    cookies = []
+{%- for binding in http.input_groups.cookie %}
+    cookies =
+      case {{ bound(binding) }} do
+        nil -> cookies
+        value -> [{ {{ (binding.name or binding.port.name.raw) | tojson }}, value |> Client.wire() |> to_string() } | cookies]
+      end
+{%- endfor %}
+
+    has_json_body = false
+    json_body = nil
+{%- for binding in http.input_groups.body %}
+    has_json_body = true
+    json_body = {{ bound(binding) }}
+{%- endfor %}
+
+    form = nil
+{%- if http.input_groups.form %}
+    form = []
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+    form =
+      case Client.wire({{ bound(binding) }}) do
+        value when is_map(value) ->
+          Enum.reduce(value, form, fn {name, item}, acc ->
+            Client.append_pair(acc, to_string(name), item)
+          end)
+
+        _ ->
+          form
+      end
+{%- else %}
+    form = Client.append_pair(form, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+    case Client.request(
+           client,
+           :{{ http.method | lower }},
+           path,
+           params: params,
+           headers: headers,
+           cookies: cookies,
+           json_body: json_body,
+           has_json_body: has_json_body,
+           form: form
+         ) do
+      {:ok, payload} ->
+{%- if operation.output %}
+        {{ decode_output(operation.output.value, 'payload') }}
+{%- else %}
+        {:ok, nil}
+{%- endif %}
+
+      {:error, error} ->
+        {:error, error}
+    end
+{%- endif %}
+  end
+end
