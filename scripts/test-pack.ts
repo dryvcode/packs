@@ -19,7 +19,7 @@
  */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 const PACKS = join(REPO, "packs");
@@ -36,21 +36,14 @@ function run(command: string[], cwd: string): number {
 }
 
 
-function portableFixturePath(value: string, label: string): string {
-  if (!value || value.includes("\\") || isAbsolute(value) || value.split("/").includes("..")) {
-    throw new Error(`${label} must be a non-empty portable relative path`);
-  }
-  return value;
-}
-
 function applySharedFixtures(pack: string, project: string): void {
   const manifest = join(PACKS, pack, "tests", "shared-fixtures.json");
   if (!existsSync(manifest)) return;
 
   const mappings = JSON.parse(readFileSync(manifest, "utf8")) as Record<string, string>;
   for (const [destinationValue, sourceValue] of Object.entries(mappings)) {
-    const destination = portableFixturePath(destinationValue, `${pack} shared fixture destination`);
-    const source = portableFixturePath(sourceValue, `${pack} shared fixture source`);
+    const destination = portableRelative(destinationValue, `${pack} shared fixture destination`);
+    const source = portableRelative(sourceValue, `${pack} shared fixture source`);
     const from = join(FIXTURES, source);
     const to = join(project, destination);
 
