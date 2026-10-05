@@ -13,7 +13,7 @@ if (!tag) {
 
 const split = tag.lastIndexOf("/v");
 if (split <= 0) {
-  console.error(\`invalid release tag: \${tag}\`);
+  console.error(`invalid release tag: ${tag}`);
   process.exit(1);
 }
 
@@ -28,13 +28,13 @@ try {
 }
 
 if (!version) {
-  console.error(\`release tag has no version: \${tag}\`);
+  console.error(`release tag has no version: ${tag}`);
   process.exit(1);
 }
 
 const manifestPath = join(PACKS, pack, "dryv.pack.yaml");
 if (!existsSync(manifestPath)) {
-  console.error(\`no pack manifest at packs/\${pack}/dryv.pack.yaml\`);
+  console.error(`no pack manifest at packs/${pack}/dryv.pack.yaml`);
   process.exit(1);
 }
 
@@ -42,16 +42,20 @@ const manifest = Bun.YAML.parse(readFileSync(manifestPath, "utf8")) as {
   info?: { version?: string };
 };
 const actual = manifest.info?.version;
+
 if (actual !== version) {
-  console.error(\`release tag version \${version} does not match pack info.version \${actual ?? "<missing>"}\`);
+  console.error(
+    `release tag version ${version} does not match pack info.version ${actual ?? "<missing>"}`,
+  );
   process.exit(1);
 }
 
-if (releaseRef(pack, version) !== tag) {
-  console.error(\`release tag is not canonical: expected \${releaseRef(pack, version)}\`);
+const expected = releaseRef(pack, version);
+if (expected !== tag) {
+  console.error(`release tag is not canonical: expected ${expected}`);
   process.exit(1);
 }
 
-console.log(\`pack=\${pack}\`);
-console.log(\`version=\${version}\`);
-console.log(\`name=\${pack.replaceAll("/", "-")}\`);
+console.log(`pack=${pack}`);
+console.log(`version=${version}`);
+console.log(`name=${pack.replaceAll("/", "-")}`);
