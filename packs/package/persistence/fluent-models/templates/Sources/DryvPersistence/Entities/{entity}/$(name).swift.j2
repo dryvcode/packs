@@ -3,7 +3,11 @@ import Fluent
 
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
-{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- if dependency.target.id == link.id -%}
+{%- if dependency.symbol -%}{{ dependency.symbol }}
+{%- elif dependency.symbols.entity -%}{{ dependency.symbols.entity }}
+{%- endif -%}
+{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 
@@ -66,7 +70,7 @@ import Fluent
 {%- endmacro -%}
 
 {%- macro pk_supported(field) -%}
-{%- if field.value.is.integer or field.value.is.uuid or field.value.is.string -%}x{%- endif -%}
+{%- if field.array is none and (field.value.is.integer or field.value.is.uuid or field.value.is.string) -%}x{%- endif -%}
 {%- endmacro -%}
 
 {%- set pk = namespace(count=0, supported=true, has_system_composite=false, system_unsupported=false) -%}
