@@ -1,0 +1,58 @@
+{%- macro java_string(value) -%}{{ value | tojson }}{%- endmacro -%}
+package {{ pack.inputs.java_package }}.models;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public enum {{ file.symbol }} {
+{%- for item in property.enum.values %}
+    {{ item.name.constant }}({{ java_string(item.value_json) }}){% if not loop.last %},{% else %};{% endif %}
+{%- endfor %}
+
+    private final String wireJson;
+
+    {{ file.symbol }}(String wireJson) {
+        this.wireJson = wireJson;
+    }
+
+    @JsonValue
+    public JsonNode value() {
+        return parse(wireJson);
+    }
+
+    @JsonCreator
+    public static {{ file.symbol }} from(JsonNode value) {
+        String wireJson = value.toString();
+{%- for item in property.enum.values %}
+        if ({{ item.name.constant }}.wireJson.equals(wireJson)) {
+            return {{ item.name.constant }};
+        }
+{%- endfor %}
+        throw new IllegalArgumentException("invalid {{ property.enum.name.local }} value: " + wireJson);
+    }
+
+    public static {{ file.symbol }} fromString(String value) {
+        for ({{ file.symbol }} item : values()) {
+            if (item.toString().equals(value)) {
+                return item;
+            }
+        }
+        throw new IllegalArgumentException("invalid {{ property.enum.name.local }} value: " + value);
+    }
+
+    @Override
+    public String toString() {
+        JsonNode value = value();
+        return value.isTextual() ? value.asText() : value.toString();
+    }
+
+    private static JsonNode parse(String value) {
+        try {
+            return new ObjectMapper().readTree(value);
+        } catch (Exception error) {
+            throw new IllegalStateException("invalid generated enum JSON", error);
+        }
+    }
+}
