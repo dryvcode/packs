@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.23)
+project(dryv_cpp_client VERSION 0.1.0 LANGUAGES CXX)
+
+find_package(cpr 1.14.2 CONFIG REQUIRED)
+find_package(nlohmann_json 3.12.0 CONFIG REQUIRED)
+
+add_library(dryv_cpp_client INTERFACE)
+target_compile_features(dryv_cpp_client INTERFACE cxx_std_20)
+target_include_directories(dryv_cpp_client INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(dryv_cpp_client INTERFACE cpr::cpr nlohmann_json::nlohmann_json)
