@@ -80,6 +80,7 @@ provides:
   property.enum.types:
     $ref: "#/templates/enum"
 
+# shared:go-actions:start
 actions:
   files:
     format:
@@ -90,3 +91,4 @@ actions:
     install:
       commands:
         - run: [go, mod, tidy]
+# shared:go-actions:end
