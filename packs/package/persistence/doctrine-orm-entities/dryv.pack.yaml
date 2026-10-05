@@ -1,0 +1,49 @@
+version: dryv.pack/v1alpha1
+key: persistence.doctrine-orm-entities
+layout: package
+package:
+  name: dryv/generated-entities
+
+source: templates
+
+info:
+  title: Doctrine ORM Entities
+  version: 0.1.0
+  description: Generates Doctrine ORM 3.7 entities from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Doctrine ORM entities with typed columns, keys and indexes.
+  languages: [php]
+  frameworks: [doctrine-orm]
+  tags: [entities, database, orm, php]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_namespace:
+    type: string
+    default: 'Dryv\Generated\Persistence'
+    description: Root PHP namespace for generated entity classes.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
