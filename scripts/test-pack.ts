@@ -43,16 +43,18 @@ function applySharedFixtures(pack: string, project: string): void {
   const mappings = FIXTURE_MANIFEST.packs?.[pack] ?? {};
 
   for (const [destinationValue, sourceValue] of Object.entries(mappings)) {
-    const destination = portableRelative(destinationValue, \`\${pack} shared fixture destination\`);
-    const source = portableRelative(sourceValue, \`\${pack} shared fixture source\`);
+    const destination = portableRelative(destinationValue, `${pack} shared fixture destination`);
+    const source = portableRelative(sourceValue, `${pack} shared fixture source`);
     const from = join(FIXTURES, source);
     const to = join(project, destination);
 
     if (!existsSync(from)) {
-      throw new Error(\`\${pack}: shared fixture does not exist: fixtures/\${source}\`);
+      throw new Error(`${pack}: shared fixture does not exist: fixtures/${source}`);
     }
     if (existsSync(to)) {
-      throw new Error(\`\${pack}: shared fixture would overwrite pack-local fixture: \${destination}\`);
+      throw new Error(
+        `${pack}: shared fixture would overwrite pack-local fixture: ${destination}`,
+      );
     }
 
     mkdirSync(dirname(to), { recursive: true });
@@ -63,17 +65,17 @@ function applySharedFixtures(pack: string, project: string): void {
 function prepare(pack: string): string {
   const fixture = join(PACKS, pack, "tests", "fixture");
   if (!existsSync(fixture)) {
-    throw new Error(\`\${pack}: no tests/fixture directory\`);
+    throw new Error(`${pack}: no tests/fixture directory`);
   }
 
   const privateIr = join(fixture, "dryv.ir.yaml");
   if (existsSync(privateIr)) {
     throw new Error(
-      \`\${pack}: pack-local dryv.ir.yaml is forbidden; extend fixtures/dryv.ir.yaml instead\`,
+      `${pack}: pack-local dryv.ir.yaml is forbidden; extend fixtures/dryv.ir.yaml instead`,
     );
   }
 
-  const project = mkdtempSync(join(tmpdir(), \`dryv-pack-\${pack.replaceAll("/", "-")}-\`));
+  const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replaceAll("/", "-")}-`));
   cpSync(fixture, project, { recursive: true });
   cpSync(join(FIXTURES, "dryv.ir.yaml"), join(project, "dryv.ir.yaml"));
   applySharedFixtures(pack, project);
@@ -82,7 +84,6 @@ function prepare(pack: string): string {
     recursive: true,
     filter: (path) => {
       const parts = relative(PACKS, path).split("/");
-      // packs/<layout>/<purpose>/<name>/...: test projects need pack sources, not their fixtures.
       return parts[3] !== "tests";
     },
   });
@@ -109,17 +110,18 @@ async function main(): Promise<number> {
   for (const pack of packs) {
     const checks = join(PACKS, pack, "tests", "check.sh");
     if (!existsSync(checks)) {
-      console.error(\`✖ \${pack}: no tests/check.sh\`);
+      console.error(`✖ ${pack}: no tests/check.sh`);
       failures.push(pack);
       continue;
     }
 
-    console.log(\`\\n▶ \${pack}\`);
+    console.log(`\n▶ ${pack}`);
     let project: string;
+
     try {
       project = prepare(pack);
     } catch (error) {
-      console.error(\`✖ \${error instanceof Error ? error.message : String(error)}\`);
+      console.error(`✖ ${error instanceof Error ? error.message : String(error)}`);
       failures.push(pack);
       continue;
     }
@@ -128,20 +130,20 @@ async function main(): Promise<number> {
     const checked = generated === 0 ? run(["bash", checks], project) : generated;
 
     if (checked === 0) {
-      console.log(\`✓ \${pack}\${keep ? \` (project kept at \${project})\` : ""}\`);
+      console.log(`✓ ${pack}${keep ? ` (project kept at ${project})` : ""}`);
       if (!keep) rmSync(project, { recursive: true, force: true });
     } else {
-      console.error(\`✖ \${pack} (project kept at \${project})\`);
+      console.error(`✖ ${pack} (project kept at ${project})`);
       failures.push(pack);
     }
   }
 
   if (failures.length > 0) {
-    console.error(\`\\nFailed: \${failures.join(", ")}\`);
+    console.error(`\nFailed: ${failures.join(", ")}`);
     return 1;
   }
 
-  console.log(\`\\nAll \${packs.length} pack(s) passed.\`);
+  console.log(`\nAll ${packs.length} pack(s) passed.`);
   return 0;
 }
 
