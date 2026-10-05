@@ -11,7 +11,7 @@
 {%- endmacro -%}
 
 {%- macro bound(binding) -%}
-{%- if binding.port.field is none -%}input{%- else -%}input.{{ binding.port.field.snake }}{%- endif -%}
+{%- if binding.port.field is none -%}input{%- else -%}Map.get(input, :"{{ binding.port.field.snake }}"){%- endif -%}
 {%- endmacro -%}
 
 {%- macro decode_output(value, expression) -%}
@@ -36,15 +36,11 @@ defmodule {{ pack.inputs.module_prefix }}.Operations.{{ file.symbol }} do
 
     defstruct [
 {%- for field in operation.input.fields %}
-      :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+      :"{{ field.name.snake }}"{% if not loop.last %},{% endif %}
 {%- endfor %}
     ]
 
-    @type t :: %__MODULE__{
-{%- for field in operation.input.fields %}
-            {{ field.name.snake }}: term(){% if not loop.last %},{% endif %}
-{%- endfor %}
-          }
+    @type t :: %__MODULE__{}
   end
 
 {%- endif %}
