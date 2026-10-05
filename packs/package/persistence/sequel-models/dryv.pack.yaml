@@ -1,0 +1,68 @@
+version: dryv.pack/v1alpha1
+key: persistence.sequel-models
+layout: package
+package:
+  name: dryv-sequel-models
+
+source: templates
+
+info:
+  title: Sequel Models
+  version: 0.1.0
+  description: Generates Sequel 5.109 models and portable schema helpers from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Connection-neutral Sequel models with schema, indexes and explicit foreign keys.
+  languages: [ruby]
+  frameworks: [sequel]
+  tags: [entities, database, orm, ruby]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvGeneratedPersistence
+    description: Root Ruby module for generated persistence code.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  model:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Model
+    imports:
+      - $ref: "#/templates/model"
+
+  registry:
+    $ref: "#/selections/all-entities"
+    output:
+      name: persistence
+      symbol: Persistence
+    imports:
+      - $ref: "#/templates/model"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/registry"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/model"
