@@ -133,4 +133,11 @@ func TestHTTPFailuresReturnAPIError(t *testing.T) {
 	if apiErr.Message != "not found" {
 		t.Fatalf("message = %q, want not found", apiErr.Message)
 	}
+	payload, ok := apiErr.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payload type = %T, want map[string]any", apiErr.Payload)
+	}
+	if payload["message"] != "not found" {
+		t.Fatalf("payload message = %v, want not found", payload["message"])
+	}
 }
