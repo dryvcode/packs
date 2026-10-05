@@ -8,6 +8,7 @@
     "packs/project/frontend/nextjs-app/templates/lib/types/{enum}/$(name).enum.ts.j2"
   ],
   "templates/typescript/export-index.ts.j2": [
+    "packs/inject/persistence/mongoose-models/templates/{index}/index.ts.j2",
     "packs/inject/validation/joi-schemas/templates/{index}/index.ts.j2",
     "packs/inject/validation/zod-schemas/templates/{index}/index.ts.j2"
   ],
