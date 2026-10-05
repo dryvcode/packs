@@ -29,15 +29,11 @@ defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
 
   defstruct [
 {%- for field in schema.fields %}
-    :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+    :"{{ field.name.snake }}"{% if not loop.last %},{% endif %}
 {%- endfor %}
   ]
 
-  @type t :: %__MODULE__{
-{%- for field in schema.fields %}
-          {{ field.name.snake }}: term(){% if not loop.last %},{% endif %}
-{%- endfor %}
-        }
+  @type t :: %__MODULE__{}
 
   @spec from_map(map()) :: {:ok, t()} | {:error, term()}
   def from_map(data) when is_map(data) do
@@ -48,16 +44,16 @@ defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
 
   @spec from_map!(map()) :: t()
   def from_map!(data) when is_map(data) do
-    %__MODULE__{
+    struct!(__MODULE__, %{
 {%- for field in schema.fields %}
-      {{ field.name.snake }}:
+      :"{{ field.name.snake }}" =>
 {%- if field.optional %}
-        decode_{{ field.name.snake }}(fetch_optional(data, {{ field.name.raw | tojson }}, :{{ field.name.snake }})){% if not loop.last %},{% endif %}
+        decode_{{ field.name.snake }}(fetch_optional(data, {{ field.name.raw | tojson }}, :"{{ field.name.snake }}")){% if not loop.last %},{% endif %}
 {%- else %}
-        decode_{{ field.name.snake }}(fetch_required!(data, {{ field.name.raw | tojson }}, :{{ field.name.snake }})){% if not loop.last %},{% endif %}
+        decode_{{ field.name.snake }}(fetch_required!(data, {{ field.name.raw | tojson }}, :"{{ field.name.snake }}")){% if not loop.last %},{% endif %}
 {%- endif %}
 {%- endfor %}
-    }
+    })
   end
 
   @spec to_map(t()) :: map()
@@ -65,9 +61,9 @@ defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
     %{}
 {%- for field in schema.fields %}
 {%- if field.optional %}
-    |> put_optional({{ field.name.raw | tojson }}, value.{{ field.name.snake }}, &encode_{{ field.name.snake }}/1)
+    |> put_optional({{ field.name.raw | tojson }}, Map.get(value, :"{{ field.name.snake }}"), &encode_{{ field.name.snake }}/1)
 {%- else %}
-    |> Map.put({{ field.name.raw | tojson }}, encode_{{ field.name.snake }}(value.{{ field.name.snake }}))
+    |> Map.put({{ field.name.raw | tojson }}, encode_{{ field.name.snake }}(Map.get(value, :"{{ field.name.snake }}")))
 {%- endif %}
 {%- endfor %}
   end
