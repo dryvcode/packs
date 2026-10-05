@@ -32,3 +32,14 @@ var (
 {%- endif %}
 {%- endif %}
 {%- endfor %}
+
+func (value {{ file.symbol }}) IsValid() bool {
+	switch value {
+{%- for item in property.enum.values %}
+	case {{ file.symbol }}{{ item.name.pascal }}:
+		return true
+{%- endfor %}
+	default:
+		return false
+	}
+}
