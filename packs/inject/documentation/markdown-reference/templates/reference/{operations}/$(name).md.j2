@@ -1,0 +1,117 @@
+{%- macro value_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}{{ value.schema.name.qualified }}
+{%- elif value.is.enum -%}{{ value.property.enum.name.qualified }}
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}{{ value.property.temporal.kind }}
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}object
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}{{ value.property.generic.name.qualified }}
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{{ value_type(field.value) }}{% if field.array is not none %}[]{% endif %}{% if field.nullable %} | null{% endif %}
+{%- endmacro -%}
+
+{%- macro binding_kind(binding) -%}
+{%- if binding.is.path -%}path
+{%- elif binding.is.query -%}query
+{%- elif binding.is.query_object -%}query-object
+{%- elif binding.is.header -%}header
+{%- elif binding.is.cookie -%}cookie
+{%- elif binding.is.body -%}body
+{%- elif binding.is.multipart -%}multipart
+{%- elif binding.is.form -%}form
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+# Operation Catalogue
+
+{% if application.facets.http.root %}> Application HTTP root: `{{ application.facets.http.root }}`. Operation paths below are operation-local paths, not a synthesized effective route.
+{% else %}> Operation paths below are operation-local paths. No application-level HTTP root is declared.
+{% endif %}
+
+{% for operation in operations %}
+## {{ operation.name.title }}
+
+{% if operation.description %}{{ operation.description }}
+
+{% endif %}- **ID:** `{{ operation.id }}`
+- **Qualified name:** `{{ operation.name.qualified }}`
+- **Role:** {% if operation.role %}`{{ operation.role }}`{% else %}—{% endif %}
+- **Group:** {% if operation.group %}`{{ operation.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if operation.feature %}`{{ operation.feature.name.qualified }}`{% else %}—{% endif %}
+- **Execution:** `{{ operation.execution.mode }}`
+- **Authenticated:** `{{ operation.access.authenticated }}`
+{% if operation.tags %}- **Tags:** {% for tag in operation.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% if operation.facets.http %}
+### HTTP
+
+- **Method:** `{{ operation.facets.http.method }}`
+- **Local path:** `{{ operation.facets.http.path.local }}`
+{% if operation.facets.http.inputs %}
+#### Bindings
+
+| Location | Port | Field | Wire name |
+| --- | --- | --- | --- |
+{% for binding in operation.facets.http.inputs %}| `{{ binding_kind(binding) }}` | `{{ binding.port.name.raw }}` | {% if binding.port.field %}`{{ binding.port.field.raw }}`{% else %}whole input{% endif %} | {% if binding.name %}`{{ binding.name }}`{% else %}—{% endif %} |
+{% endfor %}
+{% endif %}
+{% if operation.facets.http.outputs %}
+#### Success responses
+
+{% for output in operation.facets.http.outputs %}- HTTP `{{ output.status }}`
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if operation.input %}
+### Input
+
+- **Kind:** `{{ operation.input.kind }}`
+{% if operation.input.value %}- **Schema/value:** `{{ value_type(operation.input.value) }}`
+{% endif %}
+
+| Field | Type | Presence |
+| --- | --- | --- |
+{% for field in operation.input.fields %}| `{{ field.name.raw }}` | `{{ field_type(field) }}` | {% if field.optional %}optional{% else %}required{% endif %} |
+{% endfor %}
+{% endif %}
+### Output
+
+{% if operation.output %}`{{ value_type(operation.output.value) }}`{% else %}No semantic output.{% endif %}
+
+{% if operation.failures %}
+### Declared failures
+
+{% for failure in operation.failures %}- `{{ failure.name.qualified }}`
+{% endfor %}
+{% endif %}
+{% if operation.access.policies %}
+### Required policies
+
+{% for policy in operation.access.policies %}- `{{ policy.name.qualified }}`
+{% endfor %}
+{% endif %}
+### Execution facts
+
+{% if operation.execution.timeout.seconds is not none %}- Timeout: `{{ operation.execution.timeout.seconds }}s`
+{% endif %}{% if operation.execution.rate_limit %}- Rate limit: `{{ operation.execution.rate_limit.limit }}` per `{{ operation.execution.rate_limit.window.seconds }}s`
+{% endif %}{% if operation.execution.cache.ttl.seconds is not none %}- Cache TTL: `{{ operation.execution.cache.ttl.seconds }}s`
+{% endif %}{% if operation.execution.transaction.required is not none %}- Transaction required: `{{ operation.execution.transaction.required }}`
+{% endif %}{% if operation.execution.audit.required is not none %}- Audit required: `{{ operation.execution.audit.required }}`
+{% endif %}
+---
+{% endfor %}
