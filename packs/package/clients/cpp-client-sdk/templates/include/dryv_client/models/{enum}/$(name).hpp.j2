@@ -1,0 +1,64 @@
+#pragma once
+
+#include <algorithm>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <nlohmann/json.hpp>
+
+namespace {{ pack.inputs.namespace }} {
+
+class {{ file.symbol }} {
+public:
+    {{ file.symbol }}() = default;
+
+    explicit {{ file.symbol }}(nlohmann::json value) : value_(std::move(value)) {
+        if (!is_valid()) {
+            throw std::invalid_argument("invalid {{ property.enum.name.local }} value");
+        }
+    }
+
+    [[nodiscard]] static const std::vector<nlohmann::json>& values() {
+        static const std::vector<nlohmann::json> items = {
+{%- for item in property.enum.values %}
+            nlohmann::json::parse(R"json({{ item.value_json }})json"){% if not loop.last %},{% endif %}
+{%- endfor %}
+        };
+        return items;
+    }
+
+    [[nodiscard]] bool is_valid() const {
+        const auto& items = values();
+        return std::find(items.begin(), items.end(), value_) != items.end();
+    }
+
+    [[nodiscard]] const nlohmann::json& value() const noexcept {
+        return value_;
+    }
+
+    [[nodiscard]] std::string wire_string() const {
+        if (value_.is_string()) {
+            return value_.get<std::string>();
+        }
+        return value_.dump();
+    }
+
+    friend bool operator==(const {{ file.symbol }}&, const {{ file.symbol }}&) = default;
+
+private:
+    nlohmann::json value_{nullptr};
+};
+
+inline void to_json(nlohmann::json& json, const {{ file.symbol }}& value) {
+    if (!value.is_valid()) {
+        throw std::invalid_argument("invalid {{ property.enum.name.local }} value");
+    }
+    json = value.value();
+}
+
+inline void from_json(const nlohmann::json& json, {{ file.symbol }}& value) {
+    value = {{ file.symbol }}(json);
+}
+
+} // namespace {{ pack.inputs.namespace }}
