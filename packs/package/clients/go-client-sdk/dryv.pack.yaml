@@ -1,0 +1,92 @@
+version: dryv.pack/v1alpha1
+key: clients.go-client-sdk
+layout: package
+package:
+  name: { $ref: "#/inputs/package_name" }
+
+source: templates
+
+info:
+  title: Go Client SDK
+  version: 0.1.0
+  description: Generates a framework-free Go HTTP client package with typed models, enums and one function per HTTP operation.
+
+catalog:
+  purpose: clients
+  summary: A standard-library Go HTTP client SDK with typed models, enums and operations.
+  languages: [go]
+  frameworks: [net-http]
+  tags: [client, sdk, go, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: dryvclient
+    description: Go package identifier used by generated source files.
+  module_path:
+    type: string
+    default: example.com/dryvclient
+    description: Module path written to go.mod.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(subject.name.snake)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
+
+actions:
+  files:
+    format:
+      extensions: [.go]
+      commands:
+        - run: [gofmt, -w, $(files)]
+  final:
+    install:
+      commands:
+        - run: [go, mod, tidy]
