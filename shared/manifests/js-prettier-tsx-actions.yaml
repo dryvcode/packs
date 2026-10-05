@@ -3,9 +3,9 @@ actions:
     format:
       extensions: [.ts, .tsx]
       commands:
-        - run: [(pnpm|yarn), exec, prettier, --write, $(files)]
-        - run: [npm, exec, --, prettier, --write, $(files)]
-        - run: [bun, x, prettier, --write, $(files)]
+        - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+        - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+        - run: [bun, x, prettier@3.9.9, --write, $(files)]
   final:
     install:
       dependencies:
