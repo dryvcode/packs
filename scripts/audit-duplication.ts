@@ -14,6 +14,8 @@ import {
 } from "./lib/repository.ts";
 
 type SharedAssets = Record<string, string[]>;
+type SharedFragment = { marker: string; targets: string[] };
+type SharedFragments = Record<string, SharedFragment>;
 type FixtureManifest = {
   packs?: Record<string, Record<string, string>>;
 };
@@ -37,16 +39,37 @@ function digest(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-const sharedManifest = JSON.parse(
+function signature(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+const sharedAssets = JSON.parse(
   readFileSync(join(SHARED, "assets.json"), "utf8"),
 ) as SharedAssets;
+const sharedFragments = JSON.parse(
+  readFileSync(join(SHARED, "fragments.json"), "utf8"),
+) as SharedFragments;
 const fixtureManifest = JSON.parse(
   readFileSync(join(FIXTURES, "manifest.json"), "utf8"),
 ) as FixtureManifest;
 
 const targetSource = new Map<string, string>();
-for (const [source, targets] of Object.entries(sharedManifest)) {
+for (const [source, targets] of Object.entries(sharedAssets)) {
   for (const target of targets) targetSource.set(target, source);
+}
+
+const fragmentAllow = new Map<string, Set<string>>();
+for (const [source, fragment] of Object.entries(sharedFragments)) {
+  const sourcePath = join(SHARED, portableRelative(source, "shared fragment source"));
+  if (!existsSync(sourcePath)) continue;
+
+  const parsed = Bun.YAML.parse(readFileSync(sourcePath, "utf8")) as Record<string, unknown>;
+  for (const [key, value] of Object.entries(parsed)) {
+    const id = `${key}:${signature(value)}`;
+    const allowed = fragmentAllow.get(id) ?? new Set<string>();
+    for (const target of fragment.targets) allowed.add(target);
+    fragmentAllow.set(id, allowed);
+  }
 }
 
 const knownPacks = new Set(packIds());
@@ -66,7 +89,9 @@ for (const path of packFiles.filter((path) => path.endsWith("/tests/shared-fixtu
 }
 
 for (const [pack, mappings] of Object.entries(fixtureManifest.packs ?? {})) {
-  if (!knownPacks.has(pack)) problems.push(`fixtures/manifest.json references unknown pack: ${pack}`);
+  if (!knownPacks.has(pack)) {
+    problems.push(`fixtures/manifest.json references unknown pack: ${pack}`);
+  }
 
   for (const [destinationValue, sourceValue] of Object.entries(mappings)) {
     try {
@@ -109,6 +134,34 @@ for (const group of groups.values()) {
   );
 }
 
+const repeatedManifestSections = new Map<string, { key: string; paths: string[] }>();
+for (const id of packIds()) {
+  const path = `packs/${id}/dryv.pack.yaml`;
+  const document = Bun.YAML.parse(readFileSync(join(REPO, path), "utf8")) as Record<string, unknown>;
+
+  for (const key of ["choose", "actions", "dependencies"]) {
+    const value = document[key];
+    if (value === undefined) continue;
+
+    const groupId = `${key}:${signature(value)}`;
+    const group = repeatedManifestSections.get(groupId) ?? { key, paths: [] };
+    group.paths.push(path);
+    repeatedManifestSections.set(groupId, group);
+  }
+}
+
+for (const [groupId, group] of repeatedManifestSections) {
+  if (group.paths.length < 2) continue;
+
+  const allowed = fragmentAllow.get(groupId);
+  if (allowed && group.paths.every((path) => allowed.has(path))) continue;
+
+  problems.push(
+    `unmanaged duplicate manifest section '${group.key}':\n  ${group.paths.join("\n  ")}\n` +
+      "  centralize repository-wide manifest policy under shared/manifests/ and shared/fragments.json",
+  );
+}
+
 for (const [target, source] of targetSource) {
   if (!existsSync(join(REPO, target))) {
     problems.push(`mapped shared target is missing: ${target}`);
@@ -123,4 +176,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log("✓ shared fixtures and portable assets have no unmanaged risky duplication.");
+console.log(
+  "✓ shared fixtures, portable assets and repeated manifest policy have no unmanaged risky duplication.",
+);
