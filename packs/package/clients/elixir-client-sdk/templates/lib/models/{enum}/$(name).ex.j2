@@ -1,0 +1,47 @@
+{%- macro ex_literal(value_json) -%}
+{%- if value_json == 'null' -%}nil{%- else -%}{{ value_json }}{%- endif -%}
+{%- endmacro -%}
+defmodule {{ pack.inputs.module_prefix }}.Models.{{ file.symbol }} do
+  @moduledoc false
+
+  defstruct [:value]
+
+  @type t :: %__MODULE__{value: term()}
+
+  @values [
+{%- for item in property.enum.values %}
+    {{ ex_literal(item.value_json) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+
+  @spec values() :: [term()]
+  def values, do: @values
+
+  @spec parse(term()) :: {:ok, t()} | {:error, term()}
+  def parse(value) do
+    if value in @values do
+      {:ok, %__MODULE__{value: value}}
+    else
+      {:error, {:invalid_enum, {{ property.enum.name.raw | tojson }}, value}}
+    end
+  end
+
+  @spec parse!(term()) :: t()
+  def parse!(value) do
+    case parse(value) do
+      {:ok, parsed} -> parsed
+      {:error, reason} -> raise ArgumentError, inspect(reason)
+    end
+  end
+
+  @spec valid?(t()) :: boolean()
+  def valid?(%__MODULE__{value: value}), do: value in @values
+
+  @spec to_wire(t()) :: term()
+  def to_wire(%__MODULE__{value: value}), do: value
+
+  defimpl String.Chars do
+    def to_string(%{value: value}) when is_binary(value), do: value
+    def to_string(%{value: value}), do: Jason.encode!(value)
+  end
+end
