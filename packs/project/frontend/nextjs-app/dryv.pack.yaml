@@ -82,8 +82,10 @@ templates:
 needs:
   operation.client: { required: false }
 
+# shared:js-package-manager:start
 choose:
   js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
 
 # The pages and components import these; install adds them to the app's package.json.
 dependencies:
