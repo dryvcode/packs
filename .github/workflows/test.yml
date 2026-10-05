@@ -41,7 +41,9 @@ jobs:
         with:
           channel: stable
       - run: bun install --frozen-lockfile
+      - name: Shared assets and duplication are consistent
+        run: bun run shared:check
       - name: Catalogue metadata is consistent
-        run: bun scripts/catalog.ts --check
+        run: bun run catalog:check
       - name: Render and check every pack
         run: bun scripts/test-pack.ts --all
