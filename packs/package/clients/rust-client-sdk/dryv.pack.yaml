@@ -1,0 +1,86 @@
+version: dryv.pack/v1alpha1
+key: clients.rust-client-sdk
+layout: package
+package:
+  name: { $ref: "#/inputs.crate_name" }
+
+source: templates
+
+info:
+  title: Rust Client SDK
+  version: 0.1.0
+  description: Generates a typed async Rust HTTP client with reqwest, serde models, enums and one callable per HTTP operation.
+
+catalog:
+  purpose: clients
+  summary: Typed async Rust HTTP client SDK using reqwest and serde.
+  languages: [rust]
+  frameworks: [reqwest, serde]
+  tags: [client, sdk, rust, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  crate_name:
+    type: string
+    default: dryv_client
+    description: Cargo package name for the generated SDK.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  models-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operations-index:
+    exports:
+      - $ref: "#/templates/operation"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
