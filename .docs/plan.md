@@ -119,3 +119,4 @@ A release archive contains the selected pack directory only. Therefore all files
 - Framework-specific mappings stay inside packs.
 - Similar code is not centralized unless it represents the same contract/asset.
 - Missing Engine/context semantics are reported instead of hidden in pack conventions.
+- Generic backend project packs remain deferred while server-side operation capability composition is unresolved; see [backend project composition](planning/backend-project-composition.md).
