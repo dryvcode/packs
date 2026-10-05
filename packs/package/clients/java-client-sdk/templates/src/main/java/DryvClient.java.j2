@@ -72,17 +72,31 @@ public final class DryvClient {
     public String form(Map<String, ?> values) {
         StringBuilder result = new StringBuilder();
         for (Map.Entry<String, ?> entry : values.entrySet()) {
-            if (entry.getValue() == null) {
+            Object value = entry.getValue();
+            if (value == null) {
                 continue;
             }
-            if (result.length() > 0) {
-                result.append('&');
+            if (value instanceof Iterable<?> iterable) {
+                for (Object item : iterable) {
+                    appendFormValue(result, entry.getKey(), item);
+                }
+            } else {
+                appendFormValue(result, entry.getKey(), value);
             }
-            result.append(urlEncode(entry.getKey()))
-                    .append('=')
-                    .append(urlEncode(String.valueOf(entry.getValue())));
         }
         return result.toString();
+    }
+
+    private static void appendFormValue(StringBuilder result, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        if (result.length() > 0) {
+            result.append('&');
+        }
+        result.append(urlEncode(key))
+                .append('=')
+                .append(urlEncode(String.valueOf(value)));
     }
 
     public String appendQuery(String path, Map<String, ?> values) {
