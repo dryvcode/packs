@@ -59,7 +59,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 - [x] Go — client SDK verified; broader Go ecosystem remains planned
 - [ ] Rust
-- [ ] Java
+- [x] Java — Jakarta Validation DTO package implemented; verification deferred
 - [ ] .NET / C#
 - [ ] PHP
 - [ ] Swift
@@ -89,4 +89,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-Run the full public-pack suite against the shared fixture. Then continue the approved batch with Jakarta Validation DTOs and Axum backend.
+Continue the approved batch with the Axum backend. Runtime/toolchain verification is deferred while the Dryv Engine is under maintenance.
