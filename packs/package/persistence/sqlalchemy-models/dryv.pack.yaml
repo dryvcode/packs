@@ -1,0 +1,58 @@
+version: dryv.pack/v1alpha1
+key: persistence.sqlalchemy-models
+layout: package
+package:
+  name: dryv-entities
+
+source: templates
+
+info:
+  title: SQLAlchemy Models
+  version: 0.1.0
+  description: Generates SQLAlchemy 2.1 declarative models from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: SQLAlchemy 2.1 declarative models with keys, indexes and typed columns.
+  languages: [python]
+  frameworks: [sqlalchemy]
+  tags: [entities, database, orm, python]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Entity
+    imports:
+      - $ref: "#/templates/entity"
+
+  models-index:
+    $ref: "#/selections/all-entities"
+    exports:
+      - $ref: "#/templates/entity"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/models-index"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
