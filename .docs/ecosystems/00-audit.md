@@ -1,6 +1,6 @@
 # Ecosystem coverage audit
 
-Status: planning only.
+Status: living coverage audit.
 
 This document records the public-pack coverage visible on `develop` before the ecosystem expansion work starts.
 
@@ -34,6 +34,11 @@ Validation:
 Backend:
 
 - [x] `package/backend/fastapi-backend`
+- [x] `package/backend/axum-backend` — implementation present; verification deferred
+
+Validation:
+
+- [x] `package/validation/jakarta-validation-dtos` — implementation present; verification deferred
 
 Clients:
 
@@ -59,8 +64,8 @@ Generated-language families currently represented:
 - [x] Python
 - [x] Dart
 - [x] Go — client SDK verified; server/persistence/validation coverage still absent
-- [ ] Rust
-- [ ] Java
+- [x] Rust — Axum backend implemented; verification deferred
+- [x] Java — Jakarta Validation DTOs implemented; verification deferred
 - [ ] C#
 - [ ] PHP
 - [ ] Swift
@@ -81,9 +86,9 @@ Thin or absent areas:
 - Python persistence and standalone validation
 - non-TypeScript persistence
 - non-TypeScript validation
-- Go server/client ecosystem
-- Rust server/client ecosystem
-- Java/JVM server/persistence/validation/client ecosystem
+- Go server ecosystem
+- Rust client/persistence/validation ecosystem
+- Java/JVM server/persistence/client ecosystem
 - .NET server/persistence/validation/client ecosystem
 - PHP, Swift, Ruby and Elixir
 - backend project packs
@@ -93,9 +98,9 @@ Thin or absent areas:
 
 - SQL ORM/persistence → `typeorm-entities`
 - document persistence → `mongoose-models`
-- validation DTOs → `class-validator-dtos`
+- validation DTOs → `class-validator-dtos`, `jakarta-validation-dtos`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backend → `fastapi-backend`, `nestjs-backend`
+- HTTP backend → `fastapi-backend`, `nestjs-backend`, `axum-backend`
 - HTTP SDK → `ts-api-client`, `dart-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
