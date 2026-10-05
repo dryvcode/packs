@@ -16,8 +16,11 @@ export function packIds(): string[] {
     for (const purpose of readdirSync(join(PACKS, layout.name), { withFileTypes: true })) {
       if (!purpose.isDirectory()) continue;
       for (const pack of readdirSync(join(PACKS, layout.name, purpose.name), { withFileTypes: true })) {
-        if (pack.isDirectory() && existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))) {
-          found.push(\`\${layout.name}/\${purpose.name}/\${pack.name}\`);
+        if (
+          pack.isDirectory() &&
+          existsSync(join(PACKS, layout.name, purpose.name, pack.name, "dryv.pack.yaml"))
+        ) {
+          found.push(`${layout.name}/${purpose.name}/${pack.name}`);
         }
       }
     }
@@ -27,13 +30,26 @@ export function packIds(): string[] {
 
 export function parsePackId(id: string): { layout: PackLayout; purpose: string; name: string } {
   const parts = id.split("/");
-  if (parts.length !== 3 || !["inject", "package", "project"].includes(parts[0])) {
-    throw new Error(\`invalid pack id: \${id}\`);
+  if (
+    parts.length !== 3 ||
+    !["inject", "package", "project"].includes(parts[0]) ||
+    !parts[1] ||
+    !parts[2]
+  ) {
+    throw new Error(`invalid pack id: ${id}`);
   }
   return { layout: parts[0] as PackLayout, purpose: parts[1], name: parts[2] };
 }
 
+export function portableRelative(value: string, label: string): string {
+  if (!value || value.includes("\\") || isAbsolute(value) || value.split("/").includes("..")) {
+    throw new Error(`${label} must be a non-empty portable relative path`);
+  }
+  return value;
+}
+
 export function releaseRef(id: string, version: string): string {
   parsePackId(id);
-  return \`\${id}/v\${version}\`;
+  if (!version.trim()) throw new Error("release version must not be empty");
+  return `${id}/v${version}`;
 }
