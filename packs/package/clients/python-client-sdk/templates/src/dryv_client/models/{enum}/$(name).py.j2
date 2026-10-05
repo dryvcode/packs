@@ -1,0 +1,21 @@
+from enum import Enum
+import json
+
+
+{% macro py_json(text) -%}
+{%- if text == 'true' -%}True
+{%- elif text == 'false' -%}False
+{%- elif text == 'null' -%}None
+{%- else -%}{{ text }}
+{%- endif -%}
+{%- endmacro %}
+
+class {{ file.symbol }}(Enum):
+{% for item in property.enum.values %}
+    {{ item.name.constant }} = {{ py_json(item.value_json) }}
+{% endfor %}
+
+    def __str__(self) -> str:
+        if isinstance(self.value, str):
+            return self.value
+        return json.dumps(self.value, separators=(",", ":"))
