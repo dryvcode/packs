@@ -50,6 +50,9 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 ### Python
 
 - [x] FastAPI backend
+- [x] Pydantic models — implementation present; verification deferred
+- [x] SQLAlchemy models — implementation present; verification deferred
+- [x] Python Client SDK — implementation present; verification deferred
 
 ### Go
 
@@ -85,6 +88,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Rust — backend, client, persistence and validation represented
 - [x] Java — backend, client, persistence and validation represented
 - [x] .NET / C# — backend, client, persistence and validation represented
+- [x] Python — backend, client, persistence and validation represented
 - [ ] PHP
 - [ ] Swift
 - [ ] Kotlin-specific ecosystem
