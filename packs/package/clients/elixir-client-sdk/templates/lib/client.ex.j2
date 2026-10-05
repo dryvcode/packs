@@ -1,0 +1,124 @@
+defmodule {{ pack.inputs.module_prefix }}.ApiError do
+  @moduledoc false
+
+  defexception [:status, :message, :payload]
+
+  @type t :: %__MODULE__{
+          status: integer() | nil,
+          message: String.t(),
+          payload: term()
+        }
+end
+
+defmodule {{ pack.inputs.module_prefix }}.Client do
+  @moduledoc false
+
+  alias {{ pack.inputs.module_prefix }}.ApiError
+
+  defstruct [:base_url]
+
+  @type t :: %__MODULE__{base_url: String.t()}
+
+  @spec new(String.t()) :: t()
+  def new(base_url) when is_binary(base_url) do
+    %__MODULE__{base_url: String.trim_trailing(base_url, "/")}
+  end
+
+  @spec wire(term()) :: term()
+  def wire(nil), do: nil
+
+  def wire(%{__struct__: module} = value) do
+    cond do
+      function_exported?(module, :to_map, 1) ->
+        module.to_map(value) |> wire()
+
+      function_exported?(module, :to_wire, 1) ->
+        module.to_wire(value) |> wire()
+
+      true ->
+        value |> Map.from_struct() |> wire()
+    end
+  end
+
+  def wire(value) when is_list(value), do: Enum.map(value, &wire/1)
+
+  def wire(value) when is_map(value) do
+    Map.new(value, fn {key, item} -> {key, wire(item)} end)
+  end
+
+  def wire(value), do: value
+
+  @spec append_pair([{String.t(), term()}], String.t(), term()) :: [{String.t(), term()}]
+  def append_pair(pairs, _name, nil), do: pairs
+
+  def append_pair(pairs, name, value) do
+    case wire(value) do
+      values when is_list(values) ->
+        pairs ++ Enum.reject(Enum.map(values, &{name, &1}), fn {_name, item} -> is_nil(item) end)
+
+      value ->
+        pairs ++ [{name, value}]
+    end
+  end
+
+  @spec request(
+          t(),
+          atom(),
+          String.t(),
+          keyword()
+        ) :: {:ok, term()} | {:error, ApiError.t() | Exception.t()}
+  def request(%__MODULE__{} = client, method, path, options \\ []) do
+    headers = Keyword.get(options, :headers, [])
+    cookies = Keyword.get(options, :cookies, [])
+
+    headers =
+      if cookies == [] do
+        headers
+      else
+        cookie =
+          cookies
+          |> Enum.map(fn {name, value} -> "#{name}=#{URI.encode_www_form(to_string(value))}" end)
+          |> Enum.join("; ")
+
+        [{"cookie", cookie} | headers]
+      end
+
+    req_options = [
+      method: method,
+      url: client.base_url <> path,
+      params: Keyword.get(options, :params, []),
+      headers: headers
+    ]
+
+    req_options =
+      cond do
+        Keyword.get(options, :has_json_body, false) ->
+          Keyword.put(req_options, :json, wire(Keyword.get(options, :json_body)))
+
+        form = Keyword.get(options, :form) ->
+          Keyword.put(req_options, :form, Enum.map(form, fn {name, value} -> {name, wire(value)} end))
+
+        true ->
+          req_options
+      end
+
+    case Req.request(req_options) do
+      {:ok, %Req.Response{status: status, body: body}} when status >= 200 and status < 300 ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: status, body: body}} ->
+        message =
+          case body do
+            %{"message" => message} when is_binary(message) -> message
+            %{message: message} when is_binary(message) -> message
+            value when is_binary(value) -> String.trim(value)
+            value -> inspect(value)
+          end
+
+        {:error, %ApiError{status: status, message: message, payload: body}}
+
+      {:error, exception} ->
+        {:error, exception}
+    end
+  end
+end
