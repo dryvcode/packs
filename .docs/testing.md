@@ -1,0 +1,63 @@
+# Pack testing
+
+Public packs use one reusable fixture model.
+
+## One canonical Runtime IR fixture
+
+All pack tests use:
+
+`fixtures/dryv.ir.yaml`
+
+The harness copies that file into the temporary project as `dryv.ir.yaml`.
+
+Do not add `dryv.ir.yaml` inside a pack's `tests/fixture/` directory. The harness rejects it.
+
+Why:
+
+- Runtime IR is one canonical contract;
+- pack examples should not silently drift into different semantic dialects;
+- a context or contract change should be updated once;
+- all ecosystems should prove themselves against the same semantic source;
+- bugs caused by stale private fixtures should not recur.
+
+If a new pack needs semantics the shared fixture does not cover, extend the root fixture canonically. Do not add framework-specific fields to make a fixture easier for one pack.
+
+## Reusable non-IR fixture files
+
+Shared environment/test files belong under `fixtures/`.
+
+A pack can request them with `tests/shared-fixtures.json`:
+
+```json
+{
+  "<temporary-project-path>": "<path-under-fixtures>"
+}
+```
+
+This keeps reusable files centralized while allowing each pack's own `tests/fixture/` to remain specific to its toolchain and assertions.
+
+## Pack-local files
+
+Keep a file pack-local when its content really belongs to that pack, for example:
+
+- `dryv.yaml` activation wiring;
+- package/toolchain manifests with pack-specific dependencies;
+- pack-specific assertions;
+- test source files;
+- compiler/typechecker configuration that genuinely differs.
+
+Do not centralize files merely because they currently look similar. Centralize them when they represent one shared source of truth.
+
+## Test workflow
+
+The AI implementation agent does not run pack fixture tests.
+
+The user runs:
+
+`bun scripts/test-pack.ts --keep <layout>/<purpose>/<pack>`
+
+When testing against an unpublished/current local Dryv CLI:
+
+`DRYV_CLI="bun ../dryv/source/apps/cli/bin/dryv.ts" bun scripts/test-pack.ts --keep <pack>`
+
+A pack is not marked complete until the user reports a passing generation and toolchain test.
