@@ -1,0 +1,27 @@
+package {{ pack.inputs.package_name }}
+
+import kotlinx.serialization.json.Json
+
+class DryvBindingException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
+
+object DryvKtor {
+    val json: Json = Json {
+        ignoreUnknownKeys = false
+        explicitNulls = true
+    }
+
+    fun required(raw: String?, name: String): String =
+        raw ?: throw DryvBindingException("Missing required value '$name'")
+
+    fun boolean(raw: String, name: String): Boolean =
+        raw.toBooleanStrictOrNull()
+            ?: throw DryvBindingException("Invalid boolean value for '$name'")
+
+    fun long(raw: String, name: String): Long =
+        raw.toLongOrNull()
+            ?: throw DryvBindingException("Invalid integer value for '$name'")
+
+    fun double(raw: String, name: String): Double =
+        raw.toDoubleOrNull()
+            ?: throw DryvBindingException("Invalid number value for '$name'")
+}
