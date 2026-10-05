@@ -123,7 +123,7 @@ func (c *Client) do(req *http.Request, output any) error {
 	return json.Unmarshal(payload, output)
 }
 
-func jsonBody(value any) ([]byte, error) {
+func unsupportedBinding(kind string) error {\n\treturn fmt.Errorf("dryv Go client does not yet support %s HTTP bindings", kind)\n}\n\nfunc jsonBody(value any) ([]byte, error) {
 	return json.Marshal(value)
 }
 
