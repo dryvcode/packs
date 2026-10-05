@@ -60,13 +60,13 @@ defmodule {{ pack.inputs.module_prefix }}.Validators.{{ file.symbol }} do
 
   @fields [
 {%- for field in schema.fields %}
-    :{{ field.name.snake }}{% if not loop.last %},{% endif %}
+    :"{{ field.name.snake }}"{% if not loop.last %},{% endif %}
 {%- endfor %}
   ]
 
   @types %{
 {%- for field in schema.fields %}
-    {{ field.name.snake }}: {{ ecto_type(field) }}{% if not loop.last %},{% endif %}
+    :"{{ field.name.snake }}" => {{ ecto_type(field) }}{% if not loop.last %},{% endif %}
 {%- endfor %}
   }
 
@@ -142,7 +142,7 @@ defmodule {{ pack.inputs.module_prefix }}.Validators.{{ file.symbol }} do
     end)
 {%- endif %}
 {%- if field.value.is.schema and symbol_for(field.value.schema, 'Validator') %}
-    |> validate_nested(:{{ field.name.snake }}, value.{{ field.name.snake }}, {{ pack.inputs.module_prefix }}.Validators.{{ symbol_for(field.value.schema, 'Validator') }})
+    |> validate_nested(:{{ field.name.snake }}, Map.get(value, :"{{ field.name.snake }}"), {{ pack.inputs.module_prefix }}.Validators.{{ symbol_for(field.value.schema, 'Validator') }})
 {%- endif %}
 {%- endfor %}
 {%- for invariant in schema.invariants %}
@@ -155,8 +155,8 @@ defmodule {{ pack.inputs.module_prefix }}.Validators.{{ file.symbol }} do
     |> validate_invariant(value, {{ invariant.name.raw | tojson }}, fn ->
       {% for comparison in invariant.form.comparisons -%}
       compare(
-        {{ 'value.' ~ comparison.left.field.snake if comparison.left.is.field else ex_literal(comparison.left.value_json) }},
-        {{ 'value.' ~ comparison.right.field.snake if comparison.right.is.field else ex_literal(comparison.right.value_json) }},
+        {{ 'Map.get(value, :"' ~ comparison.left.field.snake ~ '")' if comparison.left.is.field else ex_literal(comparison.left.value_json) }},
+        {{ 'Map.get(value, :"' ~ comparison.right.field.snake ~ '")' if comparison.right.is.field else ex_literal(comparison.right.value_json) }},
         {{ comparison.operator | tojson }}
       ){% if not loop.last %}{% if invariant.form.is.all %} and {% else %} or {% endif %}{% endif %}
       {%- endfor %}
