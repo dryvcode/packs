@@ -129,9 +129,11 @@
     "packs/package/validation/dry-validation-contracts/templates/lib/models/{dto}/$(name).rb.j2"
   ],
   "templates/elixir/wire-enum.ex.j2": [
-    "packs/package/clients/elixir-client-sdk/templates/lib/models/{enum}/$(name).ex.j2"
+    "packs/package/clients/elixir-client-sdk/templates/lib/models/{enum}/$(name).ex.j2",
+    "packs/package/validation/ecto-changesets/templates/lib/models/{enum}/$(name).ex.j2"
   ],
   "templates/elixir/wire-model.ex.j2": [
-    "packs/package/clients/elixir-client-sdk/templates/lib/models/{model}/$(name).ex.j2"
+    "packs/package/clients/elixir-client-sdk/templates/lib/models/{model}/$(name).ex.j2",
+    "packs/package/validation/ecto-changesets/templates/lib/models/{model}/$(name).ex.j2"
   ]
 }
