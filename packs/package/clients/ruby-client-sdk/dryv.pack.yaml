@@ -1,0 +1,83 @@
+version: dryv.pack/v1alpha1
+key: clients.ruby-client-sdk
+layout: package
+package:
+  name: dryv-ruby-client
+
+source: templates
+
+info:
+  title: Ruby Client SDK
+  version: 0.1.0
+  description: Generates a Ruby 4 Net::HTTP client SDK with typed-ish wire models and operations.
+
+catalog:
+  purpose: clients
+  summary: Ruby Net::HTTP client SDK with generated models, operations and structured errors.
+  languages: [ruby]
+  frameworks: [net-http]
+  tags: [client, sdk, ruby, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvGeneratedClient
+    description: Root Ruby module for generated SDK code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/operation"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
