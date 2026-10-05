@@ -1,8 +1,11 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <nlohmann/json.hpp>
 
 namespace {{ pack.inputs.namespace }} {
 
@@ -10,6 +13,47 @@ struct ValidationIssue {
     std::string path;
     std::string message;
 };
+
+
+template <typename T>
+nlohmann::json validation_json(const T& value) {
+    return nlohmann::json(value);
+}
+
+template <typename T>
+nlohmann::json validation_json(const std::optional<T>& value) {
+    return value.has_value() ? nlohmann::json(*value) : nlohmann::json(nullptr);
+}
+
+inline bool compare_json(
+    const nlohmann::json& left,
+    const nlohmann::json& right,
+    const std::string& operation
+) {
+    if (operation == "equal") return left == right;
+    if (operation == "not-equal") return left != right;
+
+    if (left.is_number() && right.is_number()) {
+        const auto lhs = left.get<double>();
+        const auto rhs = right.get<double>();
+        if (operation == "less-than") return lhs < rhs;
+        if (operation == "less-than-or-equal") return lhs <= rhs;
+        if (operation == "greater-than") return lhs > rhs;
+        if (operation == "greater-than-or-equal") return lhs >= rhs;
+        return false;
+    }
+
+    if (left.is_string() && right.is_string()) {
+        const auto lhs = left.get<std::string>();
+        const auto rhs = right.get<std::string>();
+        if (operation == "less-than") return lhs < rhs;
+        if (operation == "less-than-or-equal") return lhs <= rhs;
+        if (operation == "greater-than") return lhs > rhs;
+        if (operation == "greater-than-or-equal") return lhs >= rhs;
+    }
+
+    return false;
+}
 
 struct ValidationResult {
     std::vector<ValidationIssue> issues{};
