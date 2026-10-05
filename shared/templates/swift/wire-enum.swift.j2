@@ -1,5 +1,9 @@
 import Foundation
 
+{%- macro swift_ident(name) -%}
+{%- if name in ['associatedtype','class','deinit','enum','extension','fileprivate','func','import','init','inout','internal','let','open','operator','private','protocol','public','rethrows','static','struct','subscript','typealias','var','break','case','continue','default','defer','do','else','fallthrough','for','guard','if','in','repeat','return','throw','switch','where','while','as','Any','catch','false','is','nil','super','self','Self','throws','true','try','_'] -%}\`{{ name }}\`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
 public struct {{ file.symbol }}: Codable, Equatable, Sendable, CustomStringConvertible {
     public let value: DryvJSONValue
 
@@ -8,14 +12,14 @@ public struct {{ file.symbol }}: Codable, Equatable, Sendable, CustomStringConve
     }
 
 {%- for item in property.enum.values %}
-    public static let {{ item.name.camel }} = Self(
+    public static let {{ swift_ident(item.name.camel) }} = Self(
         value: DryvJSONValue.literal({{ item.value_json | tojson }})
     )
 {%- endfor %}
 
     public static let allValues: [Self] = [
 {%- for item in property.enum.values %}
-        .{{ item.name.camel }}{% if not loop.last %},{% endif %}
+        .{{ swift_ident(item.name.camel) }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ]
 
