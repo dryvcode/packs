@@ -54,10 +54,12 @@
   ],
   "templates/csharp/system-text-json-enum.cs.j2": [
     "packs/package/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2",
-    "packs/package/backend/aspnet-core-backend/templates/Models/{enum}/$(name).cs.j2"
+    "packs/package/backend/aspnet-core-backend/templates/Models/{enum}/$(name).cs.j2",
+    "packs/package/validation/fluentvalidation-dtos/templates/Models/{enum}/$(name).cs.j2"
   ],
   "templates/csharp/system-text-json-model.cs.j2": [
     "packs/package/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2",
-    "packs/package/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2"
+    "packs/package/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2",
+    "packs/package/validation/fluentvalidation-dtos/templates/Models/{dto}/$(name).cs.j2"
   ]
 }
