@@ -1,0 +1,164 @@
+# frozen_string_literal: true
+
+require "bigdecimal"
+require "date"
+require "json"
+require "securerandom"
+require "sequel"
+
+module {{ pack.inputs.module_name }}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro delete_action(value) -%}
+{%- if value == 'cascade' -%}:cascade
+{%- elif value == 'restrict' -%}:restrict
+{%- elif value == 'detach' -%}:set_null
+{%- elif value == 'reset' -%}:set_default
+{%- else -%}:no_action
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set pk = namespace(fields=[]) -%}
+{%- for field in schema.fields -%}
+{%- if field.related is none and field.storage is not none and field.storage.primary_key -%}
+{%- set pk.fields = pk.fields + [field] -%}
+{%- endif -%}
+{%- endfor -%}
+
+  class {{ file.symbol }} < Sequel::Model
+    TABLE = {% if schema.facets.storage and schema.facets.storage.namespace %}Sequel.qualify({{ schema.facets.storage.namespace | tojson }}.to_sym, {{ (schema.facets.storage.name or schema.name.snake) | tojson }}.to_sym){% else %}{{ (schema.facets.storage.name if schema.facets.storage and schema.facets.storage.name else schema.name.snake) | tojson }}.to_sym{% endif %}
+
+    JSON_COLUMNS = [
+{%- for field in schema.fields %}
+{%- if field.related is none and (field.array is not none or field.value.is.schema or field.value.is.enum or field.value.is.record or field.value.is.unknown or field.value.is.dynamic or field.value.is.generic or field.value.is.composite or field.value.is.union or field.value.is.tuple or field.value.is.literal) %}
+      :{{ field.name.snake }},
+{%- endif %}
+{%- endfor %}
+    ].freeze
+
+    class << self
+      def create_table(db)
+        db.create_table(TABLE) do
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+{%- if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.integer %}
+          primary_key :{{ field.name.snake }}, type: Integer
+{%- else %}
+{%- set nullable = field.optional or field.nullable %}
+{%- if field.array is not none or field.value.is.schema or field.value.is.enum or field.value.is.record or field.value.is.unknown or field.value.is.dynamic or field.value.is.generic or field.value.is.composite or field.value.is.union or field.value.is.tuple or field.value.is.literal %}
+          String :{{ field.name.snake }}, text: true, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.boolean %}
+          TrueClass :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.integer %}
+          Integer :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.decimal or field.value.is.money %}
+{%- set constraints = field.value.property.primitive.constraints %}
+          BigDecimal :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if constraints.has_precision and constraints.has_scale %}, size: [{{ constraints.precision }}, {{ constraints.scale }}]{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.number %}
+          Float :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.uuid %}
+          String :{{ field.name.snake }}, size: 36, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.temporal and field.value.is.date %}
+          Date :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.temporal and field.value.is.time %}
+          Time :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- elif field.value.is.temporal and (field.value.is.date_time or field.value.is.instant or field.value.is.zoned_date_time) %}
+          DateTime :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- else %}
+{%- set length = field.value.property.primitive.constraints.length if field.value.is.string else none %}
+          String :{{ field.name.snake }}, null: {% if nullable %}true{% else %}false{% endif %}{% if length is not none and length.has_exact %}, size: {{ length.exact }}{% elif length is not none and length.has_max %}, size: {{ length.max }}{% else %}, text: true{% endif %}{% if pk.fields|length == 1 and field.storage is not none and field.storage.primary_key %}, primary_key: true{% endif %}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+{%- if pk.fields|length > 1 %}
+          primary_key [{% for field in pk.fields %}:{{ field.name.snake }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- endif %}
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+          index [{% for field_name in index.fields %}:{{ field_name.snake }}{% if not loop.last %}, {% endif %}{% endfor %}], unique: {% if index.unique %}true{% else %}false{% endif %}{% if index.name %}, name: {{ index.name | tojson }}.to_sym{% endif %}
+{%- endfor %}
+{%- endif %}
+        end
+      end
+
+      def add_foreign_keys(db)
+{%- set rels = namespace(count=0) %}
+{%- for field in schema.fields %}
+{%- if field.related is none and field.relation is not none and symbol_for(field.relation.target.schema) %}
+{%- set rels.count = rels.count + 1 %}
+        db.alter_table(TABLE) do
+          add_foreign_key(
+            :{{ field.name.snake }},
+            {{ symbol_for(field.relation.target.schema) }}::TABLE,
+            key: :{{ field.relation.target.field.snake }}{% if field.relation.on_delete is not none %},
+            on_delete: {{ delete_action(field.relation.on_delete) }}{% endif %}{% if field.relation.on_update is not none %},
+            on_update: {{ delete_action(field.relation.on_update) }}{% endif %}
+          )
+        end
+{%- endif %}
+{%- endfor %}
+{%- if rels.count == 0 %}
+        nil
+{%- endif %}
+      end
+
+      def bind(db)
+        set_dataset(db[TABLE])
+{%- if pk.fields|length == 1 %}
+        set_primary_key :{{ pk.fields[0].name.snake }}
+{%- elif pk.fields|length > 1 %}
+        set_primary_key [{% for field in pk.fields %}:{{ field.name.snake }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- else %}
+        no_primary_key
+{%- endif %}
+        JSON_COLUMNS.each { |column| plugin :serialization, :json, column }
+        self
+      end
+
+      def configure_associations
+{%- set associations = namespace(count=0) %}
+{%- for field in schema.fields %}
+{%- if field.related is none and field.relation is not none and symbol_for(field.relation.target.schema) %}
+{%- set associations.count = associations.count + 1 %}
+        many_to_one :{{ field.name.snake }}_relation,
+          class: {{ symbol_for(field.relation.target.schema) }},
+          key: :{{ field.name.snake }},
+          primary_key: :{{ field.relation.target.field.snake }}
+{%- elif field.related is not none and field.related.inverse is not none and symbol_for(field.related.via.schema) %}
+{%- set associations.count = associations.count + 1 %}
+{%- if field.related.cardinality == 'one-to-many' %}
+        one_to_many :{{ field.name.snake }},
+          class: {{ symbol_for(field.related.via.schema) }},
+          key: :{{ field.related.via.field.snake }},
+          primary_key: :{{ field.related.inverse.field.snake }}
+{%- elif field.related.cardinality == 'one-to-one' %}
+        one_to_one :{{ field.name.snake }},
+          class: {{ symbol_for(field.related.via.schema) }},
+          key: :{{ field.related.via.field.snake }},
+          primary_key: :{{ field.related.inverse.field.snake }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- if associations.count == 0 %}
+        nil
+{%- endif %}
+        self
+      end
+    end
+
+{%- for field in schema.fields %}
+{%- if field.related is none and field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.uuid %}
+    def before_create
+      self.{{ field.name.snake }} ||= SecureRandom.uuid
+      super
+    end
+{%- endif %}
+{%- endfor %}
+  end
+end
