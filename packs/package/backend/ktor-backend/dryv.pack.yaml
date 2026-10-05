@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: backend.ktor-backend
+layout: package
+package:
+  name: dryv-ktor-backend
+
+source: templates
+
+info:
+  title: Ktor Backend
+  version: 0.1.0
+  description: Generates Ktor 3.6 route registration, kotlinx.serialization models and coroutine service interfaces.
+
+catalog:
+  purpose: backend
+  summary: Ktor 3.6 routes with typed serializable models and coroutine service boundaries.
+  languages: [kotlin]
+  frameworks: [ktor-server, kotlinx-serialization]
+  tags: [backend, rest, http, kotlin, coroutines]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: org.dryv.generated.backend
+    description: Kotlin package for generated backend sources.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: register$(group.name.pascal)$(feature.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
