@@ -80,10 +80,10 @@ func (c *Client) newRequest(
 		}
 	}
 	for key, value := range headers {
-		req.Header.Set(key, fmt.Sprint(value))
+		req.Header.Set(key, stringValue(value))
 	}
 	for name, value := range cookies {
-		req.AddCookie(&http.Cookie{Name: name, Value: fmt.Sprint(value)})
+		req.AddCookie(&http.Cookie{Name: name, Value: stringValue(value)})
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -141,7 +141,11 @@ func appendQuery(path string, values map[string]any) string {
 		addURLValue(query, key, value)
 	}
 	if encoded := query.Encode(); encoded != "" {
-		return path + "?" + encoded
+		separator := "?"
+		if strings.Contains(path, "?") {
+			separator = "&"
+		}
+		return path + separator + encoded
 	}
 	return path
 }
@@ -183,6 +187,20 @@ func addURLValue(values url.Values, key string, value any) {
 	values.Add(key, fmt.Sprint(value))
 }
 
+func stringValue(value any) string {
+	if value == nil {
+		return ""
+	}
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return ""
+		}
+		return fmt.Sprint(rv.Elem().Interface())
+	}
+	return fmt.Sprint(value)
+}
+
 func replacePath(path string, name string, value any) string {
-	return strings.ReplaceAll(path, "{"+name+"}", url.PathEscape(fmt.Sprint(value)))
+	return strings.ReplaceAll(path, "{"+name+"}", url.PathEscape(stringValue(value)))
 }
