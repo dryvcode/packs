@@ -147,5 +147,8 @@
     "packs/package/clients/cpp-client-sdk/templates/include/dryv_client/models/{model}/$(name).hpp.j2",
     "packs/package/validation/cpp-validation/templates/include/dryv_validation/models/{model}/$(name).hpp.j2",
     "packs/package/backend/crow-backend/templates/include/dryv_backend/models/{model}/$(name).hpp.j2"
+  ],
+  "templates/json-schema/schema.json.j2": [
+    "packs/package/validation/json-schema/templates/schemas/{schema}/$(name).schema.json.j2"
   ]
 }
