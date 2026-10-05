@@ -109,7 +109,7 @@
 
 {% if operation.execution.timeout.seconds is not none %}- Timeout: `{{ operation.execution.timeout.seconds }}s`
 {% endif %}{% if operation.execution.rate_limit %}- Rate limit: `{{ operation.execution.rate_limit.limit }}` per `{{ operation.execution.rate_limit.window.seconds }}s`
-{% endif %}{% if operation.execution.cache.ttl.seconds is not none %}- Cache TTL: `{{ operation.execution.cache.ttl.seconds }}s`
+{% endif %}{% if operation.execution.cache and operation.execution.cache.ttl.seconds is not none %}- Cache TTL: `{{ operation.execution.cache.ttl.seconds }}s`
 {% endif %}{% if operation.execution.transaction.required is not none %}- Transaction required: `{{ operation.execution.transaction.required }}`
 {% endif %}{% if operation.execution.audit.required is not none %}- Audit required: `{{ operation.execution.audit.required }}`
 {% endif %}
