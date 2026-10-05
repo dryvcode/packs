@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.cpp-validation
+layout: package
+package:
+  name: dryv_cpp_validation
+
+source: templates
+
+info:
+  title: C++ Validation
+  version: 0.1.0
+  description: Generates C++20 wire models and dependency-light validation helpers from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: C++20 generated validation helpers over nlohmann/json wire models.
+  languages: [cpp]
+  frameworks: [standard-library, nlohmann-json]
+  tags: [validation, schema, dto, cpp]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  namespace:
+    type: string
+    default: dryv::generated::validation
+    description: C++ namespace for generated models and validators.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
