@@ -1,0 +1,39 @@
+import Foundation
+
+public struct {{ file.symbol }}: Codable, Equatable, Sendable, CustomStringConvertible {
+    public let value: DryvJSONValue
+
+    private init(value: DryvJSONValue) {
+        self.value = value
+    }
+
+{%- for item in property.enum.values %}
+    public static let {{ item.name.camel }} = Self(
+        value: DryvJSONValue.literal({{ item.value_json | tojson }})
+    )
+{%- endfor %}
+
+    public static let allValues: [Self] = [
+{%- for item in property.enum.values %}
+        .{{ item.name.camel }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ]
+
+    public init(from decoder: Decoder) throws {
+        let decoded = try DryvJSONValue(from: decoder)
+        guard Self.allValues.contains(where: { $0.value == decoded }) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: decoder.codingPath, debugDescription: "Invalid {{ property.enum.name.local }} value")
+            )
+        }
+        self.value = decoded
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try value.encode(to: encoder)
+    }
+
+    public var description: String {
+        value.description
+    }
+}
