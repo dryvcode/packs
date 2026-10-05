@@ -96,6 +96,7 @@ dependencies:
   dev:
     prettier: "*"
 
+# shared:js-prettier-tsx-actions:start
 actions:
   files:
     format:
@@ -113,3 +114,4 @@ actions:
       commands:
         - run: [(pnpm|bun|yarn), add]
         - run: [npm, install]
+# shared:js-prettier-tsx-actions:end
