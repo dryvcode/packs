@@ -93,12 +93,15 @@
     "packs/package/validation/symfony-validator-dtos/templates/src/Models/{dto}/$(name).php.j2"
   ],
   "templates/swift/json-value.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2"
+    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2",
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2"
   ],
   "templates/swift/wire-enum.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2"
+    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2",
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{enum}/$(name).swift.j2"
   ],
   "templates/swift/wire-model.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{model}/$(name).swift.j2"
+    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{model}/$(name).swift.j2",
+    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{model}/$(name).swift.j2"
   ]
 }
