@@ -1,0 +1,71 @@
+version: dryv.pack/v1alpha1
+key: backend.vapor-backend
+layout: package
+package:
+  name: DryvBackend
+
+source: templates
+
+info:
+  title: Vapor Backend
+  version: 0.1.0
+  description: Generates a Swift 6.4 Vapor 4 backend library with Codable models and feature service protocols.
+
+catalog:
+  purpose: backend
+  summary: Vapor 4 route registration with pure Codable models and separated services.
+  languages: [swift]
+  frameworks: [vapor]
+  tags: [backend, rest, http, swift]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: register$(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
