@@ -1,10 +1,13 @@
 # Python ecosystem
 
-Status: candidate backlog only. Existing coverage is marked complete.
+Status: FastAPI backend, standalone Pydantic models, SQLAlchemy persistence and HTTPX client SDK are implemented on `develop`; verification of the new packs is deferred while the Dryv Engine is under maintenance.
 
 ## Existing coverage
 
 - [x] `package/backend/fastapi-backend`
+- [x] `package/validation/pydantic-models` — verification deferred
+- [x] `package/persistence/sqlalchemy-models` — verification deferred
+- [x] `package/clients/python-client-sdk` — verification deferred
 
 ## Backend candidates
 
@@ -28,22 +31,22 @@ Models:
 
 ## Persistence
 
-- [ ] SQLAlchemy 2.x models
+- [x] `package/persistence/sqlalchemy-models`
 - [ ] SQLModel models
 - [ ] Django ORM models
 - [ ] Tortoise ORM models
 - [ ] Beanie document models
 - [ ] MongoEngine research
-- [ ] primary/generated keys
-- [ ] tables/collections/namespaces
-- [ ] indexes and uniqueness
+- [x] primary/generated keys
+- [x] tables/collections/namespaces
+- [x] indexes and uniqueness
 - [ ] relations
 - [ ] delete behavior
-- [ ] enums
-- [ ] temporal types
-- [ ] Decimal/money
+- [x] enums
+- [x] temporal types
+- [x] Decimal/money
 - [ ] defaults
-- [ ] simple invariants/check constraints
+- [x] simple invariants/check constraints
 
 Models:
 
@@ -52,18 +55,18 @@ Models:
 
 ## Validation and schema types
 
-- [ ] standalone Pydantic v2 models
+- [x] `package/validation/pydantic-models`
 - [ ] Marshmallow schemas
 - [ ] attrs/cattrs research
 - [ ] dataclass schema/types pack research
-- [ ] nested schemas
-- [ ] optional/null distinction
-- [ ] collection constraints
-- [ ] enums
-- [ ] range/length/pattern
-- [ ] common formats
+- [x] nested schemas
+- [x] optional/null distinction
+- [x] collection constraints
+- [x] enums
+- [x] range/length/pattern
+- [x] common formats
 - [ ] simple invariants
-- [ ] reusable `schema.validation` and `schema.types` capability exports
+- [x] reusable `schema.validation` and `schema.types` capability exports
 
 Models:
 
@@ -72,16 +75,16 @@ Models:
 
 ## Client SDKs
 
-- [ ] `package/clients/python-client-sdk`
-- [ ] httpx transport
+- [x] `package/clients/python-client-sdk`
+- [x] httpx transport
 - [ ] requests-based variant research
-- [ ] Pydantic or dataclass models
-- [ ] typed operations
-- [ ] path/query/body bindings
-- [ ] response decoding
-- [ ] sync vs async client strategy
-- [ ] typed error surface
-- [ ] provide operation/type/enum capabilities
+- [x] Pydantic or dataclass models
+- [x] typed operations
+- [x] path/query/body bindings
+- [x] response decoding
+- [x] async-first client strategy
+- [x] typed error surface
+- [x] provide operation/type/enum capabilities
 
 Models:
 
@@ -111,7 +114,7 @@ Models:
 
 ## Context questions to verify
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] authentication/security
