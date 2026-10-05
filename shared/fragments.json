@@ -31,5 +31,12 @@
       "packs/inject/validation/joi-schemas/dryv.pack.yaml",
       "packs/inject/validation/zod-schemas/dryv.pack.yaml"
     ]
+  },
+  "manifests/js-prettier-tsx-actions.yaml": {
+    "marker": "js-prettier-tsx-actions",
+    "targets": [
+      "packs/inject/frontend/react-crud-forms/dryv.pack.yaml",
+      "packs/project/frontend/nextjs-app/dryv.pack.yaml"
+    ]
   }
 }
