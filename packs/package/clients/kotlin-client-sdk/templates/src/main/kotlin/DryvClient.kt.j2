@@ -1,0 +1,67 @@
+package {{ pack.inputs.package_name }}
+
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+class DryvApiException(
+    val status: Int,
+    override val message: String,
+    val payload: JsonElement? = null,
+) : RuntimeException(message)
+
+class DryvClient(
+    val baseUrl: String,
+    val json: Json = Json {
+        ignoreUnknownKeys = false
+        explicitNulls = true
+    },
+    val http: HttpClient = HttpClient(CIO) {
+        expectSuccess = false
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = false
+                explicitNulls = true
+            })
+        }
+    },
+) : AutoCloseable {
+    override fun close() {
+        http.close()
+    }
+
+    suspend fun ensureSuccess(response: HttpResponse) {
+        if (response.status.value in 200..299) return
+
+        val text = response.bodyAsText()
+        val payload = runCatching { json.parseToJsonElement(text) }.getOrNull()
+        val message = (payload as? JsonObject)
+            ?.get("message")
+            ?.jsonPrimitive
+            ?.contentOrNull
+            ?: text.trim()
+
+        throw DryvApiException(
+            status = response.status.value,
+            message = message,
+            payload = payload,
+        )
+    }
+
+    companion object {
+        fun wireString(value: Any): String = when (value) {
+            is String -> value
+            is Boolean, is Number -> value.toString()
+            is JsonElement -> if (value is kotlinx.serialization.json.JsonPrimitive && value.isString) value.content else value.toString()
+            else -> value.toString()
+        }
+    }
+}
