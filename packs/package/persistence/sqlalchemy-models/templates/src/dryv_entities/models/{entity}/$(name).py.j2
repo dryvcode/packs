@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any
+from uuid import UUID, uuid4
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    Interval,
+    Numeric,
+    String,
+    Text,
+    Time,
+    Uuid,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+{% macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro module_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.path.relative | replace('/', '.') | replace('.py', '') }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro py_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none -%}list[Any]
+{%- elif value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}Any
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is_decimal or value.is_money -%}Decimal
+{%- elif value.is.number -%}float
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.temporal and value.is.date -%}date
+{%- elif value.is.temporal and value.is.time -%}time
+{%- elif value.is.temporal and (value.is_date_time or value.is_instant or value.is_zoned_date_time) -%}datetime
+{%- elif value.is.temporal and (value.is_duration or value.is_interval) -%}timedelta
+{%- elif value.is.string -%}str
+{%- else -%}Any
+{%- endif -%}{%- if field.optional or field.nullable -%} | None{%- endif -%}
+{%- endmacro %}
+
+{% macro column_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}JSON
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Integer
+{%- elif value.is_decimal or value.is_money -%}
+  {%- set constraints = value.property.primitive.constraints -%}
+  {%- if constraints.has_precision and constraints.has_scale -%}Numeric({{ constraints.precision }}, {{ constraints.scale }})
+  {%- else -%}Numeric
+  {%- endif -%}
+{%- elif value.is.number -%}Float
+{%- elif value.is.uuid -%}Uuid
+{%- elif value.is.temporal and value.is.date -%}Date
+{%- elif value.is.temporal and value.is.time -%}Time
+{%- elif value.is.temporal and (value.is_instant or value.is_zoned_date_time) -%}DateTime(timezone=True)
+{%- elif value.is.temporal and value.is_date_time -%}DateTime
+{%- elif value.is.temporal and (value.is_duration or value.is_interval) -%}Interval
+{%- elif value.is.string -%}
+  {%- set length = value.property.primitive.constraints.length -%}
+  {%- if length is not none and length.has_exact -%}String({{ length.exact }})
+  {%- elif length is not none and length.has_max -%}String({{ length.max }})
+  {%- else -%}Text
+  {%- endif -%}
+{%- else -%}JSON
+{%- endif -%}
+{%- endmacro %}
+
+if TYPE_CHECKING:
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+    from .{{ dependency.path.relative | replace('/', '.') | replace('.py', '') }} import {{ dependency.symbol }}
+{%- endif %}{% endfor %}
+    pass
+
+
+class {{ file.symbol }}(Base):
+    __tablename__ = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+{%- if (schema.facets.storage and schema.facets.storage.indexes) or (schema.facets.storage and schema.facets.storage.namespace) %}
+    __table_args__ = (
+{%- if schema.facets.storage and schema.facets.storage.indexes %}
+{%- for index in schema.facets.storage.indexes %}
+        Index(
+            {% if index.name %}{{ index.name | tojson }}{% else %}"idx_{{ schema.name.snake }}_{{ loop.index }}"{% endif %},
+{%- for field_name in index.fields %}
+            "{{ field_name.snake }}",
+{%- endfor %}
+            unique={% if index.unique %}True{% else %}False{% endif %},
+        ),
+{%- endfor %}
+{%- endif %}
+{%- if schema.facets.storage and schema.facets.storage.namespace %}
+        {"schema": "{{ schema.facets.storage.namespace }}"},
+{%- endif %}
+    )
+{%- endif %}
+
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    {{ field.name.snake }}: Mapped[{{ py_type(field) }}] = mapped_column(
+        {{ column_type(field) }},
+        name="{{ field.name.snake }}",
+        nullable={% if field.optional or field.nullable %}True{% else %}False{% endif %},
+        primary_key={% if field.storage is not none and field.storage.primary_key %}True{% else %}False{% endif %}{% if field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.integer %},
+        autoincrement=True{% elif field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.uuid %},
+        default=uuid4{% endif %}
+    )
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+    {{ field.name.snake }}_relation: Mapped["{{ symbol_for(field.relation.target.schema) }}{% if field.optional or field.nullable %} | None{% endif %}"] = relationship(
+        "{{ symbol_for(field.relation.target.schema) }}",
+        primaryjoin="foreign({{ file.symbol }}.{{ field.name.snake }}) == {{ symbol_for(field.relation.target.schema) }}.{{ field.relation.target.field.snake }}",
+        viewonly=True,
+        uselist=False,
+    )
+{%- endif %}
+{%- elif field.related is not none and field.related.inverse is not none and symbol_for(field.related.via.schema) %}
+    {{ field.name.snake }}: Mapped[{% if field.related.cardinality == 'one-to-many' %}list["{{ symbol_for(field.related.via.schema) }}"]{% else %}"{{ symbol_for(field.related.via.schema) }} | None"{% endif %}] = relationship(
+        "{{ symbol_for(field.related.via.schema) }}",
+        primaryjoin="{{ file.symbol }}.{{ field.related.inverse.field.snake }} == foreign({{ symbol_for(field.related.via.schema) }}.{{ field.related.via.field.snake }})",
+        viewonly=True,
+        uselist={% if field.related.cardinality == 'one-to-many' %}True{% else %}False{% endif %},
+    )
+{%- elif field.related is not none %}
+    # Related field "{{ field.name.raw }}" cannot be mapped without an explicit inverse key/junction.
+{%- endif %}
+{%- endfor %}
