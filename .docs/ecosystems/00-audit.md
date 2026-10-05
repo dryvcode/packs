@@ -41,6 +41,7 @@ Clients:
 - [x] `package/clients/flutter-api-bridge`
 - [x] `package/clients/next-api-bridge`
 - [x] `package/clients/ts-api-client`
+- [ ] `package/clients/go-client-sdk` — implemented, awaiting fixture/toolchain verification
 
 ### Project
 
@@ -57,7 +58,7 @@ Generated-language families currently represented:
 - [x] TypeScript / JavaScript
 - [x] Python
 - [x] Dart
-- [ ] Go
+- [ ] Go — first client pack exists but is not verified yet
 - [ ] Rust
 - [ ] Java
 - [ ] C#
@@ -134,7 +135,7 @@ Existing packs already consume semantic facts for:
 - relations and delete behavior
 - invariants
 - HTTP methods and paths
-- path/query/body bindings
+- path/query/query-object/header/cookie/body/form bindings
 - operation inputs and outputs
 - response status information
 - groups and features
