@@ -76,6 +76,7 @@ Generated-language families currently represented:
 - [x] Go — client SDK verified; standard-library backend implemented; persistence/validation still absent
 - [x] Rust — backend, client, persistence and validation represented; verification deferred for new packs
 - [x] Java — backend, client, persistence and validation represented; verification deferred
+- [x] .NET / C# — backend, client, persistence and validation represented; verification deferred
 - [ ] C#
 - [ ] PHP
 - [ ] Swift
@@ -98,6 +99,7 @@ Thin or absent areas:
 - Python persistence and standalone validation
 - Rust project packs and additional framework alternatives
 - Java/JVM project packs and additional framework alternatives
+- .NET project/UI packs and additional framework alternatives
 - .NET server/persistence/validation/client ecosystem
 - PHP, Swift, Ruby and Elixir
 - backend project packs
@@ -105,12 +107,12 @@ Thin or absent areas:
 
 ## Proven pack patterns to reuse
 
-- SQL ORM/persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`
+- SQL ORM/persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`
 - document persistence → `mongoose-models`
-- validation DTOs → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`
+- validation DTOs → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backend → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`
-- HTTP SDK → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`
+- HTTP backend → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`
+- HTTP SDK → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
