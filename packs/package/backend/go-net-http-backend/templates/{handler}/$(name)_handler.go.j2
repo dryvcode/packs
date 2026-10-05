@@ -1,0 +1,345 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro go_type(value) -%}
+{%- if value is none -%}any
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'any' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'any' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int64
+{%- elif value.is.number -%}float64
+{%- elif value.is.string or value.is.temporal -%}string
+{%- elif value.is.record -%}map[string]any
+{%- else -%}any
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro optional_binding(operation, binding) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_var(binding) -%}
+{%- if binding.is.path -%}path{{ binding.port.name.pascal }}
+{%- elif binding.is.query -%}query{{ binding.port.name.pascal }}
+{%- elif binding.is.query_object -%}queryObject{{ binding.port.name.pascal }}
+{%- elif binding.is.header -%}header{{ binding.port.name.pascal }}
+{%- elif binding.is.cookie -%}cookie{{ binding.port.name.pascal }}
+{%- elif binding.is.body -%}{% if binding.port.field is none %}input{% else %}body{{ binding.port.name.pascal }}{% endif %}
+{%- elif binding.is.form -%}form{{ binding.port.name.pascal }}
+{%- else -%}unsupported{{ binding.port.name.pascal }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro enum_check(value, var) -%}
+{%- if value.is.enum %}
+	switch {{ var }} {
+{%- for item in value.property.enum.values %}
+	case {{ symbol_for(value.property.enum) }}{{ item.name.pascal }}:
+{%- endfor %}
+	default:
+		badRequest(w, fmt.Errorf("invalid {{ value.property.enum.name.local }} value"))
+		return
+	}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_into(value, var, raw) -%}
+	if err := parseScalar({{ raw }}, &{{ var }}); err != nil {
+		badRequest(w, fmt.Errorf("invalid {{ var }}: %w", err))
+		return
+	}
+{{ enum_check(value, var) }}
+{%- endmacro -%}
+
+{%- macro scalar_binding(operation, binding) -%}
+{%- set var = binding_var(binding) -%}
+{%- set optional = optional_binding(operation, binding) -%}
+{%- if binding.is.path %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if raw := r.PathValue("{{ binding.name or binding.port.name.raw }}"); raw != "" {
+		var parsed {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, 'parsed', 'raw') }}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	raw{{ var }} := r.PathValue("{{ binding.name or binding.port.name.raw }}")
+	var {{ var }} {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, var, 'raw' ~ var) }}
+{%- endif %}
+{%- elif binding.is.query %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if raw, ok := optionalQuery(r, "{{ binding.name or binding.port.name.raw }}"); ok {
+		var parsed {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, 'parsed', 'raw') }}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	raw{{ var }}, err := requiredQuery(r, "{{ binding.name or binding.port.name.raw }}")
+	if err != nil {
+		badRequest(w, err)
+		return
+	}
+	var {{ var }} {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, var, 'raw' ~ var) }}
+{%- endif %}
+{%- elif binding.is.header %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if raw, ok := optionalHeader(r, "{{ binding.name or binding.port.name.raw }}"); ok {
+		var parsed {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, 'parsed', 'raw') }}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	raw{{ var }}, err := requiredHeader(r, "{{ binding.name or binding.port.name.raw }}")
+	if err != nil {
+		badRequest(w, err)
+		return
+	}
+	var {{ var }} {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, var, 'raw' ~ var) }}
+{%- endif %}
+{%- elif binding.is.cookie %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if raw, ok := optionalCookie(r, "{{ binding.name or binding.port.name.raw }}"); ok {
+		var parsed {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, 'parsed', 'raw') }}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	raw{{ var }}, err := requiredCookie(r, "{{ binding.name or binding.port.name.raw }}")
+	if err != nil {
+		badRequest(w, err)
+		return
+	}
+	var {{ var }} {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, var, 'raw' ~ var) }}
+{%- endif %}
+{%- elif binding.is.form and binding.port.field is not none %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if raw, ok, err := optionalForm(r, "{{ binding.name or binding.port.name.raw }}"); err != nil {
+		badRequest(w, err)
+		return
+	} else if ok {
+		var parsed {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, 'parsed', 'raw') }}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	raw{{ var }}, err := requiredForm(r, "{{ binding.name or binding.port.name.raw }}")
+	if err != nil {
+		badRequest(w, err)
+		return
+	}
+	var {{ var }} {{ go_type(binding.port.value) }}
+{{ parse_into(binding.port.value, var, 'raw' ~ var) }}
+{%- endif %}
+{%- elif binding.is.body %}
+{%- if optional %}
+	var {{ var }} *{{ go_type(binding.port.value) }}
+	if r.Body != nil && r.ContentLength != 0 {
+		var parsed {{ go_type(binding.port.value) }}
+		if err := decodeJSON(r, &parsed); err != nil {
+			badRequest(w, err)
+			return
+		}
+		{{ var }} = &parsed
+	}
+{%- else %}
+	var {{ var }} {{ go_type(binding.port.value) }}
+	if err := decodeJSON(r, &{{ var }}); err != nil {
+		badRequest(w, err)
+		return
+	}
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro schema_from_params(binding, source) -%}
+{%- set object = binding_var(binding) -%}
+	var {{ object }} {{ go_type(binding.port.value) }}
+{%- if source == 'form' %}
+	if err := r.ParseForm(); err != nil {
+		badRequest(w, fmt.Errorf("invalid form body: %w", err))
+		return
+	}
+{%- endif %}
+{%- for field in binding.port.value.schema.fields %}
+{%- set values = 'r.URL.Query()' if source == 'query' else 'r.PostForm' %}
+{%- if field.array is not none %}
+	values{{ field.name.pascal }}, ok{{ field.name.pascal }} := {{ values }}["{{ field.name.raw }}"]
+{%- if not field.optional %}
+	if !ok{{ field.name.pascal }} {
+		badRequest(w, fmt.Errorf("missing required {{ source }} field %q", "{{ field.name.raw }}"))
+		return
+	}
+{%- endif %}
+	if ok{{ field.name.pascal }} {
+		parsed := make([]{{ go_type(field.value) }}, 0, len(values{{ field.name.pascal }}))
+		for _, raw := range values{{ field.name.pascal }} {
+			var item {{ go_type(field.value) }}
+{{ parse_into(field.value, 'item', 'raw') }}
+			parsed = append(parsed, item)
+		}
+{%- if field.optional or field.nullable %}
+		{{ object }}.{{ field.name.pascal }} = &parsed
+{%- else %}
+		{{ object }}.{{ field.name.pascal }} = parsed
+{%- endif %}
+	}
+{%- else %}
+{%- if field.optional %}
+	if raw, ok := func() (string, bool) {
+		values, exists := {{ values }}["{{ field.name.raw }}"]
+		if !exists || len(values) == 0 {
+			return "", false
+		}
+		return values[0], true
+	}(); ok {
+		var parsed {{ go_type(field.value) }}
+{{ parse_into(field.value, 'parsed', 'raw') }}
+		{{ object }}.{{ field.name.pascal }} = &parsed
+	}
+{%- else %}
+	values{{ field.name.pascal }}, ok{{ field.name.pascal }} := {{ values }}["{{ field.name.raw }}"]
+	if !ok{{ field.name.pascal }} || len(values{{ field.name.pascal }}) == 0 {
+		badRequest(w, fmt.Errorf("missing required {{ source }} field %q", "{{ field.name.raw }}"))
+		return
+	}
+	var parsed{{ field.name.pascal }} {{ go_type(field.value) }}
+{{ parse_into(field.value, 'parsed' ~ field.name.pascal, 'values' ~ field.name.pascal ~ '[0]') }}
+{%- if field.nullable %}
+	{{ object }}.{{ field.name.pascal }} = &parsed{{ field.name.pascal }}
+{%- else %}
+	{{ object }}.{{ field.name.pascal }} = parsed{{ field.name.pascal }}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro whole_binding(http, kind) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and ((kind == 'body' and binding.is.body) or (kind == 'query_object' and binding.is.query_object) or (kind == 'form' and binding.is.form)) -%}x{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro field_source(operation, http, field) -%}
+{%- if whole_binding(http, 'query_object') -%}queryObjectInput.{{ field.name.pascal }}
+{%- elif whole_binding(http, 'form') -%}formInput.{{ field.name.pascal }}
+{%- else -%}
+{%- set state = namespace(found=false) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.found = true -%}{{ binding_var(binding) }}
+{%- endif -%}
+{%- endfor -%}
+{%- if not state.found -%}nil{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+// Code generated by Dryv. DO NOT EDIT.
+
+package {{ pack.inputs.package_name }}
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
+
+type {{ file.symbols.service }} interface {
+{%- for operation in operations %}
+	{{ operation.name.pascal }}(ctx context.Context{% if operation.input and operation.input.kind == 'schema' %}, input {{ go_type(operation.input.value) }}{% elif operation.input %}{% for field in operation.input.fields %}, {{ field.name.camel }} {% if field.optional %}*{% endif %}{{ go_type(field.value) }}{% endfor %}{% endif %}) {% if operation.output %}({{ go_type(operation.output.value) }}, error){% else %}error{% endif %}
+{%- endfor %}
+}
+
+func {{ file.symbols.register }}(mux *http.ServeMux, service {{ file.symbols.service }}) {
+{%- for operation in operations %}
+	mux.HandleFunc("{{ operation.facets.http.method }} {{ operation.facets.http.path.local }}", handle{{ group.name.pascal }}{{ feature.name.pascal }}{{ operation.name.pascal }}(service))
+{%- endfor %}
+}
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+func handle{{ group.name.pascal }}{{ feature.name.pascal }}{{ operation.name.pascal }}(service {{ file.symbols.service }}) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+{%- if http.input_groups.multipart %}
+		http.Error(w, "multipart bindings require an explicit Go semantic mapping", http.StatusNotImplemented)
+		return
+{%- else %}
+{%- for binding in http.input_groups.path %}
+{{ scalar_binding(operation, binding) }}
+{%- endfor %}
+{%- for binding in http.input_groups.query %}
+{{ scalar_binding(operation, binding) }}
+{%- endfor %}
+{%- for binding in http.input_groups.header %}
+{{ scalar_binding(operation, binding) }}
+{%- endfor %}
+{%- for binding in http.input_groups.cookie %}
+{{ scalar_binding(operation, binding) }}
+{%- endfor %}
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none and binding.port.value.is.schema %}
+{{ schema_from_params(binding, 'form') }}
+{%- else %}
+{{ scalar_binding(operation, binding) }}
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+{%- if binding.port.value.is.schema %}
+{{ schema_from_params(binding, 'query') }}
+{%- else %}
+		http.Error(w, "non-schema query-object bindings are not implemented", http.StatusNotImplemented)
+		return
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.body %}
+{{ scalar_binding(operation, binding) }}
+{%- endfor %}
+
+{%- if operation.input and operation.input.kind == 'schema' and not whole_binding(http, 'body') and not whole_binding(http, 'query_object') and not whole_binding(http, 'form') %}
+		serviceInput := {{ go_type(operation.input.value) }}{
+{%- for field in operation.input.value.schema.fields %}
+			{{ field.name.pascal }}: {{ field_source(operation, http, field) }},
+{%- endfor %}
+		}
+{%- endif %}
+
+{%- if operation.output %}
+		output, err := service.{{ operation.name.pascal }}(r.Context(){% if operation.input and operation.input.kind == 'schema' %}, {% if whole_binding(http, 'body') %}input{% elif whole_binding(http, 'query_object') %}queryObjectInput{% elif whole_binding(http, 'form') %}formInput{% else %}serviceInput{% endif %}{% elif operation.input %}{% for field in operation.input.fields %}, {{ field_source(operation, http, field) }}{% endfor %}{% endif %})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, {{ success_status(http) }}, output)
+{%- else %}
+		if err := service.{{ operation.name.pascal }}(r.Context(){% if operation.input and operation.input.kind == 'schema' %}, {% if whole_binding(http, 'body') %}input{% elif whole_binding(http, 'query_object') %}queryObjectInput{% elif whole_binding(http, 'form') %}formInput{% else %}serviceInput{% endif %}{% elif operation.input %}{% for field in operation.input.fields %}, {{ field_source(operation, http, field) }}{% endfor %}{% endif %}); err != nil {
+			writeError(w, err)
+			return
+		}
+		w.WriteHeader({{ success_status(http) }})
+{%- endif %}
+{%- endif %}
+	}
+}
+
+{%- endfor %}
