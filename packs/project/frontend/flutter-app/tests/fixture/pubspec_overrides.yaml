@@ -1,6 +1,0 @@
-# flutter_api_bridge 0.2.0 isn't on pub.dev yet; test against its git main until it is.
-dependency_overrides:
-  flutter_api_bridge:
-    git:
-      url: https://github.com/alidantech-org/flutter_api_bridge.git
-      ref: main
