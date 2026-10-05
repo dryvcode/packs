@@ -1,18 +1,11 @@
 #!/usr/bin/env bun
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 
-import { PACKS, REPO, SHARED } from "./lib/repository.ts";
+import { PACKS, REPO, SHARED, portableRelative } from "./lib/repository.ts";
 
 type SharedAssets = Record<string, string[]>;
-
-function portable(value: string, label: string): string {
-  if (!value || value.includes("\\\\") || isAbsolute(value) || value.split("/").includes("..")) {
-    throw new Error(\`\${label} must be a non-empty portable relative path\`);
-  }
-  return value;
-}
 
 const check = process.argv.includes("--check");
 const manifest = JSON.parse(readFileSync(join(SHARED, "assets.json"), "utf8")) as SharedAssets;
@@ -21,7 +14,7 @@ const problems: string[] = [];
 let synchronized = 0;
 
 for (const [sourceValue, targetValues] of Object.entries(manifest)) {
-  const source = portable(sourceValue, "shared source");
+  const source = portableRelative(sourceValue, "shared source");
   const sourcePath = join(SHARED, source);
   if (!existsSync(sourcePath)) {
     problems.push(\`missing shared source: shared/\${source}\`);
@@ -30,7 +23,7 @@ for (const [sourceValue, targetValues] of Object.entries(manifest)) {
   const sourceContent = readFileSync(sourcePath);
 
   for (const targetValue of targetValues) {
-    const target = portable(targetValue, "shared target");
+    const target = portableRelative(targetValue, "shared target");
     const targetPath = join(REPO, target);
     if (!targetPath.startsWith(PACKS + "/")) {
       problems.push(\`shared target must be inside packs/: \${target}\`);
