@@ -1,12 +1,12 @@
 # Java / JVM ecosystem
 
-Status: Jakarta Validation DTOs, Java HttpClient SDK and portable JPA entities are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
+Status: Jakarta Validation DTOs, Java HttpClient SDK, portable JPA entities and Jakarta REST backend are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 This file covers Java-first JVM packs. Kotlin-specific packs are tracked separately.
 
 ## Coverage
 
-- [ ] backend pack
+- [x] backend pack
 - [x] persistence pack
 - [x] validation pack
 - [x] API client SDK
@@ -38,12 +38,12 @@ Primary model: `class-validator-dtos`.
 - [ ] Quarkus REST backend
 - [ ] Javalin backend
 - [ ] Helidon backend
-- [ ] Jakarta REST / JAX-RS backend
-- [ ] generated controller/resource layer separated from business services
-- [ ] request DTO binding
-- [ ] path/query/body/header mapping
-- [ ] response/status mapping
-- [ ] feature/group organization
+- [x] `package/backend/jakarta-rest-backend` — implementation present; verification deferred
+- [x] generated resource layer separated from business services
+- [x] request/model binding
+- [x] path/query/query-object/body/header/cookie/form mapping
+- [x] response/status mapping
+- [x] feature/group organization
 - [ ] dependency injection boundaries
 - [ ] validation capability composition
 
@@ -74,13 +74,13 @@ Primary model: `typeorm-entities`.
 ## Client SDKs
 
 - [x] `package/clients/java-client-sdk` — implementation present; verification deferred
-- [ ] Java `HttpClient` baseline
-- [ ] Jackson models
-- [ ] typed operations
-- [ ] path/query/body binding
-- [ ] typed outputs
-- [ ] error model
-- [ ] provide operation/type/enum capability slots
+- [x] Java `HttpClient` baseline
+- [x] Jackson models
+- [x] typed operations
+- [x] path/query/query-object/header/cookie/body/form binding
+- [x] typed outputs
+- [x] error model
+- [x] provide operation/type/enum capability slots
 - [ ] Retrofit-based alternative research
 - [ ] OpenFeign-oriented client research
 
@@ -112,7 +112,7 @@ Models:
 
 ## Context questions to verify before implementation
 
-- [ ] headers/cookies
+- [x] headers/cookies
 - [ ] multipart/files
 - [ ] streaming
 - [ ] security/auth
