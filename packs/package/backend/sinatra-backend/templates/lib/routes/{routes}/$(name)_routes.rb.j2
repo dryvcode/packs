@@ -119,7 +119,7 @@ module {{ pack.inputs.module_name }}
           halt 400, JSON.generate("message" => "missing required {{ field.name.raw }}") if raw_{{ field.name.snake }}.empty?
 {%- endif %}
           unless raw_{{ field.name.snake }}.empty?
-            input_data[{{ field.name.raw | tojson }}] = {{ decode_field(field, 'field.array is not none and raw_' ~ field.name.snake ~ ' or raw_' ~ field.name.snake ~ '.first') }}
+            input_data[{{ field.name.raw | tojson }}] = {% if field.array is not none %}{{ decode_field(field, 'raw_' ~ field.name.snake) }}{% else %}{{ decode_field(field, 'raw_' ~ field.name.snake ~ '.first') }}{% endif %}
           end
 {%- endfor %}
           input = {{ symbol_for(operation.input.value.schema) }}.from_h(input_data)
