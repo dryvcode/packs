@@ -1,10 +1,10 @@
 # Rust ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: Axum backend is implemented on `develop` but verification is deferred while the Dryv Engine is under maintenance. Other Rust candidates remain backlog.
 
 ## Coverage
 
-- [ ] backend pack
+- [x] backend pack
 - [ ] persistence pack
 - [ ] validation/schema pack
 - [ ] API client SDK
@@ -12,7 +12,7 @@ Status: candidate backlog only. No implementation is approved by this file.
 
 ## Backends
 
-- [ ] Axum backend
+- [x] `package/backend/axum-backend` — implementation present; verification deferred
 - [ ] Actix Web backend
 - [ ] Rocket backend
 - [ ] Poem backend
