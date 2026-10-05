@@ -8,8 +8,8 @@
  *
  * For each pack under packs/<layout>/<purpose>/<name> with tests/check.sh:
  *   1. copy tests/fixture/ into a temporary project, copy the repository-wide
- *      fixtures/dryv.ir.yaml as the one shared Runtime IR fixture, and place the whole
- *      packs/ tree under packs/;
+ *      fixtures/dryv.ir.yaml as the one shared Runtime IR fixture, apply any explicit
+ *      tests/shared-fixtures.json mappings, and place the whole packs/ tree under packs/;
  *   2. run `dryv generate --yes` against the engine at DRYV_API_URL;
  *   3. run tests/check.sh inside the project; a non-zero exit fails the pack.
  *
@@ -17,9 +17,9 @@
  * DRYV_CLI overrides the CLI command, e.g. `bun ../dryv/source/apps/cli/bin/dryv.ts` to test
  * against a local Dryv checkout instead of the pinned @dryvcode/cli.
  */
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dir, "..");
 const PACKS = join(REPO, "packs");
@@ -51,6 +51,37 @@ function run(command: string[], cwd: string): number {
   return Bun.spawnSync(command, { cwd, stdout: "inherit", stderr: "inherit" }).exitCode;
 }
 
+
+function portableFixturePath(value: string, label: string): string {
+  if (!value || value.includes("\\") || isAbsolute(value) || value.split("/").includes("..")) {
+    throw new Error(`${label} must be a non-empty portable relative path`);
+  }
+  return value;
+}
+
+function applySharedFixtures(pack: string, project: string): void {
+  const manifest = join(PACKS, pack, "tests", "shared-fixtures.json");
+  if (!existsSync(manifest)) return;
+
+  const mappings = JSON.parse(readFileSync(manifest, "utf8")) as Record<string, string>;
+  for (const [destinationValue, sourceValue] of Object.entries(mappings)) {
+    const destination = portableFixturePath(destinationValue, `${pack} shared fixture destination`);
+    const source = portableFixturePath(sourceValue, `${pack} shared fixture source`);
+    const from = join(FIXTURES, source);
+    const to = join(project, destination);
+
+    if (!existsSync(from)) {
+      throw new Error(`${pack}: shared fixture does not exist: fixtures/${source}`);
+    }
+    if (existsSync(to)) {
+      throw new Error(`${pack}: shared fixture would overwrite pack-local fixture: ${destination}`);
+    }
+
+    mkdirSync(dirname(to), { recursive: true });
+    cpSync(from, to, { recursive: true });
+  }
+}
+
 function prepare(pack: string): string {
   const fixture = join(PACKS, pack, "tests", "fixture");
   const privateIr = join(fixture, "dryv.ir.yaml");
@@ -63,6 +94,7 @@ function prepare(pack: string): string {
   const project = mkdtempSync(join(tmpdir(), `dryv-pack-${pack.replaceAll("/", "-")}-`));
   cpSync(fixture, project, { recursive: true });
   cpSync(join(FIXTURES, "dryv.ir.yaml"), join(project, "dryv.ir.yaml"));
+  applySharedFixtures(pack, project);
   cpSync(PACKS, join(project, "packs"), {
     recursive: true,
     filter: (path) => {
