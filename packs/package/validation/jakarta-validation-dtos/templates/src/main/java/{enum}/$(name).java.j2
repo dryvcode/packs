@@ -1,0 +1,18 @@
+package {{ pack.inputs.java_package }}.{{ group.name.snake }};
+
+/** {{ property.enum.description or property.enum.name.title }} */
+public enum {{ file.symbol }} {
+{%- for item in property.enum.values %}
+    {{ item.name.constant }}({{ item.value_json }}){% if not loop.last %},{% else %};{% endif %}
+{%- endfor %}
+
+    private final Object value;
+
+    {{ file.symbol }}(Object value) {
+        this.value = value;
+    }
+
+    public Object value() {
+        return value;
+    }
+}
