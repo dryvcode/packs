@@ -1,6 +1,6 @@
 # Java / JVM ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: Jakarta Validation DTOs are implemented on `develop` but verification is deferred while the Dryv Engine is under maintenance. Other Java/JVM candidates remain backlog.
 
 This file covers Java-first JVM packs. Kotlin-specific packs are tracked separately.
 
@@ -8,13 +8,13 @@ This file covers Java-first JVM packs. Kotlin-specific packs are tracked separat
 
 - [ ] backend pack
 - [ ] persistence pack
-- [ ] validation pack
+- [x] validation pack
 - [ ] API client SDK
 - [ ] project pack
 
 ## Validation
 
-- [ ] `package/validation/jakarta-validation-dtos`
+- [x] `package/validation/jakarta-validation-dtos` — implementation present; verification deferred
   - generate Java records/classes or DTO classes
   - generate enums
   - map required/nullability semantics
