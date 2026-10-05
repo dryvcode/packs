@@ -1,0 +1,210 @@
+{%- macro cs_ident(name) -%}
+{%- if name in ['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','false','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','null','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','true','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','virtual','void','volatile','while','record','required','file','scoped'] -%}@{{ name }}{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value) -%}
+{%- if value is none -%}JsonElement
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'JsonElement' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'JsonElement' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}long
+{%- elif value.is.decimal or value.is.money -%}decimal
+{%- elif value.is.number -%}double
+{%- elif value.is.temporal and value.is.date -%}DateOnly
+{%- elif value.is.temporal and value.is.time -%}TimeOnly
+{%- elif value.is.temporal and value.is.date_time -%}DateTime
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}DateTimeOffset
+{%- elif value.is.temporal and value.is.duration -%}TimeSpan
+{%- elif value.is.record -%}Dictionary<string, JsonElement>
+{%- elif value.is.string -%}string
+{%- else -%}JsonElement
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ base_type(operation.input.value) }}{%- else -%}{{ operation.name.pascal }}Input{%- endif -%}
+{%- endmacro -%}
+{%- macro result_type(operation) -%}
+{%- if operation.output -%}{{ base_type(operation.output.value) }}{%- else -%}void{%- endif -%}
+{%- endmacro -%}
+{%- macro whole_binding(http, kind) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and ((kind == 'body' and binding.is.body) or (kind == 'query_object' and binding.is.query_object) or (kind == 'form' and binding.is.form)) -%}x{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro parse_values(field, values, target) -%}
+{%- if field.array is not none %}
+        if (!DryvBindingParser.TryParseMany<{{ base_type(field.value) }}>({{ values }}, out var parsed{{ field.name.pascal }}))
+        {
+            return Results.BadRequest(new { message = "Invalid {{ field.name.raw }}" });
+        }
+        {{ target }} = parsed{{ field.name.pascal }};
+{%- else %}
+        if (!DryvBindingParser.TryParse<{{ base_type(field.value) }}>({{ values }}.FirstOrDefault(), out var parsed{{ field.name.pascal }}))
+        {
+            return Results.BadRequest(new { message = "Invalid {{ field.name.raw }}" });
+        }
+        {{ target }} = parsed{{ field.name.pascal }};
+{%- endif -%}
+{%- endmacro -%}
+{%- macro assign_direct(field, binding, target) -%}
+{%- if binding.is.path %}
+        var values{{ field.name.pascal }} = new StringValues(context.Request.RouteValues.TryGetValue("{{ binding.name or binding.port.name.raw }}", out var route{{ field.name.pascal }}) ? route{{ field.name.pascal }}?.ToString() : null);
+{%- elif binding.is.query %}
+        var values{{ field.name.pascal }} = context.Request.Query["{{ binding.name or binding.port.name.raw }}"];
+{%- elif binding.is.header %}
+        var values{{ field.name.pascal }} = context.Request.Headers["{{ binding.name or binding.port.name.raw }}"];
+{%- elif binding.is.cookie %}
+        var values{{ field.name.pascal }} = new StringValues(context.Request.Cookies.TryGetValue("{{ binding.name or binding.port.name.raw }}", out var cookie{{ field.name.pascal }}) ? cookie{{ field.name.pascal }} : null);
+{%- elif binding.is.form %}
+        var values{{ field.name.pascal }} = form["{{ binding.name or binding.port.name.raw }}"];
+{%- endif %}
+{%- if binding.is.path or binding.is.query or binding.is.header or binding.is.cookie or binding.is.form %}
+{%- if field.optional %}
+        if (values{{ field.name.pascal }}.Count > 0)
+        {
+{{ parse_values(field, 'values' ~ field.name.pascal, target) }}
+        }
+{%- else %}
+        if (values{{ field.name.pascal }}.Count == 0)
+        {
+            return Results.BadRequest(new { message = "Missing required {{ field.name.raw }}" });
+        }
+{{ parse_values(field, 'values' ~ field.name.pascal, target) }}
+{%- endif %}
+{%- elif binding.is.body %}
+        var parsed{{ field.name.pascal }} = await context.Request.ReadFromJsonAsync<{{ field_type(field) }}>(cancellationToken: cancellationToken);
+{%- if not field.optional %}
+        if (parsed{{ field.name.pascal }} is null)
+        {
+            return Results.BadRequest(new { message = "Missing required {{ field.name.raw }}" });
+        }
+{%- endif %}
+        {{ target }} = parsed{{ field.name.pascal }};
+{%- endif -%}
+{%- endmacro -%}
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Primitives;
+using {{ pack.inputs.root_namespace }}.Models;
+
+namespace {{ pack.inputs.root_namespace }}.Endpoints;
+
+public interface {{ file.symbols.service }}
+{
+{%- for operation in operations %}
+    Task{% if operation.output %}<{{ result_type(operation) }}>{% endif %} {{ cs_ident(operation.name.pascal) }}Async({% if operation.input %}{{ input_type(operation) }} input, {% endif %}CancellationToken cancellationToken = default);
+{%- endfor %}
+}
+
+{%- for operation in operations %}{% if operation.input and operation.input.kind != 'schema' %}
+public sealed class {{ operation.name.pascal }}Input
+{
+{%- for field in operation.input.fields %}
+    public {{ field_type(field) }} {{ cs_ident(field.name.pascal) }} { get; set; }
+{%- endfor %}
+}
+{%- endif %}{% endfor %}
+
+public static class {{ group.name.pascal }}{{ feature.name.pascal }}Endpoints
+{
+    public static IEndpointRouteBuilder {{ file.symbols.map }}(this IEndpointRouteBuilder endpoints)
+    {
+{%- for operation in operations %}
+        endpoints.MapMethods("{{ operation.facets.http.path.local }}", new[] { "{{ operation.facets.http.method }}" }, Handle{{ operation.name.pascal }});
+{%- endfor %}
+        return endpoints;
+    }
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    private static async Task<IResult> Handle{{ operation.name.pascal }}(
+        HttpContext context,
+        {{ file.symbols.service }} service,
+        CancellationToken cancellationToken)
+    {
+{%- if http.input_groups.multipart %}
+        return Results.StatusCode(StatusCodes.Status501NotImplemented);
+{%- else %}
+{%- if operation.input %}
+{%- if whole_binding(http, 'body') %}
+        var serviceInput = await context.Request.ReadFromJsonAsync<{{ input_type(operation) }}>(cancellationToken: cancellationToken);
+        if (serviceInput is null)
+        {
+            return Results.BadRequest(new { message = "Request body is required" });
+        }
+{%- else %}
+        var serviceInput = new {{ input_type(operation) }}();
+{%- if http.input_groups.form %}
+        var form = await context.Request.ReadFormAsync(cancellationToken);
+{%- endif %}
+{%- if whole_binding(http, 'query_object') %}
+{%- for field in operation.input.fields %}
+        var values{{ field.name.pascal }} = context.Request.Query["{{ field.name.raw }}"];
+{%- if field.optional %}
+        if (values{{ field.name.pascal }}.Count > 0)
+        {
+{{ parse_values(field, 'values' ~ field.name.pascal, 'serviceInput.' ~ cs_ident(field.name.pascal)) }}
+        }
+{%- else %}
+        if (values{{ field.name.pascal }}.Count == 0)
+        {
+            return Results.BadRequest(new { message = "Missing required {{ field.name.raw }}" });
+        }
+{{ parse_values(field, 'values' ~ field.name.pascal, 'serviceInput.' ~ cs_ident(field.name.pascal)) }}
+{%- endif %}
+{%- endfor %}
+{%- elif whole_binding(http, 'form') %}
+{%- for field in operation.input.fields %}
+        var values{{ field.name.pascal }} = form["{{ field.name.raw }}"];
+{%- if field.optional %}
+        if (values{{ field.name.pascal }}.Count > 0)
+        {
+{{ parse_values(field, 'values' ~ field.name.pascal, 'serviceInput.' ~ cs_ident(field.name.pascal)) }}
+        }
+{%- else %}
+        if (values{{ field.name.pascal }}.Count == 0)
+        {
+            return Results.BadRequest(new { message = "Missing required {{ field.name.raw }}" });
+        }
+{{ parse_values(field, 'values' ~ field.name.pascal, 'serviceInput.' ~ cs_ident(field.name.pascal)) }}
+{%- endif %}
+{%- endfor %}
+{%- else %}
+{%- for field in operation.input.fields %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}
+{{ assign_direct(field, binding, 'serviceInput.' ~ cs_ident(field.name.pascal)) }}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+
+{%- if operation.output %}
+        var output = await service.{{ cs_ident(operation.name.pascal) }}Async({% if operation.input %}serviceInput, {% endif %}cancellationToken);
+        return Results.Json(output, statusCode: {{ success_status(http) }});
+{%- else %}
+        await service.{{ cs_ident(operation.name.pascal) }}Async({% if operation.input %}serviceInput, {% endif %}cancellationToken);
+        return Results.StatusCode({{ success_status(http) }});
+{%- endif %}
+{%- endif %}
+    }
+
+{%- endfor %}
+}
