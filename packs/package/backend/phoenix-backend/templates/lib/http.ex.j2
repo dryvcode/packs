@@ -34,13 +34,33 @@ defmodule {{ pack.inputs.module_prefix }}.Http do
     Enum.map(values, &decode(&1, kind, module))
   end
 
+  def bind_values!(values, kind, module, array?, required?, label) do
+    values = Enum.reject(values, &is_nil/1)
+
+    case values do
+      [] when required? ->
+        raise ArgumentError, "missing required #{label}"
+
+      [] ->
+        nil
+
+      values when array? ->
+        decode_many(values, kind, module)
+
+      [value | _] ->
+        decode(value, kind, module)
+    end
+  end
+
   def query_values(conn, name) do
     conn.query_string
     |> URI.query_decoder()
-    |> Enum.reduce([], fn
-      {^name, value}, acc -> acc ++ [value]
-      {key, value}, acc when key == name <> "[]" -> acc ++ [value]
-      _, acc -> acc
+    |> Enum.reduce([], fn {key, value}, acc ->
+      if key == name or key == name <> "[]" do
+        acc ++ [value]
+      else
+        acc
+      end
     end)
   end
 
