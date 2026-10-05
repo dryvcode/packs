@@ -37,7 +37,7 @@ use Doctrine\ORM\Mapping as ORM;
 {%- elif value.is.uuid -%}Types::GUID
 {%- elif value.is.temporal and value.is.date -%}Types::DATE_IMMUTABLE
 {%- elif value.is.temporal and value.is.time -%}Types::TIME_IMMUTABLE
-{%- elif value.is.temporal and value.is_date_time -%}Types::DATETIME_IMMUTABLE
+{%- elif value.is.temporal and value.is.date_time -%}Types::DATETIME_IMMUTABLE
 {%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}Types::DATETIMETZ_IMMUTABLE
 {%- elif value.is.string -%}
   {%- set length = value.property.primitive.constraints.length -%}
