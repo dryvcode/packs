@@ -1,0 +1,7 @@
+{%- for export in file.exports %}
+pub mod {{ export.path.relative | replace('.rs', '') | replace('./', '') }};
+{%- endfor %}
+
+{%- for export in file.exports %}{% if export.symbol %}
+pub use {{ export.path.relative | replace('.rs', '') | replace('./', '') }}::{{ export.symbol }};
+{%- endif %}{% endfor %}
