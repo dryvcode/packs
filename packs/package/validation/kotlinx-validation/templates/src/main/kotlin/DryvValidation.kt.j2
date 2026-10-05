@@ -1,0 +1,63 @@
+package {{ pack.inputs.package_name }}
+
+import java.math.BigDecimal
+
+data class DryvValidationError(
+    val path: String,
+    val message: String,
+)
+
+object DryvValidation {
+    fun path(parent: String, child: String): String =
+        if (parent.isBlank()) child else "$parent.$child"
+
+    fun index(parent: String, index: Int): String =
+        "$parent[$index]"
+
+    fun compare(left: Any?, right: Any?, operator: String): Boolean {
+        if (operator == "equal") return normalizedEquals(left, right)
+        if (operator == "not-equal") return !normalizedEquals(left, right)
+        if (left == null || right == null) return false
+
+        val leftNumber = numeric(left)
+        val rightNumber = numeric(right)
+        if (leftNumber != null && rightNumber != null) {
+            val comparison = leftNumber.compareTo(rightNumber)
+            return compareResult(comparison, operator)
+        }
+
+        if (left is String && right is String) {
+            return compareResult(left.compareTo(right), operator)
+        }
+
+        if (left is Boolean && right is Boolean) {
+            return compareResult(left.compareTo(right), operator)
+        }
+
+        return false
+    }
+
+    private fun normalizedEquals(left: Any?, right: Any?): Boolean {
+        if (left == null || right == null) return left == right
+        val leftNumber = numeric(left)
+        val rightNumber = numeric(right)
+        if (leftNumber != null && rightNumber != null) {
+            return leftNumber.compareTo(rightNumber) == 0
+        }
+        return left == right
+    }
+
+    private fun numeric(value: Any): BigDecimal? = when (value) {
+        is Byte, is Short, is Int, is Long, is Float, is Double -> value.toString().toBigDecimalOrNull()
+        is BigDecimal -> value
+        else -> null
+    }
+
+    private fun compareResult(comparison: Int, operator: String): Boolean = when (operator) {
+        "less-than" -> comparison < 0
+        "less-than-or-equal" -> comparison <= 0
+        "greater-than" -> comparison > 0
+        "greater-than-or-equal" -> comparison >= 0
+        else -> false
+    }
+}
