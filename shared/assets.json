@@ -30,5 +30,11 @@
     "packs/package/clients/rust-client-sdk/templates/src/models/{models-index}/mod.rs.j2",
     "packs/package/clients/rust-client-sdk/templates/src/operations/{operations-index}/mod.rs.j2",
     "packs/package/validation/validator-dtos/templates/src/types/{index}/mod.rs.j2"
+  ],
+  "templates/java/jackson-enum.java.j2": [
+    "packs/package/clients/java-client-sdk/templates/src/main/java/models/{enum}/$(name).java.j2"
+  ],
+  "templates/java/jackson-model.java.j2": [
+    "packs/package/clients/java-client-sdk/templates/src/main/java/models/{model}/$(name).java.j2"
   ]
 }
