@@ -1,15 +1,15 @@
 # Java / JVM ecosystem
 
-Status: Jakarta Validation DTOs are implemented on `develop` but verification is deferred while the Dryv Engine is under maintenance. Other Java/JVM candidates remain backlog.
+Status: Jakarta Validation DTOs, Java HttpClient SDK and portable JPA entities are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
 This file covers Java-first JVM packs. Kotlin-specific packs are tracked separately.
 
 ## Coverage
 
 - [ ] backend pack
-- [ ] persistence pack
+- [x] persistence pack
 - [x] validation pack
-- [ ] API client SDK
+- [x] API client SDK
 - [ ] project pack
 
 ## Validation
@@ -54,7 +54,7 @@ Models:
 
 ## Persistence
 
-- [ ] JPA / Hibernate entities
+- [x] `package/persistence/jpa-entities` — portable JPA implementation present; verification deferred
 - [ ] Spring Data JPA integration
 - [ ] EclipseLink/JPA portability research
 - [ ] jOOQ-oriented models/integration
@@ -73,7 +73,7 @@ Primary model: `typeorm-entities`.
 
 ## Client SDKs
 
-- [ ] `package/clients/java-client-sdk`
+- [x] `package/clients/java-client-sdk` — implementation present; verification deferred
 - [ ] Java `HttpClient` baseline
 - [ ] Jackson models
 - [ ] typed operations
