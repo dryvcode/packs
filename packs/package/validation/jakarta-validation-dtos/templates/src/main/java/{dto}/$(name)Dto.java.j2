@@ -1,0 +1,246 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro java_type(value) -%}
+{%- if value is none -%}Object
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}ZonedDateTime
+{%- elif value.is.temporal and value.is.duration -%}Duration
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay
+{%- elif value.is.record -%}Map<String, Object>
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro string_constraints(primitive, indent) -%}
+{%- set length = primitive.constraints.length -%}
+{%- if length is not none and length.has_exact %}
+{{ indent }}@Size(min = {{ length.exact }}, max = {{ length.exact }})
+{%- else %}
+{%- if length is not none and (length.has_min or length.has_max) %}
+{{ indent }}@Size({% if length.has_min %}min = {{ length.min }}{% if length.has_max %}, {% endif %}{% endif %}{% if length.has_max %}max = {{ length.max }}{% endif %})
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+{{ indent }}@Email
+{%- elif primitive.is.uuid %}
+{{ indent }}@Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+{%- elif primitive.is.ulid %}
+{{ indent }}@Pattern(regexp = "^[0-9A-HJKMNP-TV-Z]{26}$")
+{%- elif primitive.is.e164 %}
+{{ indent }}@Pattern(regexp = "^\\+[1-9][0-9]{1,14}$")
+{%- elif primitive.is.phone %}
+{{ indent }}@Pattern(regexp = "^\\+?[0-9 ().-]{7,20}$")
+{%- elif primitive.is.slug %}
+{{ indent }}@Pattern(regexp = "^[a-z0-9]+(?:-[a-z0-9]+)*$")
+{%- elif primitive.is.hex_color %}
+{{ indent }}@Pattern(regexp = "^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+{%- elif primitive.is.hex %}
+{{ indent }}@Pattern(regexp = "^[0-9a-fA-F]+$")
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match_json %}
+{{ indent }}@Pattern(regexp = {{ expression }})
+{%- endfor %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro numeric_constraints(primitive, indent) -%}
+{%- set range = primitive.constraints.range -%}
+{%- if range is not none and range.has_min %}
+{{ indent }}@DecimalMin(value = "{{ range.min }}")
+{%- endif %}
+{%- if range is not none and range.has_max %}
+{{ indent }}@DecimalMax(value = "{{ range.max }}")
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro value_constraints(value, indent) -%}
+{%- if value is not none and value.is.primitive -%}
+{%- set primitive = value.property.primitive -%}
+{%- if primitive.is.string %}
+{{- string_constraints(primitive, indent) }}
+{%- elif primitive.is.number %}
+{{- numeric_constraints(primitive, indent) }}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}
+List<{{ value_constraints(field.value, '') | trim | replace('\n', ' ') }}{% if field.value is not none and field.value.is.schema %}@Valid {% endif %}{{ java_type(field.value) }}>
+{%- else -%}
+{{ java_type(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand(value) -%}
+{%- if value.is.field -%}value.{{ value.field.camel }}
+{%- elif value.is.literal -%}{{ value.value_json }}
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic -%}{%- set state.ok = false -%}{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_predicate(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}
+compare({{ operand(comparison.left) }}, {{ operand(comparison.right) }}, "{{ comparison.operator }}")
+{%- if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+package {{ pack.inputs.java_package }}.{{ group.name.snake }};
+
+import jakarta.validation.Constraint;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
+import jakarta.validation.Payload;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.YearMonth;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.java_package }}.{{ dependency.path.pack | replace('src/main/java/', '') | replace('/', '.') | replace('.java', '') }};
+{%- endif %}{% endfor %}
+
+{%- set validation = namespace(enabled=false) %}
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}{% set validation.enabled = true %}{% endif %}
+{%- endfor %}
+{%- if validation.enabled %}
+
+@Valid{{ file.symbol }}
+{%- endif %}
+/**
+ * {{ schema.description or schema.name.title }}{% if schema.role %} ({{ schema.role }}){% endif %}.
+ */
+public class {{ file.symbol }} {
+{%- for field in schema.fields %}
+
+{%- if not field.optional and not field.nullable %}
+    @NotNull
+{%- endif %}
+{%- if field.array is not none %}
+{%- if field.array.has_min or field.array.has_max %}
+    @Size({% if field.array.has_min %}min = {{ field.array.min }}{% if field.array.has_max %}, {% endif %}{% endif %}{% if field.array.has_max %}max = {{ field.array.max }}{% endif %})
+{%- endif %}
+{%- elif field.value is not none %}
+{{ value_constraints(field.value, '    ') }}
+{%- endif %}
+{%- if field.value is not none and field.value.is.schema %}
+    @Valid
+{%- endif %}
+    public {{ field_type(field) }} {{ field.name.camel }};
+{%- endfor %}
+}
+
+{%- if validation.enabled %}
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Constraint(validatedBy = {{ file.symbol }}InvariantValidator.class)
+@interface Valid{{ file.symbol }} {
+    String message() default "Dryv schema invariant failed";
+    Class<?>[] groups() default {};
+    Class<? extends Payload>[] payload() default {};
+}
+
+final class {{ file.symbol }}InvariantValidator
+        implements ConstraintValidator<Valid{{ file.symbol }}, {{ file.symbol }}> {
+
+    @Override
+    public boolean isValid({{ file.symbol }} value, ConstraintValidatorContext context) {
+        if (value == null) {
+            return true;
+        }
+
+        boolean valid = true;
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+        if (!({{ invariant_predicate(invariant) }})) {
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(
+                    {% if invariant.message %}{{ invariant.message_json }}{% else %}"Dryv invariant {{ invariant.name.raw }} failed"{% endif %}
+            ).addConstraintViolation();
+            valid = false;
+        }
+{%- endif %}
+{%- endfor %}
+        return valid;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static boolean compare(Object left, Object right, String operator) {
+        if ("equal".equals(operator)) {
+            return Objects.equals(left, right);
+        }
+        if ("not-equal".equals(operator)) {
+            return !Objects.equals(left, right);
+        }
+        if (left == null || right == null) {
+            return true;
+        }
+
+        int comparison;
+        if (left instanceof Number leftNumber && right instanceof Number rightNumber) {
+            comparison = new BigDecimal(leftNumber.toString())
+                    .compareTo(new BigDecimal(rightNumber.toString()));
+        } else if (left instanceof Comparable comparable && left.getClass().isInstance(right)) {
+            comparison = comparable.compareTo(right);
+        } else {
+            return false;
+        }
+
+        return switch (operator) {
+            case "less-than" -> comparison < 0;
+            case "less-than-or-equal" -> comparison <= 0;
+            case "greater-than" -> comparison > 0;
+            case "greater-than-or-equal" -> comparison >= 0;
+            default -> false;
+        };
+    }
+}
+{%- endif %}
