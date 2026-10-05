@@ -1,0 +1,174 @@
+# frozen_string_literal: true
+
+module {{ pack.inputs.module_name }}
+{%- macro ruby_ident(name) -%}
+{%- if name in ['BEGIN','END','alias','and','begin','break','case','class','def','defined','do','else','elsif','end','ensure','false','for','if','in','module','next','nil','not','or','redo','rescue','retry','return','self','super','then','true','undef','unless','until','when','while','yield'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro kind(value) -%}
+{%- if value.is.schema -%}schema
+{%- elif value.is.enum -%}enum
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.string or value.is.temporal or value.is.decimal or value.is.money -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro klass(value) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}
+{%- else -%}nil
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_field(field, raw) -%}
+{%- if field.array is not none -%}DryvHttp.decode_many({{ raw }}, {{ kind(field.value) | tojson }}, {{ klass(field.value) }})
+{%- else -%}DryvHttp.decode({{ raw }}, {{ kind(field.value) | tojson }}, {{ klass(field.value) }})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro route_path(http) -%}
+{%- set state = namespace(value=http.path.local) -%}
+{%- for binding in http.input_groups.path -%}
+{%- set name = binding.name or binding.port.name.raw -%}
+{%- set state.value = state.value | replace('{' ~ name ~ '}', ':' ~ name) -%}
+{%- endfor -%}
+{{- state.value -}}
+{%- endmacro -%}
+
+{%- macro source(binding, field) -%}
+{%- set name = binding.name or binding.port.name.raw -%}
+{%- if binding.is.path -%}params[{{ name | tojson }}]
+{%- elif binding.is.query -%}{% if field.array is not none %}DryvHttp.query_values(request, {{ name | tojson }}){% else %}DryvHttp.query_values(request, {{ name | tojson }}).first{% endif %}
+{%- elif binding.is.header -%}DryvHttp.header(request, {{ name | tojson }})
+{%- elif binding.is.cookie -%}request.cookies[{{ name | tojson }}]
+{%- elif binding.is.form -%}{% if field.array is not none %}DryvHttp.form_values(request, {{ name | tojson }}){% else %}DryvHttp.form_values(request, {{ name | tojson }}).first{% endif %}
+{%- elif binding.is.body -%}json_body[{{ field.name.raw | tojson }}]
+{%- else -%}nil
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+  module {{ file.symbols.service }}
+{%- for operation in operations %}
+    def {{ ruby_ident(operation.name.snake) }}(_input = nil)
+      raise NotImplementedError, "{{ operation.name.raw }} is not implemented"
+    end
+{%- endfor %}
+  end
+
+{%- for operation in operations %}
+{%- if operation.input and operation.input.kind != 'schema' %}
+  {{ operation.name.pascal }}Input = Struct.new(
+{%- for field in operation.input.fields %}
+    :{{ ruby_ident(field.name.snake) }}{% if not loop.last %},{% endif %}
+{%- endfor %},
+    keyword_init: true,
+  )
+{%- endif %}
+{%- endfor %}
+
+  module {{ file.symbols.register }}
+    module_function
+
+    def register(app, service)
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+      app.route({{ http.method | tojson }}, {{ route_path(http) | tojson }}) do
+{%- if http.input_groups.multipart %}
+        status 501
+        content_type :json
+        JSON.generate("message" => "multipart bindings require an explicit Ruby semantic mapping")
+{%- else %}
+        begin
+{%- if http.input_groups.body %}
+          json_body = DryvHttp.json_object(request)
+{%- endif %}
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+{%- set whole = namespace(kind='', binding=none) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is none and binding.is.body %}{% set whole.kind='body' %}{% set whole.binding=binding %}{% endif %}
+{%- if binding.port.field is none and binding.is.query_object %}{% set whole.kind='query' %}{% set whole.binding=binding %}{% endif %}
+{%- if binding.port.field is none and binding.is.form %}{% set whole.kind='form' %}{% set whole.binding=binding %}{% endif %}
+{%- endfor %}
+{%- if whole.kind == 'body' %}
+          input = {{ symbol_for(operation.input.value.schema) }}.from_h(json_body)
+{%- elif whole.kind == 'query' or whole.kind == 'form' %}
+          input_data = {}
+{%- for field in operation.input.value.schema.fields %}
+{%- if whole.kind == 'query' %}
+          raw_{{ field.name.snake }} = DryvHttp.query_values(request, {{ field.name.raw | tojson }})
+{%- else %}
+          raw_{{ field.name.snake }} = DryvHttp.form_values(request, {{ field.name.raw | tojson }})
+{%- endif %}
+{%- if not field.optional %}
+          halt 400, JSON.generate("message" => "missing required {{ field.name.raw }}") if raw_{{ field.name.snake }}.empty?
+{%- endif %}
+          unless raw_{{ field.name.snake }}.empty?
+            input_data[{{ field.name.raw | tojson }}] = {{ decode_field(field, 'field.array is not none and raw_' ~ field.name.snake ~ ' or raw_' ~ field.name.snake ~ '.first') }}
+          end
+{%- endfor %}
+          input = {{ symbol_for(operation.input.value.schema) }}.from_h(input_data)
+{%- else %}
+          input_data = {}
+{%- for field in operation.input.value.schema.fields %}
+{%- set state = namespace(binding=none) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}{% set state.binding=binding %}{% endif %}
+{%- endfor %}
+{%- if state.binding %}
+          raw_{{ field.name.snake }} = {{ source(state.binding, field) }}
+{%- if not field.optional %}
+          halt 400, JSON.generate("message" => "missing required {{ field.name.raw }}") if raw_{{ field.name.snake }}.nil?{% if field.array is not none %} || raw_{{ field.name.snake }}.empty?{% endif %}
+{%- endif %}
+          input_data[{{ field.name.raw | tojson }}] = {{ decode_field(field, 'raw_' ~ field.name.snake) }} unless raw_{{ field.name.snake }}.nil?
+{%- endif %}
+{%- endfor %}
+          input = {{ symbol_for(operation.input.value.schema) }}.from_h(input_data)
+{%- endif %}
+{%- else %}
+          input = {{ operation.name.pascal }}Input.new(
+{%- for field in operation.input.fields %}
+{%- set state = namespace(binding=none) %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}{% set state.binding=binding %}{% endif %}
+{%- endfor %}
+            {{ ruby_ident(field.name.snake) }}: {% if state.binding %}{{ decode_field(field, source(state.binding, field)) }}{% else %}nil{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+          )
+{%- endif %}
+{%- endif %}
+        rescue ArgumentError, JSON::ParserError => error
+          halt 400, JSON.generate("message" => error.message)
+        end
+
+{%- if operation.output %}
+        output = service.{{ ruby_ident(operation.name.snake) }}({% if operation.input %}input{% endif %})
+        status {{ success_status(http) }}
+        content_type :json
+        JSON.generate(DryvHttp.wire(output))
+{%- else %}
+        service.{{ ruby_ident(operation.name.snake) }}({% if operation.input %}input{% endif %})
+        status {{ success_status(http) }}
+        ""
+{%- endif %}
+{%- endif %}
+      end
+{%- endfor %}
+    end
+  end
+end
