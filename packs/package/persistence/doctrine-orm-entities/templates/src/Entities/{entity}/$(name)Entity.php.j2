@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Entities;
+
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+
+{%- macro base_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none -%}array
+{%- elif value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}mixed
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.decimal or value.is.money -%}string
+{%- elif value.is.uuid -%}string
+{%- elif value.is.temporal and (value.is.date or value.is.time or value.is.date_time or value.is.instant or value.is.zoned_date_time) -%}\DateTimeImmutable
+{%- elif value.is.string or value.is.temporal -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{{- base_type(field) -}}
+{%- if (field.optional or field.nullable) and base_type(field) != 'mixed' -%}|null{%- endif -%}
+{%- endmacro -%}
+
+{%- macro dbal_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}Types::JSON
+{%- elif value.is.boolean -%}Types::BOOLEAN
+{%- elif value.is.integer -%}Types::BIGINT
+{%- elif value.is.decimal or value.is.money -%}Types::DECIMAL
+{%- elif value.is.number -%}Types::FLOAT
+{%- elif value.is.uuid -%}Types::GUID
+{%- elif value.is.temporal and value.is.date -%}Types::DATE_IMMUTABLE
+{%- elif value.is.temporal and value.is.time -%}Types::TIME_IMMUTABLE
+{%- elif value.is.temporal and value.is_date_time -%}Types::DATETIME_IMMUTABLE
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}Types::DATETIMETZ_IMMUTABLE
+{%- elif value.is.string -%}
+  {%- set length = value.property.primitive.constraints.length -%}
+  {%- if length is not none and (length.has_exact or length.has_max) -%}Types::STRING{%- else -%}Types::TEXT{%- endif -%}
+{%- else -%}Types::STRING
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set pk = namespace(count=0) -%}
+{%- for field in schema.fields -%}
+{%- if field.storage is not none and field.storage.primary_key -%}{%- set pk.count = pk.count + 1 -%}{%- endif -%}
+{%- endfor -%}
+
+#[ORM\Entity]
+#[ORM\Table(
+    name: "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"{% if schema.facets.storage and schema.facets.storage.namespace %},
+    schema: "{{ schema.facets.storage.namespace }}"{% endif %}
+)]
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+{%- if index.unique %}
+#[ORM\UniqueConstraint(
+    name: "{% if index.name %}{{ index.name }}{% else %}uniq_{{ schema.name.snake }}_{{ loop.index }}{% endif %}",
+    columns: [{% for field_name in index.fields %}"{{ field_name.snake }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+)]
+{%- else %}
+#[ORM\Index(
+    name: "{% if index.name %}{{ index.name }}{% else %}idx_{{ schema.name.snake }}_{{ loop.index }}{% endif %}",
+    columns: [{% for field_name in index.fields %}"{{ field_name.snake }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+)]
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+final class {{ file.symbol }}
+{
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+{%- if field.storage is not none and field.storage.primary_key %}
+    #[ORM\Id]
+{%- if pk.count == 1 and field.mutation == 'system' and field.value.is.integer %}
+    #[ORM\GeneratedValue(strategy: 'IDENTITY')]
+{%- endif %}
+{%- endif %}
+    #[ORM\Column(
+        name: "{{ field.name.snake }}",
+        type: {{ dbal_type(field) }},
+        nullable: {% if field.optional or field.nullable %}true{% else %}false{% endif %},
+        updatable: {% if field.mutation == 'create-only' %}false{% else %}true{% endif %}
+{%- if field.value.is.string %}
+{%- set length = field.value.property.primitive.constraints.length %}
+{%- if length is not none and length.has_exact %},
+        length: {{ length.exact }}
+{%- elif length is not none and length.has_max %},
+        length: {{ length.max }}
+{%- endif %}
+{%- endif %}
+{%- if field.value.is.decimal or field.value.is.money %}
+{%- set constraints = field.value.property.primitive.constraints %}
+{%- if constraints.has_precision %},
+        precision: {{ constraints.precision }}
+{%- endif %}
+{%- if constraints.has_scale %},
+        scale: {{ constraints.scale }}
+{%- endif %}
+{%- endif %}
+    )]
+    public {{ field_type(field) }} \${{ field.name.camel }};
+{%- if field.relation is not none %}
+
+    // Dryv relation {{ field.relation.cardinality }} targets {{ field.relation.target.schema.name.raw }}.{{ field.relation.target.field.raw }}.
+    // The scalar FK column above remains authoritative; Doctrine navigation is intentionally not double-mapped.
+{%- endif %}
+{%- elif field.related is not none %}
+
+    // Inverse relation "{{ field.name.raw }}" is derived navigation and is not persisted as a second column.
+{%- endif %}
+{%- endfor %}
+}
