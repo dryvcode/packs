@@ -24,6 +24,67 @@ final class DryvHttp
         return $decoded;
     }
 
+
+    public static function queryHas(Request $request, string $name): bool
+    {
+        return self::queryValues($request, $name) !== [];
+    }
+
+    public static function queryValue(Request $request, string $name): mixed
+    {
+        return self::queryValues($request, $name)[0] ?? null;
+    }
+
+    /** @return list<string> */
+    public static function queryValues(Request $request, string $name): array
+    {
+        return self::encodedValues((string) $request->server->get('QUERY_STRING', ''), $name);
+    }
+
+    public static function formHas(Request $request, string $name): bool
+    {
+        return self::formValues($request, $name) !== [];
+    }
+
+    public static function formValue(Request $request, string $name): mixed
+    {
+        return self::formValues($request, $name)[0] ?? null;
+    }
+
+    /** @return list<string> */
+    public static function formValues(Request $request, string $name): array
+    {
+        if ($request->getContentTypeFormat() !== 'form') {
+            $value = $request->request->all($name);
+            if ($value !== []) {
+                return array_map('strval', $value);
+            }
+            $single = $request->request->get($name);
+            return $single === null ? [] : [(string) $single];
+        }
+
+        return self::encodedValues($request->getContent(), $name);
+    }
+
+    /** @return list<string> */
+    private static function encodedValues(string $encoded, string $name): array
+    {
+        $values = [];
+        foreach (explode('&', $encoded) as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+            [$rawName, $rawValue] = array_pad(explode('=', $pair, 2), 2, '');
+            $decodedName = urldecode($rawName);
+            if ($decodedName !== $name && $decodedName !== $name . '[]') {
+                continue;
+            }
+            $values[] = urldecode($rawValue);
+        }
+
+        return $values;
+    }
+
     public static function decode(mixed $raw, string $kind, ?string $class = null): mixed
     {
         if ($raw === null) {
