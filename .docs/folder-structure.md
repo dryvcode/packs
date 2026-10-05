@@ -15,6 +15,7 @@ The scalar `layout` in `dryv.pack.yaml` is authoritative; `inject` is the defaul
 ```text
 fixtures/
   dryv.ir.yaml              one Runtime IR fixture for every pack test
+  manifest.json             reusable fixture mappings keyed by canonical pack ID
   ...                       other reusable test inputs
 
 shared/
