@@ -1,0 +1,83 @@
+version: dryv.pack/v1alpha1
+key: backend.sinatra-backend
+layout: package
+package:
+  name: dryv-sinatra-backend
+
+source: templates
+
+info:
+  title: Sinatra Backend
+  version: 0.1.0
+  description: Generates Sinatra 4.2 route registration modules, wire models and service boundaries.
+
+catalog:
+  purpose: backend
+  summary: Sinatra route registration with shared Ruby wire models and explicit service injection.
+  languages: [ruby]
+  frameworks: [sinatra]
+  tags: [backend, rest, http, ruby]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvGeneratedBackend
+    description: Root Ruby module for generated backend code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  routes:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: $(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  package-index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/routes"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
