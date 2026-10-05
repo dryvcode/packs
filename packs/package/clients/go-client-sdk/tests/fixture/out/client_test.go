@@ -97,15 +97,11 @@ func TestSearchUsersBindsQueryHeaderAndCookie(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"user-1","externalCustomerId":"customer-1","displayName":"Ada","status":"active","createdAt":"2026-10-05T00:00:00Z"}`))
 	})
 
-	status := UserStatusActive
-	limit := int64(25)
-	traceID := "trace-1"
-	session := "session-1"
 	result, err := SearchUsers(context.Background(), client, SearchUsersInput{
-		Status:  &status,
-		Limit:   &limit,
-		TraceId: &traceID,
-		Session: &session,
+		Status:  UserStatusActive,
+		Limit:   25,
+		TraceId: "trace-1",
+		Session: "session-1",
 	})
 	if err != nil {
 		t.Fatal(err)
