@@ -25,8 +25,12 @@ import Foundation
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro storage_type(field) -%}
+{%- if field.array is not none -%}[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
 {%- macro field_type(field) -%}
-{%- if field.array is not none -%}[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{{- storage_type(field) -}}{%- if field.optional or field.nullable -%}?{%- endif -%}
 {%- endmacro -%}
 
 public struct {{ file.symbol }}: Codable, Sendable {
@@ -47,6 +51,60 @@ public struct {{ file.symbol }}: Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
 {%- for field in schema.fields %}
         case {{ swift_ident(field.name.camel) }} = {{ field.name.raw | tojson }}
+{%- endfor %}
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+{%- for field in schema.fields %}
+{%- if field.optional %}
+        self.{{ swift_ident(field.name.camel) }} = try container.decodeIfPresent(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- elif field.nullable %}
+        guard container.contains(.{{ swift_ident(field.name.camel) }}) else {
+            throw DecodingError.keyNotFound(
+                .{{ swift_ident(field.name.camel) }},
+                .init(
+                    codingPath: container.codingPath,
+                    debugDescription: "Missing required nullable field {{ field.name.raw }}"
+                )
+            )
+        }
+        self.{{ swift_ident(field.name.camel) }} = try container.decodeIfPresent(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- else %}
+        self.{{ swift_ident(field.name.camel) }} = try container.decode(
+            {{ storage_type(field) }}.self,
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- endif %}
+{%- endfor %}
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+{%- for field in schema.fields %}
+{%- if field.optional %}
+        try container.encodeIfPresent(
+            {{ swift_ident(field.name.camel) }},
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- elif field.nullable %}
+        if let value = {{ swift_ident(field.name.camel) }} {
+            try container.encode(value, forKey: .{{ swift_ident(field.name.camel) }})
+        } else {
+            try container.encodeNil(forKey: .{{ swift_ident(field.name.camel) }})
+        }
+{%- else %}
+        try container.encode(
+            {{ swift_ident(field.name.camel) }},
+            forKey: .{{ swift_ident(field.name.camel) }}
+        )
+{%- endif %}
 {%- endfor %}
     }
 }
