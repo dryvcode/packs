@@ -38,5 +38,17 @@
   "templates/java/jackson-model.java.j2": [
     "packs/package/clients/java-client-sdk/templates/src/main/java/models/{model}/$(name).java.j2",
     "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{model}/$(name).java.j2"
+  ],
+  "templates/go/go.mod.j2": [
+    "packs/package/clients/go-client-sdk/templates/go.mod.j2",
+    "packs/package/backend/go-net-http-backend/templates/go.mod.j2"
+  ],
+  "templates/go/enum.go.j2": [
+    "packs/package/clients/go-client-sdk/templates/{enum}/$(name)_enum.go.j2",
+    "packs/package/backend/go-net-http-backend/templates/{enum}/$(name)_enum.go.j2"
+  ],
+  "templates/go/model.go.j2": [
+    "packs/package/clients/go-client-sdk/templates/{model}/$(name)_model.go.j2",
+    "packs/package/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2"
   ]
 }
