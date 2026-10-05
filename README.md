@@ -48,7 +48,7 @@ The repository avoids parallel sources of truth:
 - pack catalogue metadata lives only in each pack's `dryv.pack.yaml`; `catalog.json` is generated and not committed;
 - every pack test uses the same `fixtures/dryv.ir.yaml`;
 - reusable test inputs live under `fixtures/`;
-- exact reusable template/support assets have canonical sources under `shared/` and synchronized copies inside packs so released packs stay standalone;
+- exact reusable template/support assets and repeated manifest policy have canonical sources under `shared/`, with synchronized copies/marked regions inside packs so released packs stay standalone;
 - repository pack discovery, pack IDs and release refs come from `scripts/lib/repository.ts`.
 
 Useful consistency checks:
