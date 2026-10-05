@@ -41,7 +41,7 @@ Clients:
 - [x] `package/clients/flutter-api-bridge`
 - [x] `package/clients/next-api-bridge`
 - [x] `package/clients/ts-api-client`
-- [ ] `package/clients/go-client-sdk` — implemented, awaiting fixture/toolchain verification
+- [x] `package/clients/go-client-sdk`
 
 ### Project
 
@@ -58,7 +58,7 @@ Generated-language families currently represented:
 - [x] TypeScript / JavaScript
 - [x] Python
 - [x] Dart
-- [ ] Go — first client pack exists but is not verified yet
+- [x] Go — client SDK verified; server/persistence/validation coverage still absent
 - [ ] Rust
 - [ ] Java
 - [ ] C#
