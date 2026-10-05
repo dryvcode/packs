@@ -7,15 +7,15 @@ These candidates cut across languages. A new repository purpose must only be int
 ## Contracts and API descriptions
 
 - [ ] OpenAPI document pack
-- [ ] JSON Schema document pack
+- [x] JSON Schema 2020-12 — `package/validation/json-schema`
 - [ ] AsyncAPI research
 - [ ] GraphQL schema pack research
 - [ ] protobuf/gRPC contract pack research
 
 Questions:
 
-- [ ] confirm whether the target is generated output or another semantic authority
-- [ ] never make OpenAPI/GraphQL/protobuf replace Canonical Runtime IR inside Dryv
+- [x] JSON Schema target is generated validation output; Runtime IR remains semantic authority
+- [x] generated contract artifacts must never replace Canonical Runtime IR inside Dryv
 - [ ] define trace from Runtime IR items to generated contract artifacts
 - [ ] decide whether the pack is `inject` or `package`
 
