@@ -139,6 +139,10 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] C++ — backend, client, persistence and validation represented
 - [ ] Plain C — research-only; no baseline approved
 
+### Cross-ecosystem validation
+
+- [x] JSON Schema 2020-12 — `package/validation/json-schema`; verification deferred
+
 ## Ecosystem research
 
 - [x] [00 — Current audit](ecosystems/00-audit.md)
