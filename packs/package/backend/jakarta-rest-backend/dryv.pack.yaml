@@ -1,0 +1,83 @@
+version: dryv.pack/v1alpha1
+key: backend.jakarta-rest-backend
+layout: package
+package:
+  name: { $ref: "#/inputs.artifact_id" }
+
+source: templates
+
+info:
+  title: Jakarta REST Backend
+  version: 0.1.0
+  description: Generates portable Jakarta REST 4.0 resources, service boundaries and Jackson models for HTTP operations.
+
+catalog:
+  purpose: backend
+  summary: Portable Jakarta REST resources with service boundaries and typed Jackson models.
+  languages: [java]
+  frameworks: [jakarta-rest, jackson]
+  tags: [backend, rest, http, java, jakarta]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  group_id:
+    type: string
+    default: org.dryv.generated
+    description: Maven groupId for the generated backend.
+  artifact_id:
+    type: string
+    default: dryv-rest-backend
+    description: Maven artifactId and Dryv package identity.
+  java_package:
+    type: string
+    default: org.dryv.generated.rest
+    description: Base Java package for generated resources and models.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  resource:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Resource
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
