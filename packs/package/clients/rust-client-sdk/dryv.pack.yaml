@@ -63,7 +63,7 @@ templates:
     $ref: "#/selections/operations"
     output:
       name: $(group.name.snake)_$(subject.name.snake)
-      symbol: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.snake)_$(subject.name.snake)
     imports:
       - $ref: "#/templates/model"
       - $ref: "#/templates/enum"
