@@ -37,6 +37,17 @@ def to_wire(value: Any) -> Any:
     return value
 
 
+def append_param(target: list[tuple[str, Any]], name: str, value: Any) -> None:
+    wire = to_wire(value)
+    if wire is None:
+        return
+    if isinstance(wire, list):
+        for item in wire:
+            target.append((name, item))
+        return
+    target.append((name, wire))
+
+
 class DryvClient:
     def __init__(
         self,
