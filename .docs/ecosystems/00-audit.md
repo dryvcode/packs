@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **55 pack manifests**.
+The repository currently contains **59 pack manifests**.
 
 ### Inject
 
@@ -42,6 +42,7 @@ Backend:
 - [x] `package/backend/vapor-backend`
 - [x] `package/backend/ktor-backend`
 - [x] `package/backend/phoenix-backend`
+- [x] `package/backend/crow-backend`
 
 Persistence:
 
@@ -54,6 +55,7 @@ Persistence:
 - [x] `package/persistence/fluent-models`
 - [x] `package/persistence/exposed-tables`
 - [x] `package/persistence/ecto-schemas`
+- [x] `package/persistence/sqlite-orm-models`
 
 Validation:
 
@@ -66,6 +68,7 @@ Validation:
 - [x] `package/validation/swift-codable-validation`
 - [x] `package/validation/kotlinx-validation`
 - [x] `package/validation/ecto-changesets`
+- [x] `package/validation/cpp-validation`
 
 Clients:
 
@@ -82,6 +85,7 @@ Clients:
 - [x] `package/clients/swift-client-sdk`
 - [x] `package/clients/kotlin-client-sdk`
 - [x] `package/clients/elixir-client-sdk`
+- [x] `package/clients/cpp-client-sdk`
 
 ### Project
 
@@ -106,25 +110,26 @@ A baseline means backend + API client + persistence + validation are represented
 - [x] Kotlin — Ktor, Ktor Client, Exposed, generated validation
 - [x] Ruby — Sinatra, Net::HTTP, Active Record, dry-validation
 - [x] Elixir — Phoenix, Req, Ecto schemas, Ecto changesets
-- [ ] C / C++
+- [x] C++ — Crow, cpr, sqlite_orm, generated validation
+- [ ] Plain C — research only
 
 Dart/Flutter is represented strongly for clients and frontend projects, but is not treated as a server/persistence baseline.
 
 ## Proven pack patterns to reuse
 
-- SQL persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`, `ecto-schemas`
+- SQL persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`, `ecto-schemas`, `sqlite-orm-models`
 - document persistence → `mongoose-models`
-- validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`
+- validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`
-- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`
+- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`
+- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
 
 ## Current thin areas
 
-- C/C++ baseline coverage
+- Plain C feasibility and ABI/ownership research
 - backend/project application packs
 - explicit backend project composition capability contracts
 - multipart/file semantics
