@@ -14,8 +14,9 @@
 {%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'JsonElement' }}
 {%- elif value.is.boolean -%}Boolean
 {%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}String
 {%- elif value.is.number -%}Double
-{%- elif value.is.decimal or value.is.money or value.is.uuid or value.is.string or value.is.temporal -%}String
+{%- elif value.is.uuid or value.is.string or value.is.temporal -%}String
 {%- elif value.is.record -%}JsonObject
 {%- else -%}JsonElement
 {%- endif -%}
