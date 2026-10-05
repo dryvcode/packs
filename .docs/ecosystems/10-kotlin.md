@@ -1,68 +1,75 @@
 # Kotlin ecosystem
 
-Status: candidate backlog only. No implementation is approved by this file.
+Status: Ktor backend, Exposed persistence, generated Kotlin validation and Ktor Client SDK are implemented on `develop`; verification is deferred while the Dryv Engine is under maintenance.
 
-Kotlin shares the JVM with Java but has enough distinct framework/client/mobile conventions to track separately.
+Kotlin shares the JVM with Java but has enough distinct framework, coroutine and serialization conventions to remain a separate ecosystem.
 
 ## Coverage
 
-- [ ] backend pack
-- [ ] persistence pack
-- [ ] validation/schema pack
-- [ ] API client SDK
+- [x] backend pack
+- [x] persistence pack
+- [x] validation/schema pack
+- [x] API client SDK
 - [ ] Android/Multiplatform project pack
 
 ## Backends
 
-- [ ] Ktor backend
+- [x] `package/backend/ktor-backend` — implementation present; verification deferred
 - [ ] Spring Boot Kotlin backend
 - [ ] http4k research
-- [ ] generated routes/controllers separated from business services
-- [ ] path/query/body/header binding
-- [ ] typed response/status mapping
-- [ ] coroutine-first service interfaces
-- [ ] validation composition
+- [x] generated routes separated from business services
+- [x] path/query/query-object/body/header/cookie/form binding
+- [x] typed response/status mapping
+- [x] coroutine-first service interfaces
+- [ ] validation capability composition
 
-Models:
+Primary models:
 
 - `fastapi-backend`
-- `nestjs-backend`
+- `axum-backend`
 
 ## Persistence
 
-- [ ] Exposed ORM/SQL models
+- [x] `package/persistence/exposed-tables` — implementation present; verification deferred
 - [ ] JPA/Hibernate Kotlin entities
 - [ ] Spring Data Kotlin integration
 - [ ] KMongo research
-- [ ] primary/generated keys
-- [ ] indexes/uniqueness
-- [ ] relations
-- [ ] nullable/default fields
-- [ ] enums
-- [ ] temporal/decimal mapping
+- [x] primary/generated keys
+- [x] indexes/uniqueness
+- [x] real scalar foreign-key constraints through Exposed references
+- [x] nullable fields
+- [x] arbitrary enum values via JSON storage
+- [x] temporal/decimal mapping
+- [x] relation delete/update actions
+- [ ] portable defaults/check expressions/create-only enforcement
 
-Primary model: `typeorm-entities`.
+The Exposed package is driver-neutral: consuming projects choose JDBC or R2DBC.
 
 ## Validation/schema
 
-- [ ] Jakarta Validation Kotlin DTOs
+- [x] `package/validation/kotlinx-validation` — implementation present; verification deferred
+- [ ] Jakarta Validation Kotlin DTO alternative
 - [ ] Konform research
 - [ ] Valiktor research
-- [ ] kotlinx.serialization model package
-- [ ] nested/collection validation
-- [ ] enum/range/length/pattern mapping
-- [ ] simple invariants
+- [x] kotlinx.serialization model package
+- [x] nested/collection validation
+- [x] enum/range/length/pattern mapping
+- [x] common formats
+- [x] conservative simple invariants
+- [ ] arithmetic/structural invariant lowering
 
 ## Client SDKs
 
-- [ ] `package/clients/kotlin-client-sdk`
-- [ ] Ktor Client transport
-- [ ] kotlinx.serialization
-- [ ] typed operations
-- [ ] path/query/body bindings
-- [ ] response decoding
+- [x] `package/clients/kotlin-client-sdk` — implementation present; verification deferred
+- [x] Ktor Client transport
+- [x] kotlinx.serialization
+- [x] typed coroutine operations
+- [x] path/query/query-object/body/header/cookie/form bindings
+- [x] typed response decoding
+- [x] structured API errors
 - [ ] Retrofit alternative research
-- [ ] provide operation/type/enum capabilities
+
+**Provides:** `operation.client`, `schema.types`, `property.enum.types`.
 
 ## Android / Multiplatform
 
@@ -80,6 +87,8 @@ Primary model: `typeorm-entities`.
 - [ ] Android Compose project
 - [ ] Kotlin Multiplatform project
 
+Project composition remains blocked on explicit server/project capability contracts rather than hidden generated-path coupling.
+
 ## Other Kotlin candidates
 
 - [ ] GraphQL Kotlin research
@@ -87,11 +96,12 @@ Primary model: `typeorm-entities`.
 - [ ] coroutine Flow client adapters
 - [ ] OpenTelemetry integration
 
-## Context questions to verify
+## Context questions
 
-- [ ] headers/cookies
+- [x] headers/cookies
+- [x] query-object/form bindings
+- [x] generic/container wire values have explicit JsonElement fallbacks
 - [ ] multipart/files
 - [ ] streaming
 - [ ] auth/security
-- [ ] generic/container outputs
 - [ ] mobile view semantics
