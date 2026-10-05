@@ -1,0 +1,81 @@
+version: dryv.pack/v1alpha1
+key: backend.aspnet-core-backend
+layout: package
+package:
+  name: { $ref: "#/inputs.project_name" }
+
+source: templates
+
+info:
+  title: ASP.NET Core Backend
+  version: 0.1.0
+  description: Generates .NET 10 ASP.NET Core endpoint registration, feature service interfaces and System.Text.Json models.
+
+catalog:
+  purpose: backend
+  summary: ASP.NET Core endpoint mappings with typed models and DI service boundaries.
+  languages: [csharp]
+  frameworks: [aspnet-core, system-text-json]
+  tags: [backend, rest, http, csharp, dotnet]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  project_name:
+    type: string
+    default: Dryv.Backend
+    description: Generated .NET project name.
+  root_namespace:
+    type: string
+    default: Dryv.Generated.Backend
+    description: Root C# namespace for generated endpoints and models.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  endpoint:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: I$(group.name.pascal)$(feature.name.pascal)Service
+        map: Map$(group.name.pascal)$(feature.name.pascal)Endpoints
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
