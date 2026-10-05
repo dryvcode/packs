@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: backend.crow-backend
+layout: package
+package:
+  name: dryv_cpp_backend
+
+source: templates
+
+info:
+  title: Crow Backend
+  version: 0.1.0
+  description: Generates a C++20 Crow 1.3 backend library with nlohmann/json wire models and feature service interfaces.
+
+catalog:
+  purpose: backend
+  summary: Crow route registration with typed wire models and separated service interfaces.
+  languages: [cpp]
+  frameworks: [crow, nlohmann-json]
+  tags: [backend, rest, http, cpp]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  namespace:
+    type: string
+    default: dryv::generated::backend
+    description: C++ namespace for generated backend code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: register$(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
