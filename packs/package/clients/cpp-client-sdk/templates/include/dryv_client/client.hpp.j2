@@ -136,6 +136,19 @@ std::optional<nlohmann::json> optional_wire_json(const std::optional<T>& value) 
     return wire_json(*value);
 }
 
+template <typename T>
+std::string required_wire_string(const T& value, const std::string&) {
+    return wire_string(value);
+}
+
+template <typename T>
+std::string required_wire_string(const std::optional<T>& value, const std::string& label) {
+    if (!value.has_value()) {
+        throw std::invalid_argument("missing required HTTP binding: " + label);
+    }
+    return wire_string(*value);
+}
+
 class Client {
 public:
     explicit Client(std::string base_url) : base_url_(std::move(base_url)) {
