@@ -1,0 +1,49 @@
+version: dryv.pack/v1alpha1
+key: persistence.ecto-schemas
+layout: package
+package:
+  name: dryv_ecto_schemas
+
+source: templates
+
+info:
+  title: Ecto Schemas
+  version: 0.1.0
+  description: Generates Ecto 3.14 schema modules from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Ecto schema modules with keys, typed fields and explicit associations.
+  languages: [elixir]
+  frameworks: [ecto]
+  tags: [entities, database, orm, elixir]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_prefix:
+    type: string
+    default: DryvGenerated.Persistence
+    description: Root Elixir module for generated Ecto schemas.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Schema
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
