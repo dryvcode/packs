@@ -1,0 +1,229 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Controllers;
+
+use {{ pack.inputs.root_namespace }}\DryvHttp;
+use {{ pack.inputs.root_namespace }}\Services\{{ file.symbols.service }};
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+use {{ pack.inputs.root_namespace }}\Models\{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro php_var(name) -%}{{ '$' }}{{ name }}{%- endmacro -%}
+
+{%- macro php_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}mixed
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'mixed' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'mixed' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.decimal or value.is.money -%}string
+{%- elif value.is.record -%}array
+{%- elif value.is.string or value.is.temporal -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_kind(value) -%}
+{%- if value.is.schema -%}schema
+{%- elif value.is.enum -%}enum
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.string or value.is.temporal or value.is.decimal or value.is.money -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro class_arg(value) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}::class
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}::class
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_field(field, raw) -%}
+{%- if field.array is not none -%}DryvHttp::decodeMany(is_array({{ raw }}) ? {{ raw }} : [{{ raw }}], {{ decode_kind(field.value) | tojson }}, {{ class_arg(field.value) }})
+{%- else -%}DryvHttp::decode({{ raw }}, {{ decode_kind(field.value) | tojson }}, {{ class_arg(field.value) }})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro method_name(name) -%}
+{%- if name in ['class','function','const','public','protected','private','static','abstract','final','readonly','new','clone','if','else','elseif','endif','for','foreach','while','do','switch','match','case','default','break','continue','return','yield','try','catch','finally','throw','namespace','use','trait','interface','enum','extends','implements','instanceof','insteadof','as','fn','echo','print','include','require','global','isset','empty','unset','list','array','callable','iterable','void','never','mixed','true','false','null'] -%}{{ name }}Operation{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+{%- macro source_presence(binding, field) -%}
+{%- if binding.is.path -%}$request->attributes->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query or binding.is.query_object -%}$request->query->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}$request->headers->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.cookie -%}$request->cookies->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form -%}$request->request->has({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.body -%}array_key_exists({{ field.name.raw | tojson }}, $json)
+{%- else -%}false
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro source_raw(binding, field) -%}
+{%- if binding.is.path -%}$request->attributes->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif (binding.is.query or binding.is.query_object) and field.array is not none -%}$request->query->all({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query or binding.is.query_object -%}$request->query->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}$request->headers->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.cookie -%}$request->cookies->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form and field.array is not none -%}$request->request->all({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form -%}$request->request->get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.body -%}$json[{{ field.name.raw | tojson }}]
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro assign_bound_field(operation, field, target) -%}
+{%- set found = namespace(value=false) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set found.value=true -%}
+{%- if field.optional %}
+        if ({{ source_presence(binding, field) }}) {
+            {{ target }} = {{ decode_field(field, source_raw(binding, field)) }};
+        }
+{%- else %}
+        if (!({{ source_presence(binding, field) }})) {
+            return new JsonResponse(['message' => 'Missing required {{ field.name.raw }}'], 400);
+        }
+        {{ target }} = {{ decode_field(field, source_raw(binding, field)) }};
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- if not found.value and field.optional %}
+        {{ target }} = null;
+{%- endif -%}
+{%- endmacro -%}
+
+final class {{ file.symbols.controller }}
+{
+    public function __construct(
+        private readonly {{ file.symbols.service }} $service,
+    ) {
+    }
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    #[Route(path: {{ http.path.local | tojson }}, methods: [{{ http.method | tojson }}])]
+    public function {{ method_name(operation.name.camel) }}(Request $request): Response
+    {
+{%- if http.input_groups.multipart %}
+        return new JsonResponse(
+            ['message' => 'Multipart bindings require an explicit PHP semantic mapping.'],
+            501,
+        );
+{%- else %}
+        try {
+{%- if http.input_groups.body %}
+            $json = DryvHttp::jsonObject($request);
+{%- endif %}
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+{%- set whole = namespace(kind='') %}
+{%- for binding in http.inputs %}
+{%- if binding.port.field is none and binding.is.body %}{% set whole.kind='body' %}{% endif %}
+{%- if binding.port.field is none and binding.is.query_object %}{% set whole.kind='query' %}{% endif %}
+{%- if binding.port.field is none and binding.is.form %}{% set whole.kind='form' %}{% endif %}
+{%- endfor %}
+{%- if whole.kind == 'body' %}
+            $input = {{ php_type(operation.input.value) }}::fromArray($json);
+{%- elif whole.kind == 'query' or whole.kind == 'form' %}
+            $inputData = [];
+{%- for field in operation.input.fields %}
+{%- if whole.kind == 'query' %}
+{%- set bag = '$request->query' %}
+{%- else %}
+{%- set bag = '$request->request' %}
+{%- endif %}
+{%- if field.optional %}
+            if ({{ bag }}->has({{ field.name.raw | tojson }})) {
+{%- endif %}
+{%- if not field.optional %}
+            if (!{{ bag }}->has({{ field.name.raw | tojson }})) {
+                return new JsonResponse(['message' => 'Missing required {{ field.name.raw }}'], 400);
+            }
+{%- endif %}
+{%- if field.array is not none %}
+            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {{ bag }}->all({{ field.name.raw | tojson }});
+{%- else %}
+            {% if field.optional %}    {% endif %}$raw{{ field.name.pascal }} = {{ bag }}->get({{ field.name.raw | tojson }});
+{%- endif %}
+            {% if field.optional %}    {% endif %}$inputData[{{ field.name.raw | tojson }}] = {{ decode_field(field, '$raw' ~ field.name.pascal) }};
+{%- if field.optional %}
+            }
+{%- endif %}
+{%- endfor %}
+            $input = {{ php_type(operation.input.value) }}::fromArray($inputData);
+{%- else %}
+            $inputData = [];
+{%- for field in operation.input.fields %}
+{{ assign_bound_field(operation, field, '$inputData[' ~ (field.name.raw | tojson) ~ ']') }}
+{%- endfor %}
+            $input = {{ php_type(operation.input.value) }}::fromArray($inputData);
+{%- endif %}
+{%- else %}
+{%- for field in operation.input.fields %}
+            {{ php_var(field.name.camel) }} = null;
+{{ assign_bound_field(operation, field, '$' ~ field.name.camel) }}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+        } catch (\InvalidArgumentException|\JsonException $error) {
+            return new JsonResponse(['message' => $error->getMessage()], 400);
+        }
+
+{%- if operation.output %}
+        $output = $this->service->{{ method_name(operation.name.camel) }}(
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+            $input
+{%- else %}
+{%- for field in operation.input.fields %}
+            {{ php_var(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+        );
+
+        return new JsonResponse(DryvHttp::wire($output), {{ success_status(http) }});
+{%- else %}
+        $this->service->{{ method_name(operation.name.camel) }}(
+{%- if operation.input %}
+{%- if operation.input.kind == 'schema' %}
+            $input
+{%- else %}
+{%- for field in operation.input.fields %}
+            {{ php_var(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+        );
+
+        return new Response('', {{ success_status(http) }});
+{%- endif %}
+{%- endif %}
+    }
+
+{%- endfor %}
+}
