@@ -9,7 +9,6 @@
     "test:packs": "bun scripts/test-pack.ts --all"
   },
   "devDependencies": {
-    "@dryvcode/cli": "0.0.1",
     "@types/bun": "^1"
   }
 }
