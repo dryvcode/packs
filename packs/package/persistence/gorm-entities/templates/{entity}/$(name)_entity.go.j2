@@ -36,9 +36,10 @@
 {%- macro index_tags(schema, field) -%}
 {%- if schema.facets.storage is not none -%}
 {%- for index in schema.facets.storage.indexes -%}
+{%- set generated_index_name = index.name or ('idx_' ~ schema.name.snake ~ '_' ~ loop.index) -%}
 {%- for indexed in index.fields -%}
 {%- if indexed.raw == field.name.raw -%}
-;{% if index.unique %}uniqueIndex{% else %}index{% endif %}:{% if index.name %}{{ index.name }}{% else %}idx_{{ schema.name.snake }}_{{ loop.index }}{% endif %}
+;{% if index.unique %}uniqueIndex{% else %}index{% endif %}:{{ generated_index_name }}
 {%- endif -%}
 {%- endfor -%}
 {%- endfor -%}
@@ -81,7 +82,7 @@ type {{ file.symbol }} struct {
 {%- if field.related is none %}
 	{{ field.name.pascal }} {{ field_type(field) }} `gorm:"{{ field_tag(schema, field) }}" json:"{{ field.name.raw }}{% if field.optional %},omitempty{% endif %}"`
 {%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
-	{{ field.name.pascal }}Relation *{{ symbol_for(field.relation.target.schema) }} `gorm:"foreignKey:{{ field.name.pascal }};references:{{ field.relation.target.field.pascal }}{% if field.relation.on_update %};constraint:OnUpdate:{{ lifecycle(field.relation.on_update) }}{% endif %}{% if field.relation.on_delete %},OnDelete:{{ lifecycle(field.relation.on_delete) }}{% endif %}" json:"-"`
+	{{ field.name.pascal }}Relation *{{ symbol_for(field.relation.target.schema) }} `gorm:"foreignKey:{{ field.name.pascal }};references:{{ field.relation.target.field.pascal }}{% if field.relation.on_update or field.relation.on_delete %};constraint:{% if field.relation.on_update %}OnUpdate:{{ lifecycle(field.relation.on_update) }}{% endif %}{% if field.relation.on_update and field.relation.on_delete %},{% endif %}{% if field.relation.on_delete %}OnDelete:{{ lifecycle(field.relation.on_delete) }}{% endif %}{% endif %}" json:"-"`
 {%- endif %}
 {%- else %}
 {%- if symbol_for(field.related.via.schema) and field.related.cardinality == 'one-to-many' %}
