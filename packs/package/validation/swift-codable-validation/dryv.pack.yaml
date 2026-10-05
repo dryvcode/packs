@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.swift-codable-validation
+layout: package
+package:
+  name: DryvValidation
+
+source: templates
+
+info:
+  title: Swift Codable Validation
+  version: 0.1.0
+  description: Generates Swift 6 Codable models and deterministic validation helpers from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Swift Codable models with generated constraint validation.
+  languages: [swift]
+  frameworks: [foundation, codable]
+  tags: [validation, schema, swift]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  module_name:
+    type: string
+    default: DryvValidation
+    description: Swift module and library product name.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validation
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
