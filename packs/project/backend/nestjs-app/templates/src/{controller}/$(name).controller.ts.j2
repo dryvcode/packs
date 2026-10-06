@@ -1,0 +1,174 @@
+{#- The dependency a subject resolves to through one slot. -#}
+{%- macro symbol_for(link, slot) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro pack_for(link, slot) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.pack }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- Non-empty when some dependency comes through the slot (and, optionally, from the pack). -#}
+{%- macro has_slot(slot) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- macro uses_pack(key) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == 'schema.validation' and dependency.pack == key -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ts_type(value) -%}
+{%- if value.is.schema -%}
+  {%- set pack = pack_for(value.schema, 'schema.validation') -%}
+  {%- if pack == 'validation.zod-schemas' -%}z.infer<typeof {{ symbol_for(value.schema, 'schema.validation') }}>
+  {%- elif pack == 'validation.joi-schemas' -%}Record<string, unknown>
+  {%- else -%}{{ symbol_for(value.schema, 'schema.validation') }}
+  {%- endif -%}
+{%- elif value.is.property and value.is.primitive -%}{{ value.property.primitive.type }}
+{%- elif value.is.property and value.is.enum -%}string
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{#- class-validator DTOs rely on Nest's global ValidationPipe; zod and Joi schemas get a pipe. -#}
+{%- macro body_pipe(value) -%}
+{%- if value.is.schema -%}
+  {%- set pack = pack_for(value.schema, 'schema.validation') -%}
+  {%- if pack == 'validation.zod-schemas' or pack == 'validation.joi-schemas' -%}new SchemaValidationPipe({{ symbol_for(value.schema, 'schema.validation') }})
+  {%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- One input object, like props: a schema input is its DTO, named fields an object type. -#}
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ ts_type(operation.input.value) }}
+{%- else -%}{ {% for field in operation.input.fields %}{{ field.name.camel }}{% if field.optional %}?{% endif %}: {{ ts_type(field.value) }}{% if not loop.last %}; {% endif %}{% endfor %} }
+{%- endif -%}
+{%- endmacro -%}
+{%- macro signature(operation) -%}
+{%- if operation.input %}input: {{ input_type(operation) }}{% endif -%}
+{%- endmacro -%}
+{%- macro result(operation) -%}
+Promise<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}void{% endif %}>
+{%- endmacro -%}
+{%- macro scalar_pipe(value) -%}
+{%- if value.is.integer -%}, ParseIntPipe
+{%- elif value.is.number -%}, ParseFloatPipe
+{%- elif value.is.boolean -%}, ParseBoolPipe
+{%- endif -%}
+{%- endmacro -%}
+{#- Non-empty when HTTP binds the whole (schema) input in one parameter. -#}
+{%- macro binds_whole(http) -%}
+{%- for binding in http.inputs %}{% if binding.port.field is none %}x{% endif %}{% endfor -%}
+{%- endmacro -%}
+{#- The controller flattens the input into parameters, then hands the service one object. -#}
+{%- macro call_input(operation, http) -%}
+{%- if operation.input -%}
+{%- if binds_whole(http) -%}input
+{%- else -%}{ {% for binding in http.inputs %}{{ binding.port.name.camel }}{% if not loop.last %}, {% endif %}{% endfor %} }
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set zod = uses_pack('validation.zod-schemas') != '' -%}
+{%- set joi = uses_pack('validation.joi-schemas') != '' -%}
+{%- set persistence = has_slot('schema.persistence') != '' -%}
+import {
+  Body,
+  Controller,
+  createParamDecorator,
+  Delete,
+  type DynamicModule,
+  type ExecutionContext,
+  Get,
+  Headers,
+  HttpCode,
+  Module,
+  Param,
+  ParseBoolPipe,
+  ParseFloatPipe,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  type Type,
+} from "@nestjs/common";
+{%- if persistence %}
+import { TypeOrmModule } from "@nestjs/typeorm";
+{%- endif %}
+{%- if zod %}
+import type { z } from "zod";
+{%- endif %}
+{%- if zod or joi %}
+
+import { SchemaValidationPipe } from "../../common/server/validation/schema-validation.pipe.ts";
+{%- endif %}
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+const Cookie = createParamDecorator(
+  (name: string, context: ExecutionContext): string | undefined => {
+    const request = context.switchToHttp().getRequest<{ headers: { cookie?: string } }>();
+    const header = request.headers.cookie;
+    if (!header) return undefined;
+
+    for (const part of header.split(";")) {
+      const [key, ...value] = part.trim().split("=");
+      if (key === name) return decodeURIComponent(value.join("="));
+    }
+    return undefined;
+  },
+);
+
+/** What {{ feature.name.title }} needs from handwritten code. */
+export abstract class {{ file.symbols.service }} {
+{%- for operation in operations %}
+  /** {{ ((operation.description or operation.name.title) ~ '.') | replace('..', '.') }}{% if operation.role %} Role: {{ operation.role }}.{% endif %} */
+  abstract {{ operation.name.camel }}({{ signature(operation) }}): {{ result(operation) }};
+{%- endfor %}
+}
+
+@Controller()
+export class {{ file.symbols.controller }} {
+  constructor(private readonly service: {{ file.symbols.service }}) {}
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+
+  @{{ http.method | lower | capitalize }}("{{ http.path.effective | replace('{', ':') | replace('}', '') }}")
+{%- for binding in http.outputs %}
+  @HttpCode({{ binding.status }})
+{%- endfor %}
+  {{ operation.name.camel }}(
+{%- for binding in http.inputs %}
+    {% if binding.is.path %}@Param("{{ binding.name }}"{{ scalar_pipe(binding.port.value) }}){% elif binding.is.query %}@Query("{{ binding.name }}"{{ scalar_pipe(binding.port.value) }}){% elif binding.is.query_object %}@Query({{ body_pipe(binding.port.value) }}){% elif binding.is.header %}@Headers("{{ binding.name }}"){% elif binding.is.cookie %}@Cookie("{{ binding.name }}"){% else %}@Body({{ body_pipe(binding.port.value) }}){% endif %} {{ binding.port.name.camel }}: {{ ts_type(binding.port.value) }},
+{%- endfor %}
+  ): {{ result(operation) }} {
+    return this.service.{{ operation.name.camel }}({{ call_input(operation, http) }});
+  }
+{%- endfor %}
+}
+
+/** Registers {{ feature.name.title }}: pass the class that implements {{ file.symbols.service }}. */
+@Module({})
+export class {{ file.symbols.module }} {
+  static register(implementation: Type<{{ file.symbols.service }}>): DynamicModule {
+    return {
+      module: {{ file.symbols.module }},
+{%- if persistence %}
+      imports: [
+        TypeOrmModule.forFeature([
+{%- for entity in file.dependencies %}{% if entity.slot == 'schema.persistence' %}
+          {{ entity.symbol }},
+{%- endif %}{% endfor %}
+        ]),
+      ],
+{%- endif %}
+      controllers: [{{ file.symbols.controller }}],
+      providers: [{ provide: {{ file.symbols.service }}, useClass: implementation }],
+    };
+  }
+}
+
