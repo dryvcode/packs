@@ -1,4 +1,5 @@
-# DESIGN EXAMPLE — proposed final project Usage.
+# DESIGN EXAMPLE — materialized project Usage with relative imports.
+# Runner alternatives have already been resolved to Bun.
 version: dryv/v1alpha1
 
 sources:
@@ -11,61 +12,92 @@ sources:
       ref: develop
       root: packs
 
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: [--dev]
+        - pinned: "$(name)@$(version)"
+          any: "$(name)"
+    commands:
+      - run: [bun, add]
+
+  build:
+    stage: final
+    commands:
+      - run: [bun, run, build]
+
 destinations:
-  code:
-    backend:
-      path: apps/backend
-      choose:
-        js.package_manager: bun
+  backend:
+    path: apps/backend
 
-      # No imports block: relative addressing is the default.
-
-      outputs:
-        server:
-          controller:
-            path: [src, modules, "$(feature.name.kebab)"]
-          service:
-            path: [src, modules, "$(feature.name.kebab)"]
-          module:
-            path: [src, modules, "$(feature.name.kebab)"]
-
-        validation:
-          schema:
-            path: [src, modules, "$(group.name.kebab)", dto]
-
-        persistence:
-          entity:
-            path: [src, modules, "$(group.name.kebab)", entities]
+    # No imports block: relative addressing is the default.
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+      - $ref: "#/actions/build"
 
 authoring:
-  source: { $ref: "#/sources/authoring/ir" }
+  source:
+    $ref: "#/sources/authoring/ir"
 
 packs:
   app:
-    source: { $ref: "#/sources/packs/official" }
-    path: unit/backend/nestjs
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: unit/backend/nestjs
+    destination:
+      $ref: "#/destinations/backend"
     inputs:
       package_name: dryv-backend
     bind:
-      operation.server: { $ref: "#/packs/server" }
+      operation.server:
+        $ref: "#/packs/server"
 
   server:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/backend/nestjs
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/backend/nestjs
+    destination:
+      $ref: "#/destinations/backend"
     bind:
-      schema.validation: { $ref: "#/packs/validation" }
-      schema.persistence: { $ref: "#/packs/persistence" }
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
+    outputs:
+      controller:
+        path: [src, modules, "$(feature.name.kebab)"]
+      service:
+        path: [src, modules, "$(feature.name.kebab)"]
+      module:
+        path: [src, modules, "$(feature.name.kebab)"]
 
   validation:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/validation/zod
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/validation/zod
+    destination:
+      $ref: "#/destinations/backend"
+    outputs:
+      schema:
+        path: [src, modules, "$(group.name.kebab)", dto]
 
   persistence:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/persistence/typeorm
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/backend"
     inputs:
       naming_strategy: snake
+    outputs:
+      entity:
+        path: [src, modules, "$(group.name.kebab)", entities]
