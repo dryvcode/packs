@@ -52,13 +52,18 @@ This is the next repository-wide structural refactor. The current repository sti
 - [ ] Allow any pack to carry a root `dryv.example.yaml` and validate it automatically when present.
 - [ ] Let `dryv packs add` use a validated example as the default proposal/autofill source while still writing explicit Usage.
 - [ ] Let unit examples demonstrate complete recommended compositions without hidden activation.
-- [ ] Add named configurable output placements for inject packs so Usage can override project-relative structure safely.
-- [ ] Keep destination roots and pack-relative placements separate.
-- [ ] Allow declared placement path patterns to use only Engine-owned planning tokens.
-- [ ] Support filename overrides only where the emitted resource is unambiguous.
-- [ ] Resolve imports/dependencies from final planned paths after placement overrides.
-- [ ] Prove placement with class-validator, TypeORM and NestJS across both feature-module and `_generated` layouts.
-- [ ] Trace every placement default/override into the generation plan.
+- [ ] Keep pack manifests simple: no pack-side placement registry and no duplicate placement defaults.
+- [ ] Relax reusable pack `output.path` so the first segment must be dynamic while later pack-local segments may be static.
+- [ ] Add destination `outputs.<activation>.<template>` partial overrides for `name`, `path`, `symbol` and `symbols`.
+- [ ] Keep pack filesystem + pack output as the zero-config default.
+- [ ] Allow rare outputs to explicitly forbid project overrides.
+- [ ] Resolve final output path/name/symbols before representation and dependency planning.
+- [ ] Add destination import-root/prefix configuration while preserving relative imports as default.
+- [ ] Expose generic import-address facts for TypeScript aliases, Python modules, Java packages and Dart package imports.
+- [ ] Keep generated-code dependencies in pack manifests; move ordinary package-manager/setup recommendations into examples/Usage.
+- [ ] Reduce repeated package-manager/install/formatter matrices only after shared command/action resolution is proven.
+- [ ] Prove pack-default, feature, `_generated`, type-oriented, symbol-override and rooted-import configurations with NestJS + validation + TypeORM.
+- [ ] Trace every pack default, Usage output override and final import address into the generation plan.
 
 See the canonical research in the Dryv repository:
 
