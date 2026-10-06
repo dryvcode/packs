@@ -1,32 +1,31 @@
 # Other language ecosystems
 
-Status: long-term research backlog only.
+Status: Scala and Clojure baselines are implemented on `develop`; remaining languages stay research backlog.
 
 These are not implementation priorities. They exist so the ecosystem map does not quietly become limited to the first few languages Dryv supports.
 
 ## Scala
 
-- [ ] http4s backend
+- [x] `package/backend/http4s-backend`
+- [x] `package/clients/scala-client-sdk`
+- [x] `package/persistence/slick-tables`
+- [x] `package/validation/scala-circe-validation`
 - [ ] Play Framework backend
 - [ ] Pekko HTTP research
-- [ ] Slick persistence
 - [ ] Doobie persistence
 - [ ] Tapir endpoint research
-- [ ] sttp client SDK
-- [ ] Circe models
 - [ ] ZIO ecosystem research
 - [ ] Scala backend project
 
 ## Clojure
 
-- [ ] Ring backend
-- [ ] Reitit routing
+- [x] `package/backend/reitit-backend` — Reitit/Ring + Muuntaja
+- [x] `package/clients/clojure-client-sdk` — JDK HttpClient + Jsonista
+- [x] `package/validation/malli-schemas`
+- [x] `package/persistence/next-jdbc-models`
 - [ ] Pedestal research
-- [ ] Malli schema/validation
 - [ ] clojure.spec research
-- [ ] next.jdbc persistence helpers
 - [ ] HoneySQL research
-- [ ] HTTP client SDK
 - [ ] Clojure API project
 
 ## Haskell
