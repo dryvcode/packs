@@ -38,6 +38,7 @@ packs:
     pack: self
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
 
     outputs:
       schema:
@@ -46,11 +47,11 @@ packs:
           pack-default: {}
 
           modules:
-            path: [src, modules, "$(group.name.kebab)", dto]
+            path: [modules, "$(group.name.kebab)", dto]
 
           generated:
-            path: [src, _generated, dto]
+            path: [_generated, dto]
 
           contracts:
-            path: [src, contracts]
+            path: [contracts]
             symbol: "$(subject.name.pascal)Validator"
