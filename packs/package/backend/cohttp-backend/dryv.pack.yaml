@@ -1,0 +1,71 @@
+version: dryv.pack/v1alpha1
+key: backend.cohttp-backend
+layout: package
+package:
+  name: dryv-cohttp-backend
+
+source: templates
+
+info:
+  title: Cohttp Backend
+  version: 0.1.0
+  description: Generates a stable Cohttp Lwt 6.3 backend with Yojson models and separated service records.
+
+catalog:
+  purpose: backend
+  summary: OCaml Cohttp/Lwt server routes with Yojson models and explicit service boundaries.
+  languages: [ocaml]
+  frameworks: [cohttp-lwt-unix, yojson]
+  tags: [backend, http, ocaml]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.snake)_$(feature.name.snake)_service
+        routes: $(group.name.snake)_$(feature.name.snake)_routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
