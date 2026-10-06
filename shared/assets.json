@@ -204,10 +204,12 @@
   ],
   "templates/ocaml/yojson-enum.ml.j2": [
     "packs/package/clients/ocaml-client-sdk/templates/lib/models/{enum}/$(name).ml.j2",
-    "packs/package/validation/yojson-validation/templates/lib/models/{enum}/$(name).ml.j2"
+    "packs/package/validation/yojson-validation/templates/lib/models/{enum}/$(name).ml.j2",
+    "packs/package/backend/cohttp-backend/templates/lib/models/{enum}/$(name).ml.j2"
   ],
   "templates/ocaml/yojson-model.ml.j2": [
     "packs/package/clients/ocaml-client-sdk/templates/lib/models/{model}/$(name).ml.j2",
-    "packs/package/validation/yojson-validation/templates/lib/models/{model}/$(name).ml.j2"
+    "packs/package/validation/yojson-validation/templates/lib/models/{model}/$(name).ml.j2",
+    "packs/package/backend/cohttp-backend/templates/lib/models/{model}/$(name).ml.j2"
   ]
 }
