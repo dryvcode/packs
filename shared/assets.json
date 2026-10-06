@@ -48,11 +48,13 @@
   "templates/go/enum.go.j2": [
     "packs/package/clients/go-client-sdk/templates/{enum}/$(name)_enum.go.j2",
     "packs/package/backend/go-net-http-backend/templates/{enum}/$(name)_enum.go.j2",
-    "packs/package/validation/go-validator-dtos/templates/{enum}/$(name)_enum.go.j2"
+    "packs/package/validation/go-validator-dtos/templates/{enum}/$(name)_enum.go.j2",
+    "packs/package/backend/gin-backend/templates/{enum}/$(name)_enum.go.j2"
   ],
   "templates/go/model.go.j2": [
     "packs/package/clients/go-client-sdk/templates/{model}/$(name)_model.go.j2",
-    "packs/package/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2"
+    "packs/package/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2",
+    "packs/package/backend/gin-backend/templates/{model}/$(name)_model.go.j2"
   ],
   "templates/csharp/system-text-json-enum.cs.j2": [
     "packs/package/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2",
