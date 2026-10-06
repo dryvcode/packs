@@ -67,14 +67,22 @@ templates:
       - $ref: "#/templates/enum"
       - $ref: "#/templates/model"
 
+  service:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)Service
+      symbol: $(group.name.pascal)$(feature.name.pascal)Service
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
   controller:
     $ref: "#/selections/routes"
     output:
-      name: $(group.name.pascal)$(feature.name.pascal)
-      symbols:
-        service: $(group.name.pascal)$(feature.name.pascal)Service
-        controller: $(group.name.pascal)$(feature.name.pascal)Controller
+      name: $(group.name.pascal)$(feature.name.pascal)Controller
+      symbol: $(group.name.pascal)$(feature.name.pascal)Controller
     imports:
+      - $ref: "#/templates/service"
       - $ref: "#/templates/model"
       - $ref: "#/templates/enum"
 
