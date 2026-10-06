@@ -1,33 +1,47 @@
 # DESIGN EXAMPLE — source-neutral proposed example contract.
 version: dryv.example/v1alpha1
 
-destination:
-  name: backend
-  path: apps/backend
+usage:
+  destinations:
+    code:
+      backend:
+        path: apps/backend
+        place:
+          server:
+            controller:
+              path: [src, modules, "$(feature.name.kebab)"]
+              filename: controller.ts
+            service:
+              path: [src, modules, "$(feature.name.kebab)"]
+              filename: service.ts
+            module:
+              path: [src, modules, "$(feature.name.kebab)"]
+              filename: module.ts
 
-packs:
-  server:
-    pack: self
-    bind:
-      schema.validation: validation
-      schema.persistence: persistence
+  packs:
+    server:
+      pack: self
+      destination: { $ref: "#/destinations/code/backend" }
+      bind:
+        schema.validation: { $ref: "#/packs/validation" }
+        schema.persistence: { $ref: "#/packs/persistence" }
 
-    # This example shows a feature-oriented structure.
-    place:
-      controller:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: controller.ts
+    validation:
+      $example:
+        title: Validation implementation
+        default: zod
+        options:
+          zod:
+            title: Zod
+            value:
+              pack: inject/validation/zod
+              destination: { $ref: "#/destinations/code/backend" }
+          class-validator:
+            title: class-validator
+            value:
+              pack: inject/validation/class-validator
+              destination: { $ref: "#/destinations/code/backend" }
 
-      service:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: service.ts
-
-      module:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: module.ts
-
-  validation:
-    pack: inject/validation/zod
-
-  persistence:
-    pack: inject/persistence/typeorm
+    persistence:
+      pack: inject/persistence/typeorm
+      destination: { $ref: "#/destinations/code/backend" }
