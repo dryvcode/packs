@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — source-neutral proposed example contract.
+# DESIGN EXAMPLE — proposed, compact and source-neutral.
 version: dryv.example/v1alpha1
 
 usage:
@@ -6,10 +6,26 @@ usage:
     code:
       backend:
         path: apps/backend
-        place:
-          validation:
-            schema:
-              path: [src, modules, "$(group.name.kebab)", dto]
+        choose:
+          js.package_manager: [bun, pnpm, npm, yarn]
+
+        outputs:
+          $options:
+            default: pack-default
+            pack-default: {}
+            modules:
+              validation:
+                schema:
+                  path: [src, modules, "$(group.name.kebab)", dto]
+            generated:
+              validation:
+                schema:
+                  path: [src, _generated, dto]
+            contracts:
+              validation:
+                schema:
+                  path: [src, contracts]
+                  symbol: "$(subject.name.pascal)Input"
 
   packs:
     validation:
