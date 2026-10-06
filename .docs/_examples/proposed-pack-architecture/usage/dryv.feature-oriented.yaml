@@ -6,7 +6,6 @@ sources:
     ir:
       type: ir
       path: dryv.ir.yaml
-
   packs:
     official:
       repository: https://github.com/dryvcode/packs
@@ -19,6 +18,25 @@ destinations:
       path: apps/backend
       choose:
         js.package_manager: bun
+      place:
+        server:
+          controller:
+            path: [src, modules, "$(feature.name.kebab)"]
+            filename: controller.ts
+          service:
+            path: [src, modules, "$(feature.name.kebab)"]
+            filename: service.ts
+          module:
+            path: [src, modules, "$(feature.name.kebab)"]
+            filename: module.ts
+        validation:
+          schema:
+            path: [src, modules, "$(group.name.kebab)", dto]
+            filename: "$(name).schema.ts"
+        persistence:
+          entity:
+            path: [src, modules, "$(group.name.kebab)", entities]
+            filename: "$(name).entity.ts"
 
 authoring:
   source:
@@ -26,57 +44,28 @@ authoring:
 
 packs:
   app:
-    source:
-      $ref: "#/sources/packs/official"
+    source: { $ref: "#/sources/packs/official" }
     path: unit/backend/nestjs
-    destination:
-      $ref: "#/destinations/code/backend"
+    destination: { $ref: "#/destinations/code/backend" }
     bind:
-      operation.server:
-        $ref: "#/packs/server"
+      operation.server: { $ref: "#/packs/server" }
 
   server:
-    source:
-      $ref: "#/sources/packs/official"
+    source: { $ref: "#/sources/packs/official" }
     path: inject/backend/nestjs
-    destination:
-      $ref: "#/destinations/code/backend"
+    destination: { $ref: "#/destinations/code/backend" }
     bind:
-      schema.validation:
-        $ref: "#/packs/validation"
-      schema.persistence:
-        $ref: "#/packs/persistence"
-    place:
-      controller:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: controller.ts
-      service:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: service.ts
-      module:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: module.ts
+      schema.validation: { $ref: "#/packs/validation" }
+      schema.persistence: { $ref: "#/packs/persistence" }
 
   validation:
-    source:
-      $ref: "#/sources/packs/official"
+    source: { $ref: "#/sources/packs/official" }
     path: inject/validation/zod
-    destination:
-      $ref: "#/destinations/code/backend"
-    place:
-      schema:
-        path: [src, modules, "$(group.name.kebab)", dto]
-        filename: "$(name).schema.ts"
+    destination: { $ref: "#/destinations/code/backend" }
 
   persistence:
-    source:
-      $ref: "#/sources/packs/official"
+    source: { $ref: "#/sources/packs/official" }
     path: inject/persistence/typeorm
-    destination:
-      $ref: "#/destinations/code/backend"
+    destination: { $ref: "#/destinations/code/backend" }
     inputs:
       naming_strategy: snake
-    place:
-      entity:
-        path: [src, modules, "$(group.name.kebab)", entities]
-        filename: "$(name).entity.ts"
