@@ -69,6 +69,6 @@ Code that Dryv generates from these packs is yours, under your project's own lic
 
 ## Contributing
 
-The design decisions are in [.docs/pack-design-decisions.md](.docs/pack-design-decisions.md) and the plan in [.docs/plan.md](.docs/plan.md).
+Active repository work is tracked in [.docs/plan.md](.docs/plan.md) and [.docs/TODO.md](.docs/TODO.md). The scheduled layout migration is in [.docs/planning/pack-layout-refactor.md](.docs/planning/pack-layout-refactor.md). Superseded documents are kept only under `.docs/_archives/`.
 
 Template naming and derived-context conventions: [.docs/template-context.md](.docs/template-context.md).
