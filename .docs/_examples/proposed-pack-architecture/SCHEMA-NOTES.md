@@ -216,3 +216,32 @@ package:riderescue_api/src/models/user.dart
 8. Which generic import-address facts belong in renderer context?
 9. How should same-unit package-style imports select the current unit's package identity?
 10. Can current `PackActivation.destinations` be removed once unit root + output overrides cover the real use cases?
+
+
+## Environment choices are not pack authority
+
+If ordinary packs stop declaring repeated package-manager option groups, the legal vocabulary must come from a Dryv/shared command-environment contract rather than from `dryv.example.yaml`.
+
+Example:
+
+```yaml
+choose:
+  js.package_manager: [bun, pnpm, npm, yarn]
+```
+
+means:
+
+- Dryv already knows `js.package_manager` is a valid destination environment choice;
+- the example recommends an ordered subset/default for setup;
+- the materialized Usage stores one selected value;
+- the example itself does not define a new choice key or make an unsupported value legal.
+
+This keeps examples advisory and keeps packs from repeating global tooling vocabulary.
+
+## Import support in packs
+
+Destination import configuration is only useful if consuming templates use planner-provided generic address facts.
+
+Official packs should migrate away from reconstructing imports from semantic names or hard-coding `path.relative` when they want to support rooted/package addressing.
+
+The exact way the Engine proves a pack supports the requested address form remains an open implementation detail. Candidate evidence includes renderer/template context analysis plus pack validation; avoid adding a large import-strategy manifest unless real packs require it.
