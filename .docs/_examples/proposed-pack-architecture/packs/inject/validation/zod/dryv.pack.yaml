@@ -34,8 +34,8 @@ placements:
 templates:
   schema:
     $ref: "#/selections/schemas"
-    placement: schema
     output:
+      placement: schema
       name: "$(subject.name.kebab)"
       symbol: "$(subject.name.pascal)Schema"
 
