@@ -1,6 +1,10 @@
 # Folder structure
 
-Public packs are organized as `packs/<layout>/<purpose>/<name>`.
+Status: **current implementation, pending scheduled layout refactor**
+
+Public packs are currently organized as `packs/<layout>/<purpose>/<name>`.
+
+The scheduled migration will converge `package` and `project` into `unit`. See [pack layout refactor](planning/pack-layout-refactor.md). This page describes the repository **as it exists before that migration**, not the long-term layout model.
 
 | Layout | Role | Examples |
 | --- | --- | --- |
@@ -10,7 +14,7 @@ Public packs are organized as `packs/<layout>/<purpose>/<name>`.
 
 Purposes describe what a pack emits and are proven by real packs, not by a fixed language taxonomy. Current examples include `backend`, `clients`, `frontend`, `persistence`, `validation`, `documentation`, and `testing`.
 
-The scalar `layout` in `dryv.pack.yaml` is authoritative; `inject` is the default. A `package` pack declares `package.name` as a reference to an input. The folder hierarchy does not supply Runtime IR meaning. Language and framework tags belong in `catalog` metadata, never in Engine context.
+The scalar `layout` in the current `dryv.pack.yaml` contract is authoritative; `inject` is the default. A current `package` pack declares `package.name` as a reference to an input. These are transitional implementation facts. The target contract is `inject | unit`, with package identity independent of layout. The folder hierarchy does not supply Runtime IR meaning. Language and framework tags belong in `catalog` metadata, never in Engine context.
 
 ## Repository support folders
 
