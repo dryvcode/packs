@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Dryv.Generated.Models.{{ group.name.pascal }}.{{ schema.name.pascal }}
+module {{ file.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }}
   ( {{ file.symbol }}(..)
   , validate{{ file.symbol }}
   ) where
