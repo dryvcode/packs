@@ -1,0 +1,7 @@
+name: Local
+variables:
+  - name: baseUrl
+    value: {{ pack.inputs.base_url | tojson }}
+    enabled: true
+    secret: false
+    description: Base URL generated from the Dryv pack input.
