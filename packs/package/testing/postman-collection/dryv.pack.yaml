@@ -1,0 +1,42 @@
+version: dryv.pack/v1alpha1
+key: testing.postman-collection
+layout: package
+package:
+  name: dryv-postman
+
+source: templates
+
+info:
+  title: Postman Collection
+  version: 0.1.0
+  description: Generates a Postman Collection v2.1 from Dryv HTTP operations using canonical effective routes.
+
+catalog:
+  purpose: testing
+  summary: Runnable Postman HTTP collection with generated request placeholders.
+  languages: [json]
+  frameworks: [postman]
+  tags: [testing, http, api, postman, collection]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  base_url:
+    type: string
+    default: http://localhost:3000
+    description: Default base URL stored in the generated collection variable.
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  collection:
+    $ref: "#/selections/operations"
+    output:
+      name: dryv
