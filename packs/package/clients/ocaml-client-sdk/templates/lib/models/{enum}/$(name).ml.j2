@@ -1,0 +1,31 @@
+type t = Yojson.Safe.t
+
+let values : t list =
+  [
+{%- for item in property.enum.values %}
+    Yojson.Safe.from_string {{ item.value_json | tojson }}{% if not loop.last %};{% endif %}
+{%- endfor %}
+  ]
+
+let is_valid value =
+  List.exists (fun candidate -> candidate = value) values
+
+let of_yojson = function
+  | value when is_valid value -> Ok value
+  | value ->
+      Error
+        ("invalid {{ property.enum.name.local }} value: "
+        ^ Yojson.Safe.to_string value)
+
+let to_yojson value =
+  if is_valid value then value
+  else invalid_arg "invalid {{ property.enum.name.local }} value"
+
+let to_wire_string = function
+  | `String value -> value
+  | value -> Yojson.Safe.to_string value
+
+{%- for item in property.enum.values %}
+let value_{{ item.name.snake }} : t =
+  Yojson.Safe.from_string {{ item.value_json | tojson }}
+{%- endfor %}
