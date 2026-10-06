@@ -11,12 +11,6 @@ import {{ pack.inputs.root_package }}.DryvProfile
 {%- if name in ['abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','forSome','given','if','implicit','import','lazy','match','new','null','object','opaque','open','override','package','private','protected','return','sealed','super','then','this','throw','trait','transparent','true','try','type','using','val','var','while','with','yield','end','extension','inline','infix','derives'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
 {%- endmacro -%}
 
-{%- macro dependency_for(link) -%}
-{%- for dependency in file.dependencies -%}
-{%- if dependency.target.id == link.id -%}{{ loop.index0 }}{%- endif -%}
-{%- endfor -%}
-{%- endmacro -%}
-
 {%- macro support_for(link) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id and not dependency.is_self -%}{{ dependency.symbols.support }}{%- endif -%}
@@ -94,31 +88,25 @@ import {{ pack.inputs.root_package }}.DryvProfile
 {%- endmacro -%}
 
 {%- set pk = namespace(count=0) -%}
+{%- set stored = namespace(fields=[]) -%}
+{%- set supports = namespace(items=[]) -%}
 {%- for field in schema.fields -%}
 {%- if field.storage is not none and field.storage.primary_key -%}{%- set pk.count = pk.count + 1 -%}{%- endif -%}
+{%- if field.related is none -%}{%- set stored.fields = stored.fields + [field] -%}{%- endif -%}
+{%- if field.relation is not none -%}
+{%- set support = support_for(field.relation.target.schema) | trim -%}
+{%- if support and support not in supports.items -%}{%- set supports.items = supports.items + [support] -%}{%- endif -%}
+{%- endif -%}
 {%- endfor -%}
 
 trait {{ file.symbols.support }}:
-  self: DryvProfile
-{%- set supports = namespace(items=[]) %}
-{%- for field in schema.fields %}
-{%- if field.relation is not none %}
-{%- set support = support_for(field.relation.target.schema) | trim %}
-{%- if support and support not in supports.items %}
-{%- set supports.items = supports.items + [support] %}
-    with {{ support }}
-{%- endif %}
-{%- endif %}
-{%- endfor %}
-  =>
+  self: DryvProfile{% for support in supports.items %} & {{ support }}{% endfor %} =>
 
   import profile.api.*
 
   final case class {{ file.symbols.row }}(
-{%- for field in schema.fields %}
-{%- if field.related is none %}
+{%- for field in stored.fields %}
     {{ scala_ident(field.name.camel) }}: {{ field_type(field) }}{% if not loop.last %},{% endif %}
-{%- endif %}
 {%- endfor %}
   )
 
@@ -188,10 +176,6 @@ trait {{ file.symbols.support }}:
       )
 
 {%- endif %}
-{%- endfor %}
-{%- set stored = namespace(fields=[]) %}
-{%- for field in schema.fields %}
-{%- if field.related is none %}{%- set stored.fields = stored.fields + [field] -%}{%- endif %}
 {%- endfor %}
 {%- if stored.fields | length == 1 %}
     def * =
