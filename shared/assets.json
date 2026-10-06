@@ -184,5 +184,11 @@
   "templates/typescript/nestjs-controller.ts.j2": [
     "packs/inject/backend/nestjs-backend/templates/{controller}/$(name).controller.ts.j2",
     "packs/project/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
+  ],
+  "templates/haskell/aeson-enum.hs.j2": [
+    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2"
+  ],
+  "templates/haskell/aeson-model.hs.j2": [
+    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{model}/$(name).hs.j2"
   ]
 }
