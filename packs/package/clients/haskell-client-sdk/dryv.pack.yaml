@@ -62,6 +62,15 @@ templates:
       - $ref: "#/templates/model"
       - $ref: "#/templates/enum"
 
+  models-index:
+    exports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  operations-index:
+    exports:
+      - $ref: "#/templates/operation"
+
 provides:
   operation.client:
     $ref: "#/templates/operation"
