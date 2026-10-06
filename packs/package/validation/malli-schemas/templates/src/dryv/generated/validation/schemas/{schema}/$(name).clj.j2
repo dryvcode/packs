@@ -1,0 +1,133 @@
+{%- macro dep_namespace(dependency) -%}
+{{- dependency.path.relative | replace('src/', '') | replace('/', '.') | replace('.clj', '') -}}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self -%}dep{{ loop.index }}/{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro clj_json(text) -%}
+{%- if text == 'true' -%}true
+{%- elif text == 'false' -%}false
+{%- elif text == 'null' -%}nil
+{%- else -%}{{ text }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro format_regex(value) -%}
+{%- if value.is.uuid -%}^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+{%- elif value.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif value.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif value.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif value.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif value.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif value.is.hex -%}^[0-9a-fA-F]+$
+{%- elif value.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif value.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif value.is.country_code -%}^[A-Z]{2}$
+{%- elif value.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro scalar_schema(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}:any
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or ':map' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or ':any' }}
+{%- elif value.is.boolean -%}:boolean
+{%- elif value.is.integer -%}
+  {%- set range = value.property.primitive.constraints.range -%}
+  {%- if range is not none and (range.has_min or range.has_max) -%}[:and :int
+    {%- if range.has_min %} [:fn (fn [value] (>= value {{ range.min }}))]{% endif -%}
+    {%- if range.has_max %} [:fn (fn [value] (<= value {{ range.max }}))]{% endif -%}]
+  {%- else -%}:int
+  {%- endif -%}
+{%- elif value.is.number or value.is.decimal or value.is.money -%}
+  {%- set range = value.property.primitive.constraints.range -%}
+  {%- if range is not none and (range.has_min or range.has_max) -%}[:and number?
+    {%- if range.has_min %} [:fn (fn [value] (>= value {{ range.min }}))]{% endif -%}
+    {%- if range.has_max %} [:fn (fn [value] (<= value {{ range.max }}))]{% endif -%}]
+  {%- else -%}number?
+  {%- endif -%}
+{%- elif value.is.string -%}
+  {%- set constraints = value.property.primitive.constraints -%}
+  {%- set length = constraints.length -%}
+[:and :string
+  {%- if length is not none and length.has_exact %} [:fn (fn [value] (= (count value) {{ length.exact }}))]{% endif -%}
+  {%- if length is not none and length.has_min %} [:fn (fn [value] (>= (count value) {{ length.min }}))]{% endif -%}
+  {%- if length is not none and length.has_max %} [:fn (fn [value] (<= (count value) {{ length.max }}))]{% endif -%}
+  {%- if value.is.email %} [:fn (fn [value] (boolean (re-matches #"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" value)))]{% endif -%}
+  {%- if value.is.url or value.is.uri %} [:fn (fn [value] (boolean (re-matches #"^[A-Za-z][A-Za-z0-9+.-]*://\\S+$" value)))]{% endif -%}
+  {%- if format_regex(value) %} [:fn (fn [value] (boolean (re-matches (re-pattern {{ format_regex(value) | tojson }}) value)))]{% endif -%}
+  {%- if constraints.pattern is not none %}{% for expression in constraints.pattern.match %} [:fn (fn [value] (boolean (re-matches (re-pattern {{ expression | tojson }}) value)))]{% endfor %}{% endif -%}]
+{%- elif value.is.temporal -%}:string
+{%- elif value.is.record -%}:map
+{%- else -%}:any
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_schema(field) -%}
+{%- set base = scalar_schema(field.value) -%}
+{%- if field.array is not none -%}
+  {%- set result = '[:vector' -%}
+[:vector{% if field.array.has_min or field.array.has_max %} {:min {{ field.array.min if field.array.has_min else 0 }}{% if field.array.has_max %} :max {{ field.array.max }}{% endif %}}{% endif %} {{ base }}]
+{%- else -%}
+{{ base }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand(value) -%}
+{%- if value.is.field -%}(get value (keyword {{ value.field.raw | tojson }}))
+{%- elif value.is.literal -%}{{ clj_json(value.value_json) }}
+{%- else -%}({% if value.operator == 'add' %}+{% elif value.operator == 'subtract' %}-{% elif value.operator == 'multiply' %}*{% else %}/{% endif %}{% for term in value.terms %} {% if term.kind == 'field' %}(get value (keyword {{ term.field.raw | tojson }})){% else %}{{ clj_json(term.value_json) }}{% endif %}{% endfor %})
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro comparison_operator(operator) -%}
+{%- if operator == 'equal' -%}=
+{%- elif operator == 'not-equal' -%}not=
+{%- elif operator == 'less-than' -%}<
+{%- elif operator == 'less-than-or-equal' -%}<=
+{%- elif operator == 'greater-than' -%}>
+{%- else -%}>=
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_expr(invariant) -%}
+({% if invariant.form.is_all %}and{% else %}or{% endif %}{% for comparison in invariant.form.comparisons %} ({{ comparison_operator(comparison.operator) }} {{ operand(comparison.left) }} {{ operand(comparison.right) }}){% endfor %})
+{%- endmacro -%}
+
+(ns dryv.generated.validation.schemas.{{ group.name.snake }}.{{ schema.name.snake }}
+  (:require
+   [malli.core :as m]
+{%- for dependency in file.dependencies %}
+{%- if dependency.symbol and not dependency.is_self %}
+   [{{ dep_namespace(dependency) }} :as dep{{ loop.index }}]
+{%- endif %}
+{%- endfor %}
+   ))
+
+(def {{ file.symbol }}
+  [:and
+   [:map
+{%- for field in schema.fields %}
+    [(keyword {{ field.name.raw | tojson }}){% if field.optional %} {:optional true}{% endif %} {% if field.nullable %}[:maybe {{ field_schema(field) }}]{% else %}{{ field_schema(field) }}{% endif %}]
+{%- endfor %}
+    ]
+{%- for invariant in schema.invariants %}
+{%- if not invariant.form.is_opaque %}
+   [:fn
+    {:error/message {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %}}
+    (fn [value] {{ invariant_expr(invariant) }})]
+{%- endif %}
+{%- endfor %}
+   ])
+
+(defn valid?
+  [value]
+  (m/validate {{ file.symbol }} value))
+
+(defn explain
+  [value]
+  (m/explain {{ file.symbol }} value))
