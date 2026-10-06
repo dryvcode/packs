@@ -1,0 +1,11 @@
+{
+  "kind": "dryv-http-contract-case-index",
+  "cases": [
+{% for dependency in file.dependencies %}
+    {
+      "semantic_id": {{ dependency.target.id | tojson }},
+      "path": {{ dependency.path.relative | tojson }}
+    }{% if not loop.last %},{% endif %}
+{% endfor %}
+  ]
+}

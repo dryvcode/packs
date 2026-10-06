@@ -55,7 +55,6 @@ usage:
                   validation:
                     schema:
                       path: [src, modules, "$(group.name.kebab)", dto]
-                      filename: "$(name).schema.ts"
                   persistence:
                     entity:
                       path: [src, modules, "$(group.name.kebab)", entities]
@@ -78,7 +77,6 @@ usage:
                   validation:
                     schema:
                       path: [src, _generated, dto]
-                      filename: "$(name).schema.ts"
                   persistence:
                     entity:
                       path: [src, _generated, entities]
@@ -101,7 +99,6 @@ usage:
                   validation:
                     schema:
                       path: [src, contracts]
-                      filename: "$(name).schema.ts"
                   persistence:
                     entity:
                       path: [src, models]
