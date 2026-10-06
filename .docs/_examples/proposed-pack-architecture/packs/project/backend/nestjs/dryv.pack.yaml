@@ -1,0 +1,46 @@
+# DESIGN EXAMPLE — tracks the project/inject architecture.
+version: dryv.pack/v1alpha1
+key: project.backend.nestjs
+layout: project
+source: templates
+
+info:
+  title: NestJS
+  version: 0.1.0
+  description: Runnable NestJS project shell that assembles bound NestJS server feature modules.
+  purpose: backend
+  summary: Runnable NestJS application project.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, http, application]
+
+inputs:
+  package_name:
+    type: string
+    default: dryv-backend
+    description: npm package name for the generated project.
+
+needs:
+  operation.server: required
+
+templates:
+  app-module:
+    imports:
+      - $ref: "#/needs/operation.server"
+        mode: all
+
+  bootstrap: {}
+
+dependencies:
+  runtime:
+    "@nestjs/common": ^11
+    "@nestjs/core": ^11
+    "@nestjs/platform-express": ^11
+    reflect-metadata: ^0.2
+    rxjs: ^7
+  dev:
+    "@types/node": ^24
+    typescript: ^5.9
+
+# Normal format/install/build workflows belong in dryv.example.yaml and
+# materialized Usage, not in this pack manifest.
