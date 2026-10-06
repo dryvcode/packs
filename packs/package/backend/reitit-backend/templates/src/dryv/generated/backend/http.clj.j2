@@ -15,6 +15,13 @@
     (or (contains? m keyword-name)
         (contains? m name))))
 
+(defn required-value
+  [present value label]
+  (if present
+    value
+    (throw (IllegalArgumentException.
+            (str "missing required " label)))))
+
 (defn values
   [value]
   (cond
