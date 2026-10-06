@@ -30,13 +30,15 @@
     "kind": {% if schema.facets.storage %}{{ schema.facets.storage.kind | tojson }}{% else %}null{% endif %}
   },
   "primary_key": [
+{%- set pk = namespace(first=true) -%}
 {%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
-    {{ field.name.raw | tojson }}{% if not loop.last %},{% endif %}
+    {% if not pk.first %},{% endif %}{{ field.name.raw | tojson }}{% set pk.first=false %}
 {%- endif %}{% endfor %}
   ],
   "fields": [
+{%- set stored = namespace(first=true) -%}
 {%- for field in schema.fields %}{% if field.related is none %}
-    {
+    {% if not stored.first %},{% endif %}{
       "name": {{ field.name.raw | tojson }},
       "semantic_type": {{ semantic_type(field.value) | trim | tojson }},
       "optional": {{ field.optional | lower }},
@@ -56,7 +58,7 @@
         "on_delete": {% if field.relation.on_delete %}{{ field.relation.on_delete | tojson }}{% else %}null{% endif %},
         "on_update": {% if field.relation.on_update %}{{ field.relation.on_update | tojson }}{% else %}null{% endif %}
       }{% else %}null{% endif %}
-    }{% if not loop.last %},{% endif %}
+    }{% set stored.first=false %}
 {%- endif %}{% endfor %}
   ],
   "inverse_relations": [
@@ -92,5 +94,7 @@
     }{% if not loop.last %},{% endif %}
 {%- endfor %}
   ],
-  "physical_foreign_key_target_identity_complete": false
+{%- set relation_state = namespace(has_owning=false) -%}
+{%- for field in schema.fields %}{% if field.relation is not none %}{% set relation_state.has_owning=true %}{% endif %}{% endfor %}
+  "physical_foreign_key_target_identity_complete": {% if relation_state.has_owning %}false{% else %}true{% endif %}
 }
