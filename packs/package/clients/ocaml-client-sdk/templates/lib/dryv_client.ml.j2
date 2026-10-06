@@ -1,0 +1,163 @@
+open Lwt.Infix
+
+type api_error =
+  {
+    status : int;
+    message : string;
+    payload : Yojson.Safe.t option;
+  }
+
+exception Api_error of api_error
+
+type t =
+  {
+    base_url : string;
+  }
+
+let create ~base_url =
+  { base_url = String.trim base_url }
+
+let wire_string = function
+  | `String value -> value
+  | `Null -> ""
+  | value -> Yojson.Safe.to_string value
+
+let append_wire pairs name = function
+  | `Null -> pairs
+  | `List values ->
+      pairs @ List.map (fun value -> (name, wire_string value)) values
+  | value -> pairs @ [ (name, wire_string value) ]
+
+let append_object pairs = function
+  | `Assoc fields ->
+      List.fold_left
+        (fun result (name, value) -> append_wire result name value)
+        pairs
+        fields
+  | _ -> pairs
+
+let path_encode value =
+  Uri.pct_encode (wire_string value)
+
+let add_pairs uri pairs =
+  List.fold_left
+    (fun current (name, value) -> Uri.add_query_param' current (name, value))
+    uri
+    pairs
+
+let form_body pairs =
+  pairs
+  |> List.map (fun (name, value) -> Uri.pct_encode name ^ "=" ^ Uri.pct_encode value)
+  |> String.concat "&"
+
+let headers_of_pairs headers cookies content_type =
+  let headers =
+    List.fold_left
+      (fun result (name, value) -> Cohttp.Header.add result name value)
+      (Cohttp.Header.init ())
+      headers
+  in
+  let headers =
+    if cookies = [] then headers
+    else
+      Cohttp.Header.add
+        headers
+        "Cookie"
+        (cookies
+         |> List.map (fun (name, value) -> name ^ "=" ^ Uri.pct_encode value)
+         |> String.concat "; ")
+  in
+  match content_type with
+  | None -> headers
+  | Some value -> Cohttp.Header.replace headers "Content-Type" value
+
+let parse_payload body =
+  if String.trim body = "" then None
+  else
+    try Some (Yojson.Safe.from_string body)
+    with Yojson.Json_error _ -> None
+
+let error_message body payload =
+  match payload with
+  | Some (`Assoc fields) ->
+      (match List.assoc_opt "message" fields with
+       | Some (`String message) -> message
+       | _ -> String.trim body)
+  | _ -> String.trim body
+
+let perform
+    client
+    ~meth
+    ~path
+    ~query
+    ~headers
+    ~cookies
+    ~json_body
+    ~form =
+  let uri =
+    Uri.of_string (String.trim client.base_url ^ path)
+    |> fun uri -> add_pairs uri query
+  in
+  let body, content_type =
+    match json_body, form with
+    | Some value, _ ->
+        ( Some (Cohttp_lwt.Body.of_string (Yojson.Safe.to_string value))
+        , Some "application/json" )
+    | None, Some values ->
+        ( Some (Cohttp_lwt.Body.of_string (form_body values))
+        , Some "application/x-www-form-urlencoded" )
+    | None, None -> (None, None)
+  in
+  let headers = headers_of_pairs headers cookies content_type in
+  Cohttp_lwt_unix.Client.call ?body ~headers meth uri
+  >>= fun (response, response_body) ->
+  Cohttp_lwt.Body.to_string response_body >>= fun body_text ->
+  let status = Cohttp.Response.status response |> Cohttp.Code.code_of_status in
+  let payload = parse_payload body_text in
+  if status >= 200 && status < 300 then
+    Lwt.return (body_text, payload)
+  else
+    Lwt.fail
+      (Api_error
+         {
+           status;
+           message = error_message body_text payload;
+           payload;
+         })
+
+let send_empty client ~meth ~path ~query ~headers ~cookies ~json_body ~form =
+  perform client ~meth ~path ~query ~headers ~cookies ~json_body ~form
+  >|= fun _ -> ()
+
+let send_json
+    client
+    ~meth
+    ~path
+    ~query
+    ~headers
+    ~cookies
+    ~json_body
+    ~form
+    ~decode =
+  perform client ~meth ~path ~query ~headers ~cookies ~json_body ~form
+  >>= fun (_, payload) ->
+  match payload with
+  | None ->
+      Lwt.fail
+        (Api_error
+           {
+             status = 200;
+             message = "expected JSON response body";
+             payload = None;
+           })
+  | Some value ->
+      (match decode value with
+       | Ok output -> Lwt.return output
+       | Error message ->
+           Lwt.fail
+             (Api_error
+                {
+                  status = 200;
+                  message = "invalid JSON response: " ^ message;
+                  payload = Some value;
+                }))
