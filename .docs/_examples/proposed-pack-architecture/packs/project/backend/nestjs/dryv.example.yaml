@@ -1,0 +1,210 @@
+# REVIEW EXAMPLE — composed NestJS Usage shape plus ordered $options.
+version: dryv.example/v1alpha1
+
+sources:
+  authoring:
+    ir: { type: ir, path: dryv.ir.yaml }
+
+  packs:
+    official:
+      repository: https://github.com/dryvcode/packs
+      ref: develop
+      root: packs
+
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: { bun: [--dev] }
+        - { pinned: "$(name)@$(version)", any: "$(name)" }
+    commands:
+      - run: [bun, add]
+
+  build:
+    stage: final
+    commands:
+      - run: [bun, run, build]
+
+  $options:
+    format:
+      - stage: files
+        extensions: [.ts]
+        commands:
+          - run: [pnpm, dlx, prettier@3.9.9, --write, $(files)]
+
+      - stage: files
+        extensions: [.ts]
+        commands:
+          - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+
+      - stage: files
+        extensions: [.ts]
+        commands:
+          - run: [yarn, dlx, prettier@3.9.9, --write, $(files)]
+
+    install:
+      - stage: final
+        dependencies:
+          args:
+            - dev: { pnpm: [-D] }
+            - { pinned: "$(name)@$(version)", any: "$(name)" }
+        commands:
+          - run: [pnpm, add]
+
+      - stage: final
+        dependencies:
+          args:
+            - dev: { npm: [--save-dev] }
+            - { pinned: "$(name)@$(version)", any: "$(name)" }
+        commands:
+          - run: [npm, install]
+
+      - stage: final
+        dependencies:
+          args:
+            - dev: { yarn: [-D] }
+            - { pinned: "$(name)@$(version)", any: "$(name)" }
+        commands:
+          - run: [yarn, add]
+
+    build:
+      - stage: final
+        commands:
+          - run: [pnpm, run, build]
+
+      - stage: final
+        commands:
+          - run: [npm, run, build]
+
+      - stage: final
+        commands:
+          - run: [yarn, run, build]
+
+destinations:
+  backend:
+    path: apps/backend
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+      - $ref: "#/actions/build"
+
+authoring:
+  source:
+    $ref: "#/sources/authoring/ir"
+
+packs:
+  app:
+    source:
+      $ref: "#/sources/packs/official"
+      path: project/backend/nestjs
+
+    destination:
+      $ref: "#/destinations/backend"
+
+    inputs:
+      package_name: dryv-backend
+
+    bind:
+      operation.server:
+        $ref: "#/packs/server"
+
+  server:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/backend/nestjs
+
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+
+    bind:
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
+
+    outputs:
+      controller:
+        path: [modules, "$(feature.name.kebab)"]
+      service:
+        path: [modules, "$(feature.name.kebab)"]
+      module:
+        path: [modules, "$(feature.name.kebab)"]
+
+    $options:
+      outputs:
+        - controller:
+            path: [_generated, controllers]
+          service:
+            path: [_generated, services]
+          module:
+            path: [_generated, modules]
+
+        - controller:
+            path: [controllers]
+          service:
+            path: [services]
+          module:
+            path: [modules]
+
+  validation:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/validation/zod
+
+    $options:
+      source:
+        - $ref: "#/sources/packs/official"
+          path: inject/validation/class-validator
+
+      outputs:
+        - schema:
+            path: [modules, "$(group.name.kebab)", dto]
+
+        - schema:
+            path: [_generated, dto]
+
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+
+    outputs:
+      schema:
+        path: [contracts]
+        symbol: "$(subject.name.pascal)Validator"
+
+  persistence:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+
+    inputs:
+      naming_strategy: snake
+
+      $options:
+        naming_strategy:
+          - camel
+
+    outputs:
+      entity:
+        path: [models]
+        symbol: "$(subject.name.pascal)Model"
+
+    $options:
+      outputs:
+        - entity:
+            path: [modules, "$(group.name.kebab)", entities]
+
+        - entity:
+            path: [_generated, entities]
