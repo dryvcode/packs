@@ -50,50 +50,59 @@ schema.persistence
 
 ## Proposed CLI presentation
 
+The unit's `dryv.example.yaml` exposes choices directly.
+
+A Client could render them like:
+
 ```text
 Add unit/backend/nestjs
 
 Destination
   apps/backend
 
+Source structure
+  ● Feature-oriented
+  ○ Central _generated tree
+  ○ Type-oriented folders
+
+Validation implementation
+  ● Zod
+  ○ class-validator
+  + show other compatible providers
+
+Package manager
+  ● Bun
+  ○ pnpm
+  ○ npm
+  ○ Yarn
+
+Database naming
+  ● snake_case
+  ○ camelCase
+
 Required capability
   operation.server
-
-Recommended provider
-  inject/backend/nestjs
+  ✓ inject/backend/nestjs
   ✓ TypeScript compatible
   ✓ NestJS compatible
   ✓ provides nestjs-feature-module
   ✓ same generated unit
 
-inject/backend/nestjs requires
-  schema.validation
-
-Recommended provider
-  inject/validation/zod
-  ✓ TypeScript compatible
-  ✓ provides zod-schema
-
-Optional capability
-  schema.persistence
-
-Recommended provider
-  inject/persistence/typeorm
+Persistence
+  ✓ inject/persistence/typeorm
   ✓ TypeScript compatible
   ✓ provides typeorm-entity
 
-Suggested package manager
-  bun
-
-Suggested structure
-  src/modules/<feature>/controller.ts
-  src/modules/<feature>/service.ts
-  src/modules/<feature>/module.ts
-  src/modules/<group>/dto/<schema>.schema.ts
-  src/modules/<group>/entities/<schema>.entity.ts
-
-Apply this composition? [review/change/apply]
+Review generated configuration? [yes/change/cancel]
 ```
+
+The selected source-structure option resolves one normal destination `place` map. It changes server, validation and persistence paths together.
+
+The selected validation option resolves one normal pack activation under the stable activation name `validation`.
+
+The selected package-manager and naming options resolve ordinary scalar Usage values.
+
+After resolution there are no `$example` nodes left.
 
 ## Alternative validation provider
 
