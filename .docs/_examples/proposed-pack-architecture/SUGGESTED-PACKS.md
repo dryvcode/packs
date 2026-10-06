@@ -1,74 +1,57 @@
 # Suggested pack composition
 
-Status: **design-only example**
+Status: **design-only**
 
-This file demonstrates how a Client could interpret `dryv.example.yaml` when a user adds a pack.
+This shows how the compact `dryv.example.yaml` can guide setup without bloating `dryv.pack.yaml`.
 
-The example is a recommendation, not a hidden dependency declaration.
-
-## Add the NestJS unit
-
-User intent:
+## User adds the NestJS unit
 
 ```text
 dryv pack add unit/backend/nestjs
 ```
 
-The unit declares:
+The pack contracts determine what is legal:
 
 ```text
-needs operation.server
-  language compatible
-  framework compatible
-  representation accepted: nestjs-feature-module
-  locality: same-unit
+unit/backend/nestjs
+  needs operation.server
+
+inject/backend/nestjs
+  provides operation.server
+  needs schema.validation
+  optionally needs schema.persistence
+
+inject/validation/zod
+  provides schema.validation
+
+inject/validation/class-validator
+  provides schema.validation
+
+inject/persistence/typeorm
+  provides schema.persistence
 ```
 
-Its example recommends:
+The example supplies useful choices.
+
+## Possible setup UI
 
 ```text
-operation.server
-  -> inject/backend/nestjs
-```
+NestJS backend
 
-The NestJS inject pack then declares:
-
-```text
-needs schema.validation
-needs schema.persistence (optional)
-```
-
-Its example recommends:
-
-```text
-schema.validation
-  -> inject/validation/zod
-
-schema.persistence
-  -> inject/persistence/typeorm
-```
-
-## Proposed CLI presentation
-
-The unit's `dryv.example.yaml` exposes choices directly.
-
-A Client could render them like:
-
-```text
-Add unit/backend/nestjs
-
-Destination
-  apps/backend
-
-Source structure
-  ● Feature-oriented
-  ○ Central _generated tree
-  ○ Type-oriented folders
-
-Validation implementation
+Validation
   ● Zod
   ○ class-validator
-  + show other compatible providers
+
+Source layout
+  ● Pack default
+  ○ Feature modules
+  ○ Central _generated
+  ○ Type-oriented
+
+Imports
+  ● Relative
+  ○ @/ from src
+  ○ #/ from src
 
 Package manager
   ● Bun
@@ -76,76 +59,66 @@ Package manager
   ○ npm
   ○ Yarn
 
-Database naming
-  ● snake_case
-  ○ camelCase
-
-Required capability
-  operation.server
-  ✓ inject/backend/nestjs
-  ✓ TypeScript compatible
-  ✓ NestJS compatible
-  ✓ provides nestjs-feature-module
-  ✓ same generated unit
-
-Persistence
-  ✓ inject/persistence/typeorm
-  ✓ TypeScript compatible
-  ✓ provides typeorm-entity
-
-Review generated configuration? [yes/change/cancel]
+TypeORM naming
+  ● snake
+  ○ camel
 ```
 
-The selected source-structure option resolves one normal destination `place` map. It changes server, validation and persistence paths together.
+This comes from compact example values such as:
 
-The selected validation option resolves one normal pack activation under the stable activation name `validation`.
+```yaml
+choose:
+  js.package_manager: [bun, pnpm, npm, yarn]
 
-The selected package-manager and naming options resolve ordinary scalar Usage values.
+packs:
+  validation:
+    pack:
+      - inject/validation/zod
+      - inject/validation/class-validator
 
-After resolution there are no `$example` nodes left.
+inputs:
+  naming_strategy: [snake, camel]
+```
 
-## Alternative validation provider
+Structured choices such as source layout remain named maps because they contain several coordinated output overrides.
 
-If a future pack exists:
+## Materialized result
+
+After setup, normal `dryv.yaml` contains only the selected values:
+
+```yaml
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      choose:
+        js.package_manager: bun
+      imports:
+        root: src
+        prefix: "@/"
+      outputs:
+        persistence:
+          entity:
+            path: [src, models]
+            symbol: "$(subject.name.pascal)Model"
+```
+
+No example-only option lists remain.
+
+## Important distinction
 
 ```text
-inject/validation/class-validator
+pack contract
+    legal capabilities and inputs
+
+example
+    recommended setup choices
+
+catalogue
+    may discover more legal alternatives
+
+usage
+    actual explicit project decision
 ```
 
-and it provides:
-
-```text
-schema.validation
-contract: class-validator-dto
-language: typescript
-```
-
-then it can also be offered because `inject/backend/nestjs` explicitly accepts that representation.
-
-The example may still prefer Zod.
-
-Therefore:
-
-```text
-example recommendation != legal-provider whitelist
-```
-
-The Engine determines legal compatibility from pack contracts.
-
-The Client uses the example only to rank/propose a known-good composition.
-
-## Alternative project structure
-
-The same pack graph may be materialized using:
-
-```text
-usage/dryv.central-generated.yaml
-```
-
-or:
-
-```text
-usage/dryv.type-oriented.yaml
-```
-
-No different NestJS, Zod or TypeORM pack is required.
+Repeated readable options across pack examples are acceptable.
