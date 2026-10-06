@@ -90,10 +90,9 @@ packs:
       path: inject/validation/zod
     destination:
       $ref: "#/destinations/backend"
-      root: [src, contracts]
     outputs:
       schema:
-        path: [$(group.name.kebab)]
+        path: [src, contracts]
         symbol: "$(subject.name.pascal)Validator"
 
   persistence:
@@ -102,10 +101,9 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
-      root: [src, models]
     inputs:
       naming_strategy: camel
     outputs:
       entity:
-        path: [$(group.name.kebab)]
+        path: [src, models]
         symbol: "$(subject.name.pascal)Model"

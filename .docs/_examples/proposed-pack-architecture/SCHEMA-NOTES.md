@@ -1,8 +1,8 @@
 # Proposed syntax review notes
 
-Status: **aligned with the latest Dryv pack/Usage design**
+Status: **aligned with the latest Dryv design decisions**
 
-## Pack manifest stays small
+## Pack manifest
 
 ```yaml
 layout: unit | inject
@@ -24,36 +24,39 @@ provides: ...
 dependencies: ...
 ```
 
-Do not add duplicate `catalog:` or `target:` metadata.
+Do not duplicate implementation metadata under `catalog:` or `target:`.
 
-## Needs
+## Needs are keyed because they are referenced
 
-Common required-only case:
-
-```yaml
-needs:
-  - operation.server
-```
-
-Mixed strengths:
+Canonical direction:
 
 ```yaml
 needs:
-  required:
-    - schema.validation
-  recommended:
-    - schema.persistence
-  optional:
-    - property.enum.types
+  schema.validation: required
+  schema.persistence: recommended
+  property.enum.types: optional
 ```
 
-Required must be bound. Recommended and optional may remain unbound, with recommended surfaced more strongly by setup tooling.
+Allowed strengths:
 
-Compatibility rules belong to Dryv's capability model, not consumer-side `accepts` lists.
+```text
+required
+recommended
+optional
+```
+
+The keyed map preserves stable refs:
+
+```yaml
+imports:
+  - $ref: "#/needs/schema.validation"
+```
+
+Do not use arrays or grouped lists for `needs`; they make semantic refs positional or false.
+
+Compatibility remains Engine-owned. Consumers do not enumerate provider allowlists.
 
 ## Provides
-
-Keep real template refs:
 
 ```yaml
 provides:
@@ -61,7 +64,7 @@ provides:
     $ref: "#/templates/entity"
 ```
 
-One capability has one public provider template per activation.
+Every ref must resolve to a real template node.
 
 ## Pack output defaults
 
@@ -79,7 +82,7 @@ templates:
       symbol: "$(subject.name.pascal)Entity"
 ```
 
-Reusable pack defaults remain semantic/local. Project-root folders belong to Usage.
+Pack defaults remain portable and semantic/local.
 
 ## Flat destination map
 
@@ -89,26 +92,19 @@ destinations:
     path: apps/backend
 ```
 
-Pack refs therefore use:
+Refs use:
 
-```yaml
-destination:
-  $ref: "#/destinations/backend"
+```text
+#/destinations/backend
 ```
 
-not `#/destinations/code/backend`.
+## Activation destination root
 
-## Pack activation output overrides
-
-Output overrides live beside the activation that owns the template:
+A pack activation may add a project-specific root inside the destination:
 
 ```yaml
 packs:
   persistence:
-    source:
-      $ref: "#/sources/packs/official"
-      path: inject/persistence/typeorm
-
     destination:
       $ref: "#/destinations/backend"
       root: [src, models]
@@ -120,9 +116,7 @@ packs:
         symbol: "$(subject.name.pascal)Model"
 ```
 
-`entity` must be a real template key.
-
-The override is partial and uses the existing output vocabulary:
+The override vocabulary remains:
 
 ```text
 name
@@ -131,19 +125,31 @@ symbol
 symbols
 ```
 
-Bindings and outputs solve different problems:
+An explicit output `path` replaces the pack template path, then activation `root` is prepended.
+
+## Final path planning
+
+Required conceptual order:
 
 ```text
-bind
-    which provider activation satisfies a capability
-
-outputs
-    how this activation's real template is placed/named
+pack template output default
+    ↓
+activation outputs.<template-key> partial override
+    ↓
+final template-relative path/name/symbol(s)
+    ↓
+prepend activation destination.root
+    ↓
+prepend destination.path
+    ↓
+collision / representation / dependency planning
+    ↓
+import addressing
 ```
 
-## Flat actions
+Import planning must never use pre-root/pre-override paths.
 
-Actions are keyed once and carry their stage:
+## Flat actions
 
 ```yaml
 actions:
@@ -159,7 +165,7 @@ actions:
       - run: [bun, run, build]
 ```
 
-Destination action selection uses real refs:
+Destinations select real refs:
 
 ```yaml
 actions:
@@ -167,9 +173,9 @@ actions:
   - $ref: "#/actions/build"
 ```
 
-## Example runners
+## Compact runner alternatives
 
-`dryv.example.yaml` may contain compact runner alternatives:
+In `dryv.example.yaml`:
 
 ```yaml
 commands:
@@ -178,9 +184,7 @@ commands:
   - run: [bun, x, prettier@3.9.9, --write, $(files)]
 ```
 
-Grouped selectors such as `(pnpm|yarn)` mean identical behavior for those runners.
-
-The same grouping can be used for runner-specific dependency argument rules:
+The same grouped runner syntax applies to dependency args:
 
 ```yaml
 dependencies:
@@ -195,36 +199,13 @@ dependencies:
         any: "$(name)"
 ```
 
-An example destination may provide the setup default:
+Materialized Usage contains concrete commands and concrete dependency argument rules.
 
-```yaml
-destinations:
-  backend:
-    path: apps/backend
-    runner: bun
-```
-
-A selected action may override it when required.
-
-Runner choices are materialization input. Normal Usage should contain the resolved commands, not the alternative matrix.
-
-## Multiple commands
-
-In an example, command matching chooses the commands for the selected runner.
-
-In materialized Usage, multiple commands are genuine sequential commands.
-
-## Environment choices
-
-Do not use `choose.js.package_manager` merely to decide which action command variant to run.
-
-Use runner materialization for that.
-
-The general `choose` mechanism may still exist for genuine non-runner project choices.
+Do not use `choose.js.package_manager` merely to choose command variants.
 
 ## Import addressing
 
-Import configuration remains destination-wide:
+Import configuration stays destination-wide:
 
 ```yaml
 destinations:
@@ -235,16 +216,33 @@ destinations:
       prefix: "@/"
 ```
 
-Final output overrides resolve first. Import addressing uses the final producer path and symbols.
+Activation root and output overrides resolve before import addressing.
 
-## Real refs
+## Real-reference rule
 
-Every `$ref` in an example must resolve to a real node in that exact document.
+Anything intentionally addressed by semantic `$ref` must expose a stable keyed node.
 
-Do not add a `usage:` wrapper around a Usage-shaped example while continuing to use root refs such as `#/destinations/backend`.
+Examples:
 
-## Still open / hardening
+```text
+#/needs/schema.validation
+#/templates/entity
+#/actions/format
+#/destinations/backend
+#/packs/persistence
+```
 
-Dryv roadmap task 16 owns the exact runner-materialization contract and validation.
+Avoid positional array refs for semantic identities.
 
-Do not use this directory to invent another runner schema.
+## Review focus
+
+The examples should now make it possible to review these boundaries independently:
+
+```text
+unit root        -> destination.path
+pack root        -> activation destination.root
+template path    -> output.path
+workflow choice  -> example runner materialization
+runtime action   -> concrete Usage command
+capability need  -> keyed needs map
+```

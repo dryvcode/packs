@@ -21,7 +21,7 @@ inputs:
     description: npm package name for the generated unit.
 
 needs:
-  - operation.server
+  operation.server: required
 
 templates:
   app-module:

@@ -1,6 +1,51 @@
 # Invalid examples the Engine/tooling should reject
 
-These are design fixtures for expected validation behavior.
+These are review fixtures for expected validation behavior.
+
+## Positional/grouped needs break semantic refs
+
+Do not use:
+
+```yaml
+needs:
+  - schema.validation
+```
+
+or:
+
+```yaml
+needs:
+  required:
+    - schema.validation
+```
+
+because templates need a real stable node such as:
+
+```text
+#/needs/schema.validation
+```
+
+Correct:
+
+```yaml
+needs:
+  schema.validation: required
+```
+
+## Invalid need strength
+
+```yaml
+needs:
+  schema.validation: preferred
+```
+
+Allowed:
+
+```text
+required
+recommended
+optional
+```
 
 ## Nested code destination namespace
 
@@ -11,7 +56,7 @@ destinations:
       path: apps/backend
 ```
 
-The current model is flat:
+Correct:
 
 ```yaml
 destinations:
@@ -26,17 +71,21 @@ destination:
   $ref: "#/destinations/code/backend"
 ```
 
-Expected target is a real node such as:
+Correct target:
 
 ```text
 #/destinations/backend
 ```
 
-## Wrong language provider
+## Invalid activation root
 
-A NestJS consumer binds an incompatible-language provider.
+```yaml
+destination:
+  $ref: "#/destinations/backend"
+  root: [.., secrets]
+```
 
-Expected: compatibility validation failure before render.
+Activation roots must remain portable and inside the destination unit.
 
 ## Missing required provider
 
@@ -44,7 +93,7 @@ A pack declares:
 
 ```yaml
 needs:
-  - schema.validation
+  schema.validation: required
 ```
 
 but its activation does not bind that capability.
@@ -55,6 +104,8 @@ Expected:
 usage.bind.missing
 ```
 
+Recommended/optional needs may remain unbound.
+
 ## Output override names unknown template
 
 ```yaml
@@ -63,10 +114,10 @@ packs:
     ...
     outputs:
       hidden-bootstrap:
-        path: [src, custom]
+        path: [custom]
 ```
 
-If `hidden-bootstrap` is not a real template key in that pack:
+If `hidden-bootstrap` is not a real template key:
 
 ```text
 usage.output.unknown_template
@@ -75,12 +126,9 @@ usage.output.unknown_template
 ## Output path traversal
 
 ```yaml
-packs:
-  persistence:
-    ...
-    outputs:
-      entity:
-        path: [.., secrets]
+outputs:
+  entity:
+    path: [.., secrets]
 ```
 
 Expected:
@@ -89,9 +137,15 @@ Expected:
 usage.output.path_invalid
 ```
 
-## Collision after overrides
+## Collision after root + override composition
 
-Two final activation/template outputs resolve to the same workspace file.
+Two activation/template outputs resolve to the same final workspace file after:
+
+```text
+destination.path
++ activation root
++ output path
+```
 
 Expected:
 
@@ -109,11 +163,11 @@ destinations:
       - $ref: "#/actions/missing"
 ```
 
-Expected: fail because the ref does not resolve to a real action.
+The ref must resolve to a real root action.
 
 ## Runner alternative survives materialization
 
-Normal `dryv.yaml` contains:
+Normal `dryv.yaml` still contains:
 
 ```yaml
 commands:
@@ -121,25 +175,25 @@ commands:
   - run: [bun, x, prettier, --write, $(files)]
 ```
 
-after setup has already selected Bun.
+after setup already selected Bun.
 
-Expected: runner hardening should reject/avoid unresolved example-only alternatives in materialized Usage.
+Expected: materialization should emit only the concrete selected command(s).
 
 ## Unsupported runner
 
-An example destination selects `dart`, but the selected action exposes only Bun/pnpm/npm/Yarn command variants.
+A destination selects `dart`, but an action only exposes Bun/pnpm/npm/Yarn variants.
 
-Expected: materialization failure before Usage is written.
+Expected: fail before Usage is written.
 
-## Conflicting runner dependency rules
+## Conflicting runner rules
 
-Two matching grouped runner rules produce incompatible dependency formats for the same selected runner.
+Two matching grouped runner rules produce incompatible dependency arguments for one selected runner.
 
-Expected: deterministic materialization failure; no hidden precedence.
+Expected: deterministic failure; no hidden precedence.
 
 ## Import root does not contain final producer
 
-Destination import root is `src`, but the final producer resolves outside it.
+The final artifact after activation-root/output composition is outside the configured import root.
 
 Expected import reachability failure.
 

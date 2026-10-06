@@ -38,6 +38,7 @@ packs:
     pack: self
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
 
     inputs:
       naming_strategy: [snake, camel]

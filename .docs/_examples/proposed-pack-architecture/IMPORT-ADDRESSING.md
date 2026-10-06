@@ -2,7 +2,7 @@
 
 Status: **design example aligned with current Dryv planning**
 
-Dryv plans import addresses only after final pack-activation output overrides are resolved.
+Import addressing happens after activation roots and output overrides have produced final artifacts.
 
 ## Default: relative
 
@@ -12,19 +12,7 @@ destinations:
     path: apps/backend
 ```
 
-Producer:
-
-```text
-apps/backend/src/models/user.ts
-```
-
-Consumer:
-
-```text
-apps/backend/src/controllers/users.controller.ts
-```
-
-Dryv can expose the relative filesystem address and the TypeScript pack may normalize it to a module specifier.
+No import configuration means relative addressing.
 
 ## TypeScript @/ alias
 
@@ -37,14 +25,37 @@ destinations:
       prefix: "@/"
 ```
 
-Planner facts:
+If persistence is configured as:
+
+```yaml
+packs:
+  persistence:
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+
+    outputs:
+      entity:
+        path: [models]
+        symbol: "$(subject.name.pascal)Model"
+```
+
+then a User entity resolves conceptually under:
 
 ```text
-unit root:           apps/backend
-import root:         apps/backend/src
-root-relative path: models/user.ts
-prefix:              @/
-symbol:              UserModel
+apps/backend/src/models/...
+```
+
+Planner facts can include:
+
+```text
+unit root:            apps/backend
+activation root:      src
+final output path:    models/...
+import root:           apps/backend/src
+import-root-relative: models/...
+prefix:               @/
+symbol:               UserModel
 ```
 
 A TypeScript template can render:
@@ -61,11 +72,7 @@ imports:
   prefix: "#/"
 ```
 
-can render:
-
-```ts
-import { UserModel } from "#/models/user";
-```
+The same final producer can render with `#/`.
 
 ## Python dotted module
 
@@ -78,11 +85,7 @@ destinations:
       prefix: dryv
 ```
 
-A producer under `src/dryv/models/user.py` can become:
-
-```python
-from dryv.models.user import User
-```
+A final producer below that root can be converted by a Python template to dotted module syntax.
 
 ## Java package import
 
@@ -95,39 +98,38 @@ destinations:
       prefix: com.dryv.api
 ```
 
-A producer under `users/User.java` can become:
-
-```java
-import com.dryv.api.users.User;
-```
+A Java template renders the generic final address facts as package syntax.
 
 ## Dart package import
 
-Cross-unit addressing uses provider package identity plus its import root.
+Cross-unit addressing uses provider package identity plus the provider's final import-root-relative path.
+
+## Planning order
 
 ```text
-provider unit:    packages/riderescue_api
-package name:     riderescue_api
-import root:      lib
-producer:         lib/src/models/user.dart
+pack template output
++ activation output override
+    ↓
+final template-relative path/symbol
++ activation destination.root
+    ↓
+final unit-relative artifact
++ destination.path
+    ↓
+workspace artifact
+    ↓
+representation/dependency graph
+    ↓
+destination import policy
+    ↓
+generic import address facts
 ```
 
-A Dart template can render:
-
-```dart
-import 'package:riderescue_api/src/models/user.dart';
-```
-
-## Pack output overrides happen first
-
-Usage changes a concrete activation/template:
+Example:
 
 ```yaml
 packs:
   persistence:
-    source:
-      $ref: "#/sources/packs/official"
-      path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
       root: [src, models]
@@ -138,27 +140,15 @@ packs:
         symbol: "$(subject.name.pascal)Model"
 ```
 
-Planning order:
-
-```text
-pack template output
-+ packs.persistence.outputs.entity
-    ↓
-final producer path + symbol
-    ↓
-dependency graph
-    ↓
-destination import addressing
-```
-
-No template should retain the old path or symbol.
+The Engine must use that final rooted artifact for every consumer.
 
 ## Validation
 
 Planning should fail when:
 
-- the final producer is outside a configured import root;
-- a cross-unit package import has no package/import-root identity;
-- an activation output override makes the provider unreachable;
-- a requested address cannot be proven;
+- activation root escapes the destination unit;
+- final producer lies outside a configured import root;
+- a cross-unit package import lacks package/import-root identity;
+- output/root changes create an artifact collision;
+- an address form cannot be proven;
 - a same-unit-only capability is bound across units.

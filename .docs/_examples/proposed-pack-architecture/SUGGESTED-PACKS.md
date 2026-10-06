@@ -2,22 +2,16 @@
 
 Status: **design example aligned with current Dryv planning**
 
-## User adds the NestJS unit
-
-```text
-dryv pack add unit/backend/nestjs
-```
-
-Composition:
+## Composition
 
 ```text
 unit/backend/nestjs
-  needs operation.server
+  needs operation.server: required
 
 inject/backend/nestjs
   provides operation.server
-  requires schema.validation
-  recommends schema.persistence
+  needs schema.validation: required
+  needs schema.persistence: recommended
 
 inject/validation/zod
   provides schema.validation
@@ -60,9 +54,7 @@ TypeORM naming
   ○ camel
 ```
 
-The runner replaces package-manager choices whose only purpose was selecting action command variants.
-
-## Example action alternatives
+## Runner alternatives
 
 ```yaml
 actions:
@@ -81,7 +73,7 @@ actions:
       - run: [npm, run, build]
 ```
 
-A destination may suggest:
+A setup destination may suggest:
 
 ```yaml
 destinations:
@@ -93,9 +85,60 @@ destinations:
       - $ref: "#/actions/build"
 ```
 
-## Materialized result
+## Materialized placement
 
-After setup, normal Usage contains the selected concrete commands:
+A type-oriented persistence activation can be concise:
+
+```yaml
+packs:
+  persistence:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+
+    inputs:
+      naming_strategy: snake
+
+    outputs:
+      entity:
+        path: [models]
+        symbol: "$(subject.name.pascal)Model"
+```
+
+Final placement composes:
+
+```text
+apps/backend
++ src
++ models
++ template output name
+```
+
+For a feature-oriented server:
+
+```yaml
+destination:
+  $ref: "#/destinations/backend"
+  root: [src, modules]
+
+outputs:
+  controller:
+    path: ["$(feature.name.kebab)"]
+  service:
+    path: ["$(feature.name.kebab)"]
+  module:
+    path: ["$(feature.name.kebab)"]
+```
+
+No repeated `src/modules` prefix is needed.
+
+## Materialized actions
+
+Normal Usage stores the selected concrete commands:
 
 ```yaml
 actions:
@@ -136,19 +179,19 @@ packs:
         symbol: "$(subject.name.pascal)Model"
 ```
 
-The runner menu has disappeared. The result stores actual project decisions.
+The runner menu is setup guidance, not runtime command-selection state.
 
-## Important distinction
+## Distinction
 
 ```text
 pack contract
-    generation facts and capabilities
+    legal generation facts/capabilities
 
 example
-    recommended providers / runners / output choices
+    providers / runners / placement suggestions
 
 materialization
-    resolves runner alternatives and setup choices
+    resolves runner and setup alternatives
 
 usage
     explicit concrete project decisions
