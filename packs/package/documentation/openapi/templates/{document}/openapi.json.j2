@@ -179,7 +179,7 @@
   "in": {% if binding.is.query_object %}"query"{% else %}{{ binding.kind | tojson }}{% endif %},
   "required": {% if binding.is.path or not field.optional %}true{% else %}false{% endif %},
   "schema": {{ field_schema(field) }}
-{%- if binding.is.query and field.array is not none %},
+{%- if (binding.is.query or binding.is.query_object) and field.array is not none %},
   "style": "form",
   "explode": true
 {%- endif %}
