@@ -1,0 +1,99 @@
+(ns dryv.generated.client.core
+  (:require [jsonista.core :as json])
+  (:import
+   [java.net URI URLEncoder]
+   [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
+   [java.nio.charset StandardCharsets]
+   [java.time Duration]))
+
+(def ^:private mapper
+  (json/object-mapper {:decode-key-fn keyword}))
+
+(defn client
+  ([base-url]
+   (client base-url (HttpClient/newHttpClient)))
+  ([base-url http-client]
+   {:base-url (.replaceAll ^String base-url "/+$" "")
+    :http-client http-client}))
+
+(defn wire [value]
+  (cond
+    (map? value) (into {} (map (fn [[k v]] [k (wire v)])) value)
+    (sequential? value) (mapv wire value)
+    (set? value) (mapv wire value)
+    :else value))
+
+(defn encode-component [value]
+  (URLEncoder/encode (str value) StandardCharsets/UTF_8))
+
+(defn append-query [path pairs]
+  (if (seq pairs)
+    (str path
+         (if (.contains ^String path "?") "&" "?")
+         (clojure.string/join
+          "&"
+          (map (fn [[name value]]
+                 (str (encode-component name) "=" (encode-component value)))
+               pairs)))
+    path))
+
+(defn add-param [pairs name value]
+  (let [value (wire value)]
+    (cond
+      (nil? value) pairs
+      (and (sequential? value) (not (string? value)))
+      (into pairs (map (fn [item] [name item]) value))
+      :else
+      (conj pairs [name value]))))
+
+(defn request
+  [{:keys [base-url http-client]} {:keys [method path headers cookies body form timeout-seconds]}]
+  (let [builder (doto (HttpRequest/newBuilder (URI/create (str base-url path)))
+                  (.timeout (Duration/ofSeconds (long (or timeout-seconds 60)))))
+        cookie-header (when (seq cookies)
+                        (clojure.string/join
+                         "; "
+                         (map (fn [[name value]]
+                                (str name "=" (encode-component value)))
+                              cookies)))
+        body-publisher
+        (cond
+          (some? body)
+          (do
+            (.header builder "Content-Type" "application/json")
+            (HttpRequest$BodyPublishers/ofString
+             (json/write-value-as-string (wire body) mapper)))
+
+          (some? form)
+          (do
+            (.header builder "Content-Type" "application/x-www-form-urlencoded")
+            (HttpRequest$BodyPublishers/ofString
+             (clojure.string/join
+              "&"
+              (map (fn [[name value]]
+                     (str (encode-component name) "=" (encode-component value)))
+                   form))))
+
+          :else
+          (HttpRequest$BodyPublishers/noBody))]
+    (doseq [[name value] headers]
+      (.header builder (str name) (str value)))
+    (when cookie-header
+      (.header builder "Cookie" cookie-header))
+    (.method builder (str method) body-publisher)
+    (let [response (.send ^HttpClient http-client
+                          (.build builder)
+                          (HttpResponse$BodyHandlers/ofString))
+          status (.statusCode response)
+          raw (.body response)
+          payload (when (seq raw)
+                    (try
+                      (json/read-value raw mapper)
+                      (catch Exception _ raw)))]
+      (if (<= 200 status 299)
+        payload
+        (let [message (cond
+                        (and (map? payload) (string? (:message payload))) (:message payload)
+                        (string? payload) payload
+                        :else (str payload))]
+          (throw (ex-info message {:status status :payload payload})))))))
