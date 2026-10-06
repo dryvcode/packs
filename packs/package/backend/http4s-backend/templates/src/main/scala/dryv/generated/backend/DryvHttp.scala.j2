@@ -3,6 +3,8 @@ package {{ pack.inputs.root_package }}
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
+import scala.util.Try
+
 import cats.effect.IO
 
 import io.circe.{Decoder, Json, JsonObject, parser}
@@ -84,7 +86,7 @@ object DryvHttp:
           .map(Json.fromLong)
           .toRight("Expected integer value")
       case "number" | "decimal" | "money" =>
-        BigDecimal(raw).toOption
+        Try(BigDecimal(raw)).toOption
           .map(Json.fromBigDecimal)
           .toRight("Expected numeric value")
       case "enum" =>
