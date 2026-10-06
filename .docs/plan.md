@@ -44,6 +44,114 @@ Example:
 
 The same convention is used by the catalogue and release tooling. Do not maintain a second tag convention.
 
+
+## Roadmap: simplify pack layouts
+
+**Decision direction (2026-10-06):** stress testing of the current packs and Dryv Engine contract shows that `inject | package | project` mixes independent concerns. The planned direction is to reduce runtime layout to two behaviors:
+
+```text
+inject
+unit
+```
+
+This is **not implemented yet**. Until the Dryv `dryv.pack/v1alpha1` contract is rewritten, the repository continues to use the current `inject | package | project` folders and manifest values.
+
+### Why
+
+Layout should answer only:
+
+> Does this pack establish/own the generated unit root, or does it contribute into a unit owned elsewhere?
+
+That distinction is binary.
+
+```text
+inject
+  contributes artifacts to an existing generated or handwritten unit
+
+unit
+  establishes the destination's generated unit root
+  may receive contributions from inject packs
+```
+
+The current `package` versus `project` distinction is not a reliable runtime distinction:
+
+- both establish the same generated-unit/action/dependency boundary;
+- editability is already represented per resource through managed versus scaffold ownership;
+- current `project` packs are not uniformly scaffold/editable;
+- current `package` packs include root-owning bundles such as OpenAPI, Postman and k6 output that are not ecosystem packages.
+
+### Orthogonal concerns
+
+The target model keeps these concerns separate:
+
+| Concern | Planned authority |
+| --- | --- |
+| contributor vs unit owner | pack `layout`: `inject | unit` |
+| generated artifact ownership | resource-level managed/scaffold behavior |
+| package/import identity | optional `package` metadata on a unit |
+| backend/frontend/client/testing/docs/etc. | catalogue `purpose` and metadata |
+| workspace destination | `dryv.yaml` |
+| dependencies/actions/choices | generated unit planning |
+
+A root-owning unit may therefore be an application, library, SDK, generated backend, test suite, documentation bundle, API collection or another complete artifact tree without changing Planner layout semantics.
+
+### Expected migration
+
+When the Dryv contract change is approved and implemented in `v1alpha1`, migrate in place:
+
+```text
+inject   -> inject
+package  -> unit
+project  -> unit
+```
+
+Then:
+
+1. rename runtime `package | project` layout behavior to one root-owning `unit` behavior;
+2. make package/import identity optional and independent of layout;
+3. remove artificial package identities from root-owned bundles that are not packages;
+4. preserve resource-level managed/scaffold ownership unchanged;
+5. preserve explicit `needs`, `provides`, selections, templates, dependencies and actions;
+6. update catalogue/release tooling and pack IDs together;
+7. migrate repository folders from `packs/package` and `packs/project` to `packs/unit`;
+8. update fixtures/tests/docs in the same migration;
+9. reject obsolete layout spellings after migration rather than maintaining aliases while still on `v1alpha1`.
+
+Target repository shape:
+
+```text
+packs/
+├── inject/
+│   └── <purpose>/<name>/
+└── unit/
+    └── <purpose>/<name>/
+```
+
+Examples after migration:
+
+```text
+inject/persistence/typeorm-entities
+inject/validation/zod-schemas
+unit/backend/nestjs-app
+unit/backend/spring-boot-backend
+unit/frontend/flutter-app
+unit/clients/dart-client-sdk
+unit/testing/postman-collection
+unit/documentation/openapi
+```
+
+### Guardrail while pending
+
+Do not create a new `project` layout merely because output is editable. Use resource ownership to reason about editability.
+
+Do not classify a root-owning pack as `package` merely because the current contract needs a root-owner category. Before adding substantial new root-owning pack families, account for the planned `unit` migration.
+
+The architectural research and stress test live in the Dryv repository at:
+
+```text
+.docs/planning/research/frameworks-design-templating/08-pack-layout-model.md
+```
+
 ## Catalogue
 
 `dryv.pack.yaml` is the only catalogue metadata source of truth.
