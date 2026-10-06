@@ -34,8 +34,6 @@ actions:
 destinations:
   backend:
     path: apps/backend
-
-    # Suggested setup runner. Available runners are inferred from action alternatives.
     runner: bun
 
     imports:
@@ -65,6 +63,7 @@ packs:
     pack: inject/backend/nestjs
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
     bind:
       schema.validation:
         $ref: "#/packs/validation"
@@ -77,33 +76,33 @@ packs:
           default: pack-default
           pack-default: {}
           feature:
-            path: [src, modules, "$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           generated:
-            path: [src, _generated, controllers]
+            path: [_generated, controllers]
           type-oriented:
-            path: [src, controllers]
+            path: [controllers]
 
       service:
         $options:
           default: pack-default
           pack-default: {}
           feature:
-            path: [src, modules, "$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           generated:
-            path: [src, _generated, services]
+            path: [_generated, services]
           type-oriented:
-            path: [src, services]
+            path: [services]
 
       module:
         $options:
           default: pack-default
           pack-default: {}
           feature:
-            path: [src, modules, "$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           generated:
-            path: [src, _generated, modules]
+            path: [_generated, modules]
           type-oriented:
-            path: [src, modules]
+            path: [modules]
 
   validation:
     pack:
@@ -111,6 +110,7 @@ packs:
       - inject/validation/class-validator
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
 
     outputs:
       schema:
@@ -118,17 +118,18 @@ packs:
           default: pack-default
           pack-default: {}
           feature:
-            path: [src, modules, "$(group.name.kebab)", dto]
+            path: [modules, "$(group.name.kebab)", dto]
           generated:
-            path: [src, _generated, dto]
+            path: [_generated, dto]
           type-oriented:
-            path: [src, contracts]
+            path: [contracts]
             symbol: "$(subject.name.pascal)Validator"
 
   persistence:
     pack: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
     inputs:
       naming_strategy: [snake, camel]
 
@@ -138,9 +139,9 @@ packs:
           default: pack-default
           pack-default: {}
           feature:
-            path: [src, modules, "$(group.name.kebab)", entities]
+            path: [modules, "$(group.name.kebab)", entities]
           generated:
-            path: [src, _generated, entities]
+            path: [_generated, entities]
           type-oriented:
-            path: [src, models]
+            path: [models]
             symbol: "$(subject.name.pascal)Model"
