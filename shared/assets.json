@@ -39,11 +39,13 @@
   ],
   "templates/java/jackson-enum.java.j2": [
     "packs/package/clients/java-client-sdk/templates/src/main/java/models/{enum}/$(name).java.j2",
-    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{enum}/$(name).java.j2"
+    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{enum}/$(name).java.j2",
+    "packs/package/backend/spring-boot-backend/templates/src/main/java/models/{enum}/$(name).java.j2"
   ],
   "templates/java/jackson-model.java.j2": [
     "packs/package/clients/java-client-sdk/templates/src/main/java/models/{model}/$(name).java.j2",
-    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{model}/$(name).java.j2"
+    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{model}/$(name).java.j2",
+    "packs/package/backend/spring-boot-backend/templates/src/main/java/models/{model}/$(name).java.j2"
   ],
   "templates/go/go.mod.j2": [
     "packs/package/clients/go-client-sdk/templates/go.mod.j2",
