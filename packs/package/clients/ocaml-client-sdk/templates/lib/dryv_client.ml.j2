@@ -39,6 +39,9 @@ let append_object pairs = function
 let path_encode value =
   Uri.pct_encode (wire_string value)
 
+let replace_path source pattern replacement =
+  Str.global_replace (Str.regexp_string pattern) replacement source
+
 let add_pairs uri pairs =
   List.fold_left
     (fun current (name, value) -> Uri.add_query_param' current (name, value))
