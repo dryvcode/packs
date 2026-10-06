@@ -1,0 +1,111 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Dryv.Scotty
+  ( badRequest
+  , cookieValue
+  , optionalFromValues
+  , parseOptional
+  , parseRequired
+  , queryValues
+  , formValues
+  , requiredFromValues
+  , requiredMany
+  , respondEmpty
+  , respondJson
+  ) where
+
+import Data.Aeson
+import Data.Aeson.Types (parseEither)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.Encoding (encodeUtf8)
+import Network.HTTP.Types.Status (mkStatus, status400)
+import Web.Scotty
+
+badRequest :: Text -> ActionM a
+badRequest message = do
+  status status400
+  json (object ["message" .= message])
+  finish
+
+parseWire :: FromJSON a => Text -> Either Text a
+parseWire raw =
+  case eitherDecodeStrict' (encodeUtf8 raw) of
+    Right value -> Right value
+    Left _ ->
+      case parseEither parseJSON (String raw) of
+        Right value -> Right value
+        Left message -> Left (T.pack message)
+
+parseRequired :: FromJSON a => Text -> Maybe Text -> ActionM a
+parseRequired label raw =
+  case raw of
+    Nothing -> badRequest ("missing required " <> label)
+    Just value ->
+      case parseWire value of
+        Right parsed -> pure parsed
+        Left message -> badRequest ("invalid " <> label <> ": " <> message)
+
+parseOptional :: FromJSON a => Text -> Maybe Text -> ActionM (Maybe a)
+parseOptional _ Nothing = pure Nothing
+parseOptional label (Just value) =
+  case parseWire value of
+    Right parsed -> pure (Just parsed)
+    Left message -> badRequest ("invalid " <> label <> ": " <> message)
+
+requiredFromValues :: FromJSON a => Text -> [Text] -> ActionM a
+requiredFromValues label values =
+  parseRequired label (case values of { [] -> Nothing; value : _ -> Just value })
+
+optionalFromValues :: FromJSON a => Text -> [Text] -> ActionM (Maybe a)
+optionalFromValues label values =
+  parseOptional label (case values of { [] -> Nothing; value : _ -> Just value })
+
+requiredMany :: FromJSON a => Text -> [Text] -> ActionM [a]
+requiredMany label values
+  | null values = badRequest ("missing required " <> label)
+  | otherwise =
+      traverse
+        (\value ->
+          case parseWire value of
+            Right parsed -> pure parsed
+            Left message -> badRequest ("invalid " <> label <> ": " <> message)
+        )
+        values
+
+queryValues :: Text -> ActionM [Text]
+queryValues name = do
+  pairs <- queryParams
+  pure [value | (key, value) <- pairs, key == name]
+
+formValues :: Text -> ActionM [Text]
+formValues name = do
+  pairs <- formParams
+  pure [value | (key, value) <- pairs, key == name]
+
+cookieValue :: Text -> ActionM (Maybe Text)
+cookieValue name = do
+  raw <- header "Cookie"
+  pure $ raw >>= findCookie
+  where
+    findCookie source =
+      let entries = fmap T.strip (T.splitOn ";" source)
+          values =
+            [ T.drop 1 value
+            | entry <- entries
+            , let (key, value) = T.breakOn "=" entry
+            , T.strip key == name
+            , not (T.null value)
+            ]
+      in case values of
+          value : _ -> Just value
+          [] -> Nothing
+
+respondJson :: ToJSON a => Int -> a -> ActionM ()
+respondJson code value = do
+  status (mkStatus code "")
+  json value
+
+respondEmpty :: Int -> ActionM ()
+respondEmpty code =
+  status (mkStatus code "")
