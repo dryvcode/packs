@@ -1,53 +1,157 @@
-# DESIGN EXAMPLE — source-neutral proposed example contract.
+# DESIGN EXAMPLE — proposed source-neutral example contract.
+#
+# Core idea:
+# - usage is shaped like normal project Usage.
+# - any one normal value may be replaced by a $example choice node.
+# - the Client resolves all $example nodes and source-neutral pack identities.
+# - the result becomes ordinary explicit dryv.yaml.
 version: dryv.example/v1alpha1
 
-# "self" means the pack containing this file.
-# A Client materializes this into a normal explicit dryv.yaml.
-destination:
-  name: backend
-  path: apps/backend
+usage:
+  destinations:
+    code:
+      backend:
+        path: apps/backend
 
-packs:
-  app:
-    pack: self
-    bind:
-      operation.server: server
+        choose:
+          js.package_manager:
+            $example:
+              title: Package manager
+              default: bun
+              options:
+                bun:
+                  title: Bun
+                  value: bun
+                pnpm:
+                  title: pnpm
+                  value: pnpm
+                npm:
+                  title: npm
+                  value: npm
+                yarn:
+                  title: Yarn
+                  value: yarn
 
-  server:
-    pack: inject/backend/nestjs
-    bind:
-      schema.validation: validation
-      schema.persistence: persistence
+        place:
+          $example:
+            title: Backend source structure
+            description: Choose how generated artifacts are arranged inside apps/backend.
+            default: feature
+            options:
+              feature:
+                title: Feature-oriented
+                description: Keep generated artifacts close to each feature.
+                value:
+                  server:
+                    controller:
+                      path: [src, modules, "$(feature.name.kebab)"]
+                      filename: controller.ts
+                    service:
+                      path: [src, modules, "$(feature.name.kebab)"]
+                      filename: service.ts
+                    module:
+                      path: [src, modules, "$(feature.name.kebab)"]
+                      filename: module.ts
+                  validation:
+                    schema:
+                      path: [src, modules, "$(group.name.kebab)", dto]
+                      filename: "$(name).schema.ts"
+                  persistence:
+                    entity:
+                      path: [src, modules, "$(group.name.kebab)", entities]
+                      filename: "$(name).entity.ts"
 
-    place:
-      controller:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: controller.ts
+              generated:
+                title: Central _generated tree
+                description: Keep Dryv-managed implementation under src/_generated.
+                value:
+                  server:
+                    controller:
+                      path: [src, _generated, controllers]
+                      filename: "$(feature.name.kebab).controller.ts"
+                    service:
+                      path: [src, _generated, services]
+                      filename: "$(feature.name.kebab).service.ts"
+                    module:
+                      path: [src, _generated, modules]
+                      filename: "$(feature.name.kebab).module.ts"
+                  validation:
+                    schema:
+                      path: [src, _generated, dto]
+                      filename: "$(name).schema.ts"
+                  persistence:
+                    entity:
+                      path: [src, _generated, entities]
+                      filename: "$(name).entity.ts"
 
-      service:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: service.ts
+              type-oriented:
+                title: Type-oriented folders
+                description: Separate controllers, services, contracts and models.
+                value:
+                  server:
+                    controller:
+                      path: [src, controllers]
+                      filename: "$(feature.name.kebab).controller.ts"
+                    service:
+                      path: [src, services]
+                      filename: "$(feature.name.kebab).service.ts"
+                    module:
+                      path: [src, modules]
+                      filename: "$(feature.name.kebab).module.ts"
+                  validation:
+                    schema:
+                      path: [src, contracts]
+                      filename: "$(name).schema.ts"
+                  persistence:
+                    entity:
+                      path: [src, models]
+                      filename: "$(name).entity.ts"
 
-      module:
-        path: [src, modules, "$(feature.name.kebab)"]
-        filename: module.ts
+  packs:
+    app:
+      pack: self
+      destination: { $ref: "#/destinations/code/backend" }
+      bind:
+        operation.server: { $ref: "#/packs/server" }
 
-  validation:
-    pack: inject/validation/zod
+    server:
+      pack: inject/backend/nestjs
+      destination: { $ref: "#/destinations/code/backend" }
+      bind:
+        schema.validation: { $ref: "#/packs/validation" }
+        schema.persistence: { $ref: "#/packs/persistence" }
 
-    place:
-      schema:
-        path: [src, modules, "$(group.name.kebab)", dto]
-        filename: "$(name).schema.ts"
+    validation:
+      $example:
+        title: Validation implementation
+        default: zod
+        options:
+          zod:
+            title: Zod
+            description: Runtime schemas with inferred TypeScript types.
+            value:
+              pack: inject/validation/zod
+              destination: { $ref: "#/destinations/code/backend" }
 
-  persistence:
-    pack: inject/persistence/typeorm
+          class-validator:
+            title: class-validator
+            description: Decorated DTO classes.
+            value:
+              pack: inject/validation/class-validator
+              destination: { $ref: "#/destinations/code/backend" }
 
-    place:
-      entity:
-        path: [src, modules, "$(group.name.kebab)", entities]
-        filename: "$(name).entity.ts"
-
-choose:
-  backend:
-    js.package_manager: bun
+    persistence:
+      pack: inject/persistence/typeorm
+      destination: { $ref: "#/destinations/code/backend" }
+      inputs:
+        naming_strategy:
+          $example:
+            title: Database naming
+            default: snake
+            options:
+              snake:
+                title: snake_case
+                value: snake
+              camel:
+                title: camelCase
+                value: camel
