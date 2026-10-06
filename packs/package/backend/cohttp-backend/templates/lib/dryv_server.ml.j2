@@ -1,0 +1,149 @@
+open Lwt.Infix
+
+type params = (string * string) list
+
+type route =
+  {
+    meth : Cohttp.Code.meth;
+    pattern : string;
+    handle :
+      params ->
+      Cohttp.Request.t ->
+      Cohttp_lwt.Body.t ->
+      (Cohttp.Response.t * Cohttp_lwt.Body.t) Lwt.t;
+  }
+
+let split_path path =
+  path
+  |> String.split_on_char '/'
+  |> List.filter (fun segment -> segment <> "")
+
+let capture_name segment =
+  let length = String.length segment in
+  if length >= 2 && segment.[0] = '{' && segment.[length - 1] = '}' then
+    Some (String.sub segment 1 (length - 2))
+  else None
+
+let match_pattern pattern path =
+  let rec loop pattern_segments path_segments captures =
+    match pattern_segments, path_segments with
+    | [], [] -> Some (List.rev captures)
+    | expected :: pattern_rest, actual :: path_rest ->
+        (match capture_name expected with
+         | Some name -> loop pattern_rest path_rest ((name, actual) :: captures)
+         | None when expected = actual -> loop pattern_rest path_rest captures
+         | None -> None)
+    | _ -> None
+  in
+  loop (split_path pattern) (split_path path) []
+
+let path_value params name =
+  List.assoc_opt name params
+
+let query_values request name =
+  match List.assoc_opt name (Uri.query (Cohttp.Request.uri request)) with
+  | Some values -> values
+  | None -> []
+
+let header request name =
+  Cohttp.Header.get (Cohttp.Request.headers request) name
+
+let cookie request name =
+  match header request "Cookie" with
+  | None -> None
+  | Some source ->
+      source
+      |> String.split_on_char ';'
+      |> List.find_map (fun entry ->
+           match String.split_on_char '=' (String.trim entry) with
+           | key :: value_parts when key = name ->
+               Some (String.concat "=" value_parts |> Uri.pct_decode)
+           | _ -> None)
+
+let body_json body =
+  Cohttp_lwt.Body.to_string body >|= fun source ->
+  try Ok (Yojson.Safe.from_string source)
+  with Yojson.Json_error message -> Error ("invalid JSON body: " ^ message)
+
+let form_pairs body =
+  Cohttp_lwt.Body.to_string body >|= fun source ->
+  Uri.query_of_encoded source
+
+let form_values pairs name =
+  match List.assoc_opt name pairs with
+  | Some values -> values
+  | None -> []
+
+type wire_kind =
+  | String_value
+  | Bool_value
+  | Int_value
+  | Float_value
+  | Json_value
+
+let wire_of_text kind source =
+  try
+    match kind with
+    | String_value -> Ok (`String source)
+    | Bool_value ->
+        (match String.lowercase_ascii source with
+         | "true" -> Ok (`Bool true)
+         | "false" -> Ok (`Bool false)
+         | _ -> Error "expected boolean")
+    | Int_value -> Ok (`Int (int_of_string source))
+    | Float_value -> Ok (`Float (float_of_string source))
+    | Json_value ->
+        (try Ok (Yojson.Safe.from_string source)
+         with Yojson.Json_error _ -> Ok (`String source))
+  with Failure _ -> Error "invalid scalar value"
+
+let wire_many kind values =
+  let rec loop result = function
+    | [] -> Ok (List.rev result)
+    | value :: rest ->
+        (match wire_of_text kind value with
+         | Error message -> Error message
+         | Ok wire -> loop (wire :: result) rest)
+  in
+  loop [] values
+
+let bad_request message =
+  let body = Yojson.Safe.to_string (`Assoc [ ("message", `String message) ]) in
+  Cohttp_lwt_unix.Server.respond_string
+    ~status:`Bad_request
+    ~headers:(Cohttp.Header.init_with "Content-Type" "application/json")
+    ~body
+    ()
+
+let respond_json code value =
+  Cohttp_lwt_unix.Server.respond_string
+    ~status:(Cohttp.Code.status_of_code code)
+    ~headers:(Cohttp.Header.init_with "Content-Type" "application/json")
+    ~body:(Yojson.Safe.to_string value)
+    ()
+
+let respond_empty code =
+  Cohttp_lwt_unix.Server.respond_string
+    ~status:(Cohttp.Code.status_of_code code)
+    ~body:""
+    ()
+
+let not_found () =
+  Cohttp_lwt_unix.Server.respond_string ~status:`Not_found ~body:"" ()
+
+let dispatch routes _connection request body =
+  let meth = Cohttp.Request.meth request in
+  let path = Uri.path (Cohttp.Request.uri request) in
+  let rec find = function
+    | [] -> not_found ()
+    | route :: rest ->
+        if route.meth <> meth then find rest
+        else
+          match match_pattern route.pattern path with
+          | None -> find rest
+          | Some params -> route.handle params request body
+  in
+  find routes
+
+let make routes =
+  Cohttp_lwt_unix.Server.make ~callback:(dispatch routes) ()
