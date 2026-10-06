@@ -1,6 +1,6 @@
 # Other language ecosystems
 
-Status: Scala and Clojure baselines are implemented on `develop`; remaining languages stay research backlog.
+Status: Scala, Clojure and Haskell baselines are implemented on `develop`; remaining languages stay research backlog.
 
 These are not implementation priorities. They exist so the ecosystem map does not quietly become limited to the first few languages Dryv supports.
 
@@ -30,13 +30,16 @@ These are not implementation priorities. They exist so the ecosystem map does no
 
 ## Haskell
 
-- [ ] Servant backend/client research
-- [ ] Scotty backend research
+- [x] `package/backend/scotty-backend` — implementation present; verification deferred
+- [x] `package/clients/haskell-client-sdk` — http-client-tls baseline; verification deferred
+- [x] `package/persistence/persistent-models` — Persistent 2.18 definitions + migration; verification deferred
+- [x] `package/validation/haskell-validation` — shared Aeson models + pure validation; verification deferred
+- [x] shared Aeson enum/model vocabulary
+- [x] path/query/query-object/header/cookie/body/form binding
+- [x] explicit primary/composite keys, unique constraints and foreign lifecycle in Persistent
+- [ ] Servant backend/client alternative research
 - [ ] Yesod research
-- [ ] Aeson models
-- [ ] Persistent ORM
 - [ ] Beam persistence research
-- [ ] validation strategy
 - [ ] Cabal/Stack project pack
 
 ## OCaml
