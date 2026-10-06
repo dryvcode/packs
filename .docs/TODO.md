@@ -25,6 +25,26 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [ ] Get approval for each implementation batch.
 - [ ] Let the user run fixture/toolchain tests locally before claiming a pack passes.
 
+
+## Pack layout migration
+
+The current repository still uses `inject | package | project`, but the approved roadmap direction is to simplify runtime layout to `inject | unit`.
+
+- [ ] Update Dryv `dryv.pack/v1alpha1` layout contract from `inject | package | project` to `inject | unit`.
+- [ ] Make package/import identity optional metadata on root-owning units rather than a layout.
+- [ ] Preserve managed/scaffold ownership strictly at resource level.
+- [ ] Stress test unit ownership, actions, dependency merging and cross-unit imports before migration.
+- [ ] Migrate `packs/package/**` to `packs/unit/**`.
+- [ ] Migrate `packs/project/**` to `packs/unit/**`.
+- [ ] Remove artificial package identities from outputs such as Postman, k6, HTTP smoke and OpenAPI bundles where no package identity exists.
+- [ ] Update catalogue IDs, release tags, fixtures, scripts and documentation in the same migration.
+- [ ] Reject old `package` / `project` layout spellings after migration; do not add compatibility aliases while remaining on `v1alpha1`.
+- [ ] Do not add new `project` packs solely because generated files are editable.
+
+See the canonical research in the Dryv repository:
+
+`.docs/planning/research/frameworks-design-templating/08-pack-layout-model.md`
+
 ## Current coverage
 
 ### TypeScript / JavaScript
