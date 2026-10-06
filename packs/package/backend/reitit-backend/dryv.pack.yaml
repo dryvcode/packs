@@ -1,0 +1,41 @@
+version: dryv.pack/v1alpha1
+key: backend.reitit-backend
+layout: package
+package:
+  name: dryv-generated-backend
+
+source: templates
+
+info:
+  title: Reitit Backend
+  version: 0.1.0
+  description: Generates Reitit 0.11 Ring routes with feature service maps and explicit HTTP binding.
+
+catalog:
+  purpose: backend
+  summary: Reitit/Ring backend with Muuntaja JSON and separated feature services.
+  languages: [clojure]
+  frameworks: [reitit, ring, muuntaja]
+  tags: [backend, rest, http, clojure]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  routes:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbol: $(group.name.snake)_$(feature.name.snake)_routes
+
+  router:
+    exports:
+      - $ref: "#/templates/routes"
