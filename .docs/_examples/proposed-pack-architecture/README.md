@@ -2,7 +2,7 @@
 
 Status: **design-only example**
 
-This directory shows what the proposed pack architecture could look like before the Dryv contracts are implemented.
+This directory shows the latest proposed architecture before Dryv contracts are implemented.
 
 ## Suggested pack tree
 
@@ -13,158 +13,110 @@ packs/
 │       └── nestjs/
 │           ├── dryv.pack.yaml
 │           └── dryv.example.yaml
-│
 └── inject/
-    ├── backend/
-    │   └── nestjs/
-    │       ├── dryv.pack.yaml
-    │       └── dryv.example.yaml
-    ├── validation/
-    │   ├── zod/
-    │   │   ├── dryv.pack.yaml
-    │   │   └── dryv.example.yaml
-    │   └── class-validator/
-    │       ├── dryv.pack.yaml
-    │       └── dryv.example.yaml
-    └── persistence/
-        └── typeorm/
-            ├── dryv.pack.yaml
-            └── dryv.example.yaml
+    ├── backend/nestjs/
+    ├── validation/zod/
+    ├── validation/class-validator/
+    └── persistence/typeorm/
 ```
 
-## Responsibilities
+Each pack example contains a minimal proposed `dryv.pack.yaml` and an optional compact `dryv.example.yaml`.
 
-### `unit/backend/nestjs`
-
-Owns the runnable NestJS unit:
+## Core idea
 
 ```text
-package.json
-tsconfig.json
-src/main.ts
-src/app.module.ts
-root configuration
+dryv.pack.yaml
+    keeps rigid generation facts
+
+template filesystem + output
+    define zero-config default output
+
+dryv.example.yaml
+    suggests useful setup choices
+
+dryv.yaml destination.outputs
+    records actual project output overrides
+
+dryv.yaml destination.imports
+    records actual import-root/prefix policy
 ```
 
-It does **not** generate feature controllers or DTOs itself.
+There is no proposed pack-side `placements:` registry.
 
-It consumes `operation.server` and assembles the provider's feature modules into the root application module.
+## Pack default output
 
-### `inject/backend/nestjs`
+Example pack output:
 
-Owns reusable NestJS feature implementation:
-
-```text
-controller
-service boundary
-feature module
+```yaml
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - entities
+      symbol: $(subject.name.pascal)Entity
 ```
 
-It consumes validation and optional persistence representations.
+The first path segment is semantic/dynamic; later segments may be static pack-local structure.
 
-### `inject/validation/zod` and `inject/validation/class-validator`
+If Usage says nothing, the pack filesystem and this output win.
 
-Alternative TypeScript validation providers. Both expose a compatible public `schema` placement while preserving their own representation contracts and filename defaults.
+## Project override
 
-### `inject/persistence/typeorm`
+A project may partially override the same output:
 
-Owns TypeORM entity representations.
-
-## Proposed project layouts
-
-The same packs should support all three styles:
-
-### Feature-oriented
-
-```text
-apps/backend/
-└── src/
-    └── modules/
-        └── orders/
-            ├── controller.ts
-            ├── service.ts
-            ├── module.ts
-            ├── dto/
-            │   └── create-order.schema.ts
-            └── entities/
-                └── order.entity.ts
+```yaml
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      outputs:
+        persistence:
+          entity:
+            path: [src, models]
+            symbol: "$(subject.name.pascal)Model"
 ```
 
-### Central generated tree
+`persistence` is the activation name; `entity` is the template key.
 
-```text
-apps/backend/
-└── src/
-    ├── main.ts
-    ├── app.module.ts
-    └── _generated/
-        ├── controllers/
-        ├── services/
-        ├── modules/
-        ├── dto/
-        └── entities/
+## Compact example options
+
+Examples deliberately prefer terse choices:
+
+```yaml
+choose:
+  js.package_manager: [bun, pnpm, npm, yarn]
+
+inputs:
+  naming_strategy: [snake, camel]
 ```
 
-### Type-oriented
+Structured alternatives use direct values rather than `value:` wrappers.
 
-```text
-apps/backend/
-└── src/
-    ├── controllers/
-    ├── services/
-    ├── modules/
-    ├── contracts/
-    └── models/
-```
+## Explicit Usage examples
 
-See the corresponding explicit Usage examples under `usage/`.
+Compare:
 
-## Important
+- `usage/dryv.feature-oriented.yaml` — relative imports;
+- `usage/dryv.central-generated.yaml` — `#/` rooted imports;
+- `usage/dryv.type-oriented.yaml` — `@/` rooted imports plus symbol overrides.
 
-Fields such as `target`, `placements`, `match`, `accepts`, `locality`, `contract`, aggregate imports and `dryv.example/v1alpha1` are **proposed syntax** used to make the design reviewable.
+## Import addressing
 
-They are not current Dryv contract syntax.
+See [IMPORT-ADDRESSING.md](IMPORT-ADDRESSING.md) for:
 
+- relative imports;
+- TypeScript `@/` and `#/`;
+- Python dotted modules;
+- Java package imports;
+- Dart `package:` imports.
 
 ## Review helpers
 
-- [Suggested pack composition](SUGGESTED-PACKS.md) — how `dryv pack add` could turn a pack example into a reviewed explicit composition.
-- [Proposed schema notes](SCHEMA-NOTES.md) — proposed syntax and the main design questions to validate.
-- [Invalid examples](INVALID-EXAMPLES.md) — examples the Engine should reject.
+- [SUGGESTED-PACKS.md](SUGGESTED-PACKS.md) — setup experience;
+- [SCHEMA-NOTES.md](SCHEMA-NOTES.md) — proposed syntax and open decisions;
+- [INVALID-EXAMPLES.md](INVALID-EXAMPLES.md) — expected planning failures.
 
-
-## Destination-centered placement
-
-The explicit Usage examples intentionally keep structural overrides under:
-
-```text
-destinations.code.backend.place
-```
-
-rather than under each pack activation.
-
-That means one unit shows its complete generated structure together:
-
-```text
-backend
-├── server.controller
-├── server.service
-├── server.module
-├── validation.schema
-└── persistence.entity
-```
-
-Pack activations simply target `backend`.
-
-The pack manifest still owns the placement defaults; the destination only overrides them.
-
-## Multi-option example
-
-The NestJS unit `dryv.example.yaml` demonstrates a generic `$example` wrapper for:
-
-- package manager;
-- complete source-layout profile;
-- validation provider pack;
-- TypeORM naming strategy.
-
-Resolving those choices must produce ordinary explicit Usage with no `$example` nodes remaining.
+All fields beyond current Dryv contracts are design-only and intentionally easy to change while planning.
