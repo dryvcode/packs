@@ -1,0 +1,67 @@
+version: dryv.pack/v1alpha1
+key: persistence.slick-tables
+layout: package
+package:
+  name: dryv-slick-tables
+
+source: templates
+
+info:
+  title: Slick Tables
+  version: 0.1.0
+  description: Generates Scala 3.9 Slick 3.6 table mappings from persistent Dryv schemas.
+
+catalog:
+  purpose: persistence
+  summary: Profile-neutral Slick table-support traits with keys, indexes and relations.
+  languages: [scala]
+  frameworks: [slick]
+  tags: [entities, database, persistence, scala]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_package:
+    type: string
+    default: dryv.generated.persistence
+    description: Root Scala package for generated persistence code.
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all_entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbols:
+        support: $(group.name.pascal)$(subject.name.pascal)TableSupport
+        row: $(group.name.pascal)$(subject.name.pascal)Row
+        table: $(group.name.pascal)$(subject.name.pascal)Table
+        query: $(group.name.camel)$(subject.name.pascal)Table
+    imports:
+      - $ref: "#/templates/entity"
+
+  tables:
+    $ref: "#/selections/all_entities"
+    output:
+      name: DryvTables
+      symbol: DryvTables
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
