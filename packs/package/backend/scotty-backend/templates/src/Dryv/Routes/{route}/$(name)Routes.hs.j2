@@ -89,6 +89,67 @@ import qualified {{ dependency.path.relative | replace('src/', '') | replace('/'
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro parse_operation_values(operation, field, source, name) -%}
+{%- set raw = raw_var(operation, field) -%}
+{%- set target = field_var(operation, field) -%}
+  {{ raw }} <- {{ source }} {{ name | tojson }}
+{%- if field.optional %}
+  {{ target }} <- optionalFromValues {{ field.name.raw | tojson }} {{ raw }}
+{%- else %}
+  {{ target }} <- requiredFromValues {{ field.name.raw | tojson }} {{ raw }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_bound_operation_field(operation, field) -%}
+{%- set state = namespace(found=false) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.found=true -%}
+{%- set target = field_var(operation, field) -%}
+{%- set label = binding.name or binding.port.name.raw -%}
+{%- if binding.is.path %}
+  {{ raw_var(operation, field) }} <- (pathParamMaybe {{ label | tojson }} :: ActionM (Maybe Text))
+{%- if field.optional %}
+  {{ target }} <- parseOptional {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- else %}
+  {{ target }} <- parseRequired {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- endif %}
+{%- elif binding.is.query %}
+{{ parse_operation_values(operation, field, 'queryValues', label) }}
+{%- elif binding.is.header %}
+  {{ raw_var(operation, field) }} <- header {{ label | tojson }}
+{%- if field.optional %}
+  {{ target }} <- parseOptional {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- else %}
+  {{ target }} <- parseRequired {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- endif %}
+{%- elif binding.is.cookie %}
+  {{ raw_var(operation, field) }} <- cookieValue {{ label | tojson }}
+{%- if field.optional %}
+  {{ target }} <- parseOptional {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- else %}
+  {{ target }} <- parseRequired {{ field.name.raw | tojson }} {{ raw_var(operation, field) }}
+{%- endif %}
+{%- elif binding.is.form %}
+{{ parse_operation_values(operation, field, 'formValues', label) }}
+{%- elif binding.is.body %}
+{%- if field.optional %}
+  {{ target }} <- bodyOptional {{ field.name.raw | tojson }} {{ operation.name.camel }}Body
+{%- else %}
+  {{ target }} <- bodyRequired {{ field.name.raw | tojson }} {{ operation.name.camel }}Body
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- if not state.found %}
+{%- if field.optional %}
+  let {{ field_var(operation, field) }} = Nothing
+{%- else %}
+  {{ field_var(operation, field) }} <- badRequest "required operation field has no HTTP binding"
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
 {%- macro parse_bound_field(operation, field) -%}
 {%- set state = namespace(found=false) -%}
 {%- for binding in operation.facets.http.inputs -%}
@@ -212,7 +273,7 @@ data {{ file.symbols.service }} = {{ file.symbols.service }}
     {{ operation.name.camel }}Input <- (jsonData :: ActionM {{ operation.name.pascal }}Input)
 {%- elif whole_binding(http, 'query') %}
 {%- for field in operation.input.fields %}
-{{ parse_schema_values(operation, field, 'queryValues', field.name.raw) }}
+{{ parse_operation_values(operation, field, 'queryValues', field.name.raw) }}
 {%- endfor %}
     let {{ operation.name.camel }}Input =
           {{ operation.name.pascal }}Input
@@ -221,7 +282,7 @@ data {{ file.symbols.service }} = {{ file.symbols.service }}
 {%- endfor %}
 {%- elif whole_binding(http, 'form') %}
 {%- for field in operation.input.fields %}
-{{ parse_schema_values(operation, field, 'formValues', field.name.raw) }}
+{{ parse_operation_values(operation, field, 'formValues', field.name.raw) }}
 {%- endfor %}
     let {{ operation.name.camel }}Input =
           {{ operation.name.pascal }}Input
@@ -230,7 +291,7 @@ data {{ file.symbols.service }} = {{ file.symbols.service }}
 {%- endfor %}
 {%- else %}
 {%- for field in operation.input.fields %}
-{{ parse_bound_field(operation, field) }}
+{{ parse_bound_operation_field(operation, field) }}
 {%- endfor %}
     let {{ operation.name.camel }}Input =
           {{ operation.name.pascal }}Input
