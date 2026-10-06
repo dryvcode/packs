@@ -1,0 +1,53 @@
+# DESIGN EXAMPLE — source-neutral proposed example contract.
+version: dryv.example/v1alpha1
+
+# "self" means the pack containing this file.
+# A Client materializes this into a normal explicit dryv.yaml.
+destination:
+  name: backend
+  path: apps/backend
+
+packs:
+  app:
+    pack: self
+    bind:
+      operation.server: server
+
+  server:
+    pack: inject/backend/nestjs
+    bind:
+      schema.validation: validation
+      schema.persistence: persistence
+
+    place:
+      controller:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: controller.ts
+
+      service:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: service.ts
+
+      module:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: module.ts
+
+  validation:
+    pack: inject/validation/zod
+
+    place:
+      schema:
+        path: [src, modules, "$(group.name.kebab)", dto]
+        filename: "$(name).schema.ts"
+
+  persistence:
+    pack: inject/persistence/typeorm
+
+    place:
+      entity:
+        path: [src, modules, "$(group.name.kebab)", entities]
+        filename: "$(name).entity.ts"
+
+choose:
+  backend:
+    js.package_manager: bun
