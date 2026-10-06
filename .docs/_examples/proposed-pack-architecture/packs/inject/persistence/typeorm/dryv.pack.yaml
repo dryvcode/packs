@@ -31,22 +31,17 @@ selections:
   entities:
     subject: schema
     filter:
-      all:
-        role: entity
+      all: { role: entity }
     scope: each
-
-placements:
-  entity:
-    description: Generated entity location.
-    path: [src, generated, persistence]
-    filename: "$(name).entity.ts"
 
 templates:
   entity:
     $ref: "#/selections/entities"
     output:
-      placement: entity
       name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - entities
       symbol: "$(subject.name.pascal)Entity"
 
 provides:
