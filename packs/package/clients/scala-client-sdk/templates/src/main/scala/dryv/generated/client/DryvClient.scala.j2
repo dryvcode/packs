@@ -16,9 +16,9 @@ import {{ pack.inputs.root_package }}.models.DryvWire
 
 final case class ApiError(
   status: Int,
-  override val getMessage: String,
+  message: String,
   payload: Option[Json] = None,
-) extends RuntimeException(getMessage)
+) extends RuntimeException(message)
 
 final class DryvClient(
   baseUrl: String,
