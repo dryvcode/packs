@@ -1,6 +1,6 @@
 # Suggested pack composition
 
-Status: **design example aligned with current Dryv planning**
+Status: **review example aligned with current Dryv planning**
 
 ## Composition
 
@@ -23,38 +23,83 @@ inject/persistence/typeorm
   provides schema.persistence
 ```
 
-## Possible setup UI
+## Setup choices come from ordinary fields
+
+A UI may still present friendly choices:
 
 ```text
-NestJS backend
-
 Validation
   ● Zod
   ○ class-validator
 
-Source layout
-  ● Pack default
-  ○ Feature modules
-  ○ Central _generated
-  ○ Type-oriented
+Layout
+  ● feature-oriented
+  ○ generated
+  ○ type-oriented
 
-Imports
-  ● Relative
-  ○ @/ from src
-  ○ #/ from src
-
-Runner
-  ● Bun
-  ○ pnpm
-  ○ npm
-  ○ Yarn
+Formatting/install/build commands
+  ● Bun commands
+  ○ pnpm commands
+  ○ npm commands
+  ○ Yarn commands
 
 TypeORM naming
   ● snake
   ○ camel
 ```
 
-## Runner alternatives
+But the file does not store those labels or IDs.
+
+It stores normal values plus ordered alternatives.
+
+## Provider example
+
+```yaml
+packs:
+  validation:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/validation/zod
+
+    $options:
+      source:
+        - $ref: "#/sources/packs/official"
+          path: inject/validation/class-validator
+```
+
+Zod is the default because it is the normal hard-coded value.
+
+## Scalar example
+
+```yaml
+inputs:
+  naming_strategy: snake
+
+  $options:
+    naming_strategy:
+      - camel
+```
+
+## Layout example
+
+```yaml
+outputs:
+  entity:
+    path: [models]
+    symbol: "$(subject.name.pascal)Model"
+
+$options:
+  outputs:
+    - entity:
+        path: [modules, "$(group.name.kebab)", entities]
+
+    - entity:
+        path: [_generated, entities]
+```
+
+No profile names are required.
+
+## Action example
 
 ```yaml
 actions:
@@ -62,46 +107,43 @@ actions:
     stage: files
     extensions: [.ts]
     commands:
-      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
-      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
       - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-  build:
-    stage: final
+  $options:
+    format:
+      - stage: files
+        extensions: [.ts]
+        commands:
+          - run: [pnpm, dlx, prettier@3.9.9, --write, $(files)]
+
+      - stage: files
+        extensions: [.ts]
+        commands:
+          - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+```
+
+Each alternative is a complete normal `ActionDefinition`.
+
+## Materialized result
+
+Once choices are selected, normal Usage contains only concrete values:
+
+```yaml
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
     commands:
-      - run: [(pnpm|bun|yarn), run, build]
-      - run: [npm, run, build]
-```
+      - run: [pnpm, dlx, prettier@3.9.9, --write, $(files)]
 
-A setup destination may suggest:
-
-```yaml
-destinations:
-  backend:
-    path: apps/backend
-    runner: bun
-    actions:
-      - $ref: "#/actions/format"
-      - $ref: "#/actions/build"
-```
-
-## Materialized placement
-
-A type-oriented persistence activation can be concise:
-
-```yaml
 packs:
   persistence:
-    source:
-      $ref: "#/sources/packs/official"
-      path: inject/persistence/typeorm
-
     destination:
       $ref: "#/destinations/backend"
       root: [src]
 
     inputs:
-      naming_strategy: snake
+      naming_strategy: camel
 
     outputs:
       entity:
@@ -109,90 +151,4 @@ packs:
         symbol: "$(subject.name.pascal)Model"
 ```
 
-Final placement composes:
-
-```text
-apps/backend
-+ src
-+ models
-+ template output name
-```
-
-For a feature-oriented server:
-
-```yaml
-destination:
-  $ref: "#/destinations/backend"
-  root: [src, modules]
-
-outputs:
-  controller:
-    path: ["$(feature.name.kebab)"]
-  service:
-    path: ["$(feature.name.kebab)"]
-  module:
-    path: ["$(feature.name.kebab)"]
-```
-
-No repeated `src/modules` prefix is needed.
-
-## Materialized actions
-
-Normal Usage stores the selected concrete commands:
-
-```yaml
-actions:
-  format:
-    stage: files
-    extensions: [.ts]
-    commands:
-      - run: [bun, x, prettier@3.9.9, --write, $(files)]
-
-  build:
-    stage: final
-    commands:
-      - run: [bun, run, build]
-
-destinations:
-  backend:
-    path: apps/backend
-    imports:
-      root: src
-      prefix: "@/"
-    actions:
-      - $ref: "#/actions/format"
-      - $ref: "#/actions/build"
-
-packs:
-  persistence:
-    source:
-      $ref: "#/sources/packs/official"
-      path: inject/persistence/typeorm
-    destination:
-      $ref: "#/destinations/backend"
-      root: [src, models]
-    inputs:
-      naming_strategy: snake
-    outputs:
-      entity:
-        path: [$(group.name.kebab)]
-        symbol: "$(subject.name.pascal)Model"
-```
-
-The runner menu is setup guidance, not runtime command-selection state.
-
-## Distinction
-
-```text
-pack contract
-    legal generation facts/capabilities
-
-example
-    providers / runners / placement suggestions
-
-materialization
-    resolves runner and setup alternatives
-
-usage
-    explicit concrete project decisions
-```
+There is no `$options` metadata in materialized Usage.
