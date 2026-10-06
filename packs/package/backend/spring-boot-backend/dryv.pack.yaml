@@ -1,0 +1,85 @@
+version: dryv.pack/v1alpha1
+key: backend.spring-boot-backend
+layout: package
+package:
+  name: { $ref: "#/inputs.artifact_id" }
+
+source: templates
+
+info:
+  title: Spring Boot Backend
+  version: 0.1.0
+  description: Generates Spring Boot 4.1 MVC controllers, Jackson models and feature service interfaces.
+
+catalog:
+  purpose: backend
+  summary: Spring MVC controllers with shared Jackson models and separated service boundaries.
+  languages: [java]
+  frameworks: [spring-boot, spring-mvc, jackson]
+  tags: [backend, rest, http, java, spring]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  group_id:
+    type: string
+    default: org.dryv.generated
+    description: Maven groupId for generated backend code.
+  artifact_id:
+    type: string
+    default: dryv-spring-backend
+    description: Maven artifactId and Dryv package identity.
+  java_package:
+    type: string
+    default: org.dryv.generated.spring
+    description: Base Java package for generated Spring code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  controller:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        controller: $(group.name.pascal)$(feature.name.pascal)Controller
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
