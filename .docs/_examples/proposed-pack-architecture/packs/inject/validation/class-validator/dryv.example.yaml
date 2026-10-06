@@ -1,0 +1,18 @@
+# DESIGN EXAMPLE — source-neutral proposed example contract.
+version: dryv.example/v1alpha1
+
+usage:
+  destinations:
+    code:
+      backend:
+        path: apps/backend
+        place:
+          validation:
+            dto:
+              path: [src, modules, "$(group.name.kebab)", dto]
+              filename: "$(name).dto.ts"
+
+  packs:
+    validation:
+      pack: self
+      destination: { $ref: "#/destinations/code/backend" }
