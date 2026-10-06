@@ -4,126 +4,78 @@ These are design fixtures for expected validation behavior.
 
 ## Wrong language provider
 
-```yaml
-app:
-  pack: unit/backend/nestjs
-  bind:
-    operation.server: fastapi
-
-fastapi:
-  pack: inject/backend/fastapi
-```
+A NestJS unit binds a Python server provider.
 
 Expected:
 
 ```text
 usage.bind.language_mismatch
-NestJS unit requires a compatible TypeScript operation.server provider.
 ```
 
-## Wrong server framework
+## Wrong framework/representation
 
-```yaml
-app:
-  pack: unit/backend/nestjs
-  bind:
-    operation.server: express
-
-express:
-  pack: inject/backend/express
-```
-
-If the NestJS unit requires a NestJS-compatible server representation:
-
-```text
-usage.bind.framework_mismatch
-```
-
-## Wrong representation
-
-A consumer accepts:
-
-```text
-zod-schema
-class-validator-dto
-joi-schema
-```
-
-but the provider exposes:
-
-```text
-json-schema-document
-```
+A NestJS unit needs a `nestjs-feature-module` but receives an incompatible server representation.
 
 Expected:
 
 ```text
+usage.bind.framework_mismatch
+or
 usage.bind.representation_mismatch
 ```
 
-## Placement traversal
+## Output override names unknown activation
 
 ```yaml
 destinations:
   code:
     backend:
       path: apps/backend
-      place:
-        persistence:
+      outputs:
+        missing-pack:
           entity:
-            path: [.., .., secrets]
+            path: [src, models]
 ```
 
 Expected:
 
 ```text
-usage.place.path_invalid
+usage.output.unknown_activation
 ```
 
-## Undeclared placement
-
-Pack declares only:
-
-```text
-controller
-service
-module
-```
-
-Usage tries:
+## Output override names unknown template
 
 ```yaml
-destinations:
-  code:
-    backend:
-      place:
-        server:
-          hidden-bootstrap:
-            path: [src, custom]
+outputs:
+  persistence:
+    hidden-bootstrap:
+      path: [src, custom]
 ```
 
 Expected:
 
 ```text
-usage.place.unknown
+usage.output.unknown_template
 ```
 
-## Collision after override
+## Output path traversal
 
 ```yaml
-destinations:
-  code:
-    backend:
-      place:
-        server:
-          controller:
-            path: [src, generated]
-            filename: "$(feature.name.kebab).ts"
-
-          service:
-            path: [src, generated]
-            filename: "$(feature.name.kebab).ts"
+outputs:
+  persistence:
+    entity:
+      path: [.., secrets]
 ```
+
+Expected:
+
+```text
+usage.output.path_invalid
+```
+
+## Collision after overrides
+
+Two final outputs resolve to the same workspace file.
 
 Expected:
 
@@ -131,61 +83,58 @@ Expected:
 planner.output.collision
 ```
 
-## Cross-unit locality violation
+## Fixed output overridden
 
-A same-unit validation need is bound to a provider generated into another destination.
+A template explicitly disables output overrides, but Usage attempts to change it.
 
 Expected:
 
 ```text
-usage.bind.locality_mismatch
+usage.output.override_forbidden
 ```
 
-
-## Placement for activation targeting another destination
+## Import root does not contain producer
 
 ```yaml
-destinations:
-  code:
-    backend:
-      path: apps/backend
-      place:
-        mobile:
-          screen:
-            path: [src, screens]
+imports:
+  root: src
+  prefix: "@/"
+```
 
-    mobile:
-      path: apps/mobile
+but an imported producer resolves under:
 
-packs:
-  mobile:
-    pack: unit/frontend/flutter
-    destination: { $ref: "#/destinations/code/mobile" }
+```text
+generated-outside-src/model.ts
 ```
 
 Expected:
 
 ```text
-usage.place.activation_destination_mismatch
+usage.imports.unreachable
 ```
 
-## Invalid example option value
+## Cross-unit package lacks import identity
 
-A package-manager example wraps a field that accepts only a declared choice:
+A consumer needs a provider from another unit, but the provider has no usable package identity/import root.
 
-```yaml
-js.package_manager:
-  $example:
-    default: deno
-    options:
-      deno:
-        value: deno
-```
-
-but the unit accepts only:
+Expected:
 
 ```text
-bun | pnpm | npm | yarn
+usage.bind.import_unreachable
+```
+
+## Invalid scalar example choice
+
+The pack input allows:
+
+```text
+snake | camel
+```
+
+but the example exposes:
+
+```yaml
+naming_strategy: [snake, kebab]
 ```
 
 Expected:
@@ -194,4 +143,4 @@ Expected:
 example.option.invalid_value
 ```
 
-The example system must validate each option using the schema of the normal Usage field it replaces.
+Every example option is validated against the normal field contract it represents.
