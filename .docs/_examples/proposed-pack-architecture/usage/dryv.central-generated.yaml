@@ -18,6 +18,25 @@ destinations:
       path: apps/backend
       choose:
         js.package_manager: bun
+      place:
+        server:
+          controller:
+            path: [src, _generated, controllers]
+            filename: "$(feature.name.kebab).controller.ts"
+          service:
+            path: [src, _generated, services]
+            filename: "$(feature.name.kebab).service.ts"
+          module:
+            path: [src, _generated, modules]
+            filename: "$(feature.name.kebab).module.ts"
+        validation:
+          schema:
+            path: [src, _generated, dto]
+            filename: "$(name).schema.ts"
+        persistence:
+          entity:
+            path: [src, _generated, entities]
+            filename: "$(name).entity.ts"
 
 authoring:
   source:
@@ -38,31 +57,13 @@ packs:
     bind:
       schema.validation: { $ref: "#/packs/validation" }
       schema.persistence: { $ref: "#/packs/persistence" }
-    place:
-      controller:
-        path: [src, _generated, controllers]
-        filename: "$(feature.name.kebab).controller.ts"
-      service:
-        path: [src, _generated, services]
-        filename: "$(feature.name.kebab).service.ts"
-      module:
-        path: [src, _generated, modules]
-        filename: "$(feature.name.kebab).module.ts"
 
   validation:
     source: { $ref: "#/sources/packs/official" }
     path: inject/validation/zod
     destination: { $ref: "#/destinations/code/backend" }
-    place:
-      schema:
-        path: [src, _generated, dto]
-        filename: "$(name).schema.ts"
 
   persistence:
     source: { $ref: "#/sources/packs/official" }
     path: inject/persistence/typeorm
     destination: { $ref: "#/destinations/code/backend" }
-    place:
-      entity:
-        path: [src, _generated, entities]
-        filename: "$(name).entity.ts"
