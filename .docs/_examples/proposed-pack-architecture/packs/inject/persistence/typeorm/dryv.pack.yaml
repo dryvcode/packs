@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — proposed, not current executable syntax.
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
 version: dryv.pack/v1alpha1
 key: inject.persistence.typeorm
 layout: inject
@@ -8,17 +8,11 @@ info:
   title: TypeORM
   version: 0.1.0
   description: Generates TypeORM entity representations for entity-role schemas.
-
-catalog:
   purpose: persistence
   summary: TypeORM entities.
   languages: [typescript]
   frameworks: [typeorm]
   tags: [persistence, orm, entity]
-
-target:
-  languages: [typescript]
-  frameworks: [typeorm]
 
 inputs:
   naming_strategy:
@@ -47,8 +41,6 @@ templates:
 provides:
   schema.persistence:
     $ref: "#/templates/entity"
-    contract: typeorm-entity
-    symbol: default
 
 dependencies:
   runtime:
