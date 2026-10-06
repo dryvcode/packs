@@ -24,11 +24,9 @@ provides: ...
 dependencies: ...
 ```
 
-Do not duplicate implementation metadata under `catalog:` or `target:`.
+Do not duplicate metadata under `catalog:` or `target:`.
 
-## Needs are keyed because they are referenced
-
-Canonical direction:
+## Needs are keyed
 
 ```yaml
 needs:
@@ -37,52 +35,21 @@ needs:
   property.enum.types: optional
 ```
 
-Allowed strengths:
+This preserves stable refs such as:
 
 ```text
-required
-recommended
-optional
+#/needs/schema.validation
 ```
 
-The keyed map preserves stable refs:
+Do not use positional/grouped lists for semantically addressable needs.
 
-```yaml
-imports:
-  - $ref: "#/needs/schema.validation"
-```
-
-Do not use arrays or grouped lists for `needs`; they make semantic refs positional or false.
-
-Compatibility remains Engine-owned. Consumers do not enumerate provider allowlists.
-
-## Provides
+## Provides use real template refs
 
 ```yaml
 provides:
   schema.persistence:
     $ref: "#/templates/entity"
 ```
-
-Every ref must resolve to a real template node.
-
-## Pack output defaults
-
-There is no `placements:` registry and no `output.placement`.
-
-```yaml
-templates:
-  entity:
-    $ref: "#/selections/entities"
-    output:
-      name: "$(subject.name.kebab)"
-      path:
-        - "$(group.name.kebab)"
-        - entities
-      symbol: "$(subject.name.pascal)Entity"
-```
-
-Pack defaults remain portable and semantic/local.
 
 ## Flat destination map
 
@@ -92,7 +59,7 @@ destinations:
     path: apps/backend
 ```
 
-Refs use:
+Pack activations reference:
 
 ```text
 #/destinations/backend
@@ -100,129 +67,166 @@ Refs use:
 
 ## Activation destination root
 
-A pack activation may add a project-specific root inside the destination:
+```yaml
+packs:
+  persistence:
+    destination:
+      $ref: "#/destinations/backend"
+      root: [src]
+```
+
+Final placement:
+
+```text
+destination.path
++ activation destination.root
++ final output.path
+```
+
+The root is optional and pack-activation-specific.
+
+## Activation output overrides
 
 ```yaml
 packs:
   persistence:
     destination:
       $ref: "#/destinations/backend"
-      root: [src, models]
+      root: [src]
 
     outputs:
       entity:
-        path: ["$(group.name.kebab)"]
-        name: "$(subject.name.kebab)"
+        path: [models]
         symbol: "$(subject.name.pascal)Model"
 ```
 
-The override vocabulary remains:
+Output keys are real template keys.
 
-```text
-name
-path
-symbol
-symbols
+## dryv.example.yaml is Usage-shaped
+
+The only generic extension is sibling `$options`.
+
+```yaml
+inputs:
+  naming_strategy: snake
+
+  $options:
+    naming_strategy:
+      - camel
 ```
 
-An explicit output `path` replaces the pack template path, then activation `root` is prepended.
+A hard-coded value is choice 0/default.
 
-## Final path planning
+Without the hard-coded value:
 
-Required conceptual order:
-
-```text
-pack template output default
-    ↓
-activation outputs.<template-key> partial override
-    ↓
-final template-relative path/name/symbol(s)
-    ↓
-prepend activation destination.root
-    ↓
-prepend destination.path
-    ↓
-collision / representation / dependency planning
-    ↓
-import addressing
+```yaml
+inputs:
+  $options:
+    naming_strategy:
+      - snake
+      - camel
 ```
 
-Import planning must never use pre-root/pre-override paths.
+the first list item is choice 0/default.
 
-## Flat actions
+## $options is always an ordered list
+
+Do not write named option maps:
+
+```yaml
+# wrong
+$options:
+  naming_strategy:
+    snake: snake
+    camel: camel
+```
+
+Do not add:
+
+```yaml
+default: ...
+```
+
+The correct form is:
+
+```yaml
+$options:
+  naming_strategy:
+    - snake
+    - camel
+```
+
+## Preserve the normal field type
+
+Conceptually:
+
+```text
+field: T
+
+$options:
+  field:
+    - T
+    - T
+```
+
+For an array-valued field, each option is therefore a full array value.
+
+For an object-valued field, each option is a full object value.
+
+## Coordinated changes
+
+If command and dependency configuration must change together, expose alternatives for the complete action definition at the parent `actions` map.
+
+Do not create hidden coupling between two unrelated option lists.
+
+Example:
 
 ```yaml
 actions:
-  format:
-    stage: files
-    extensions: [.ts]
-    commands:
-      - run: [bun, x, prettier@3.9.9, --write, $(files)]
-
-  build:
+  install:
     stage: final
     commands:
-      - run: [bun, run, build]
+      - run: [bun, add]
+
+  $options:
+    install:
+      - stage: final
+        commands:
+          - run: [pnpm, add]
 ```
 
-Destinations select real refs:
+## No special runner fields
 
-```yaml
-actions:
-  - $ref: "#/actions/format"
-  - $ref: "#/actions/build"
+Do not add example-only:
+
+```text
+runner
+runners
+runner selectors
+profile IDs
+package-manager option IDs
 ```
 
-## Compact runner alternatives
+Tool alternatives are ordinary values of ordinary fields.
 
-In `dryv.example.yaml`:
+## Materialization
 
-```yaml
-commands:
-  - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
-  - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
-  - run: [bun, x, prettier@3.9.9, --write, $(files)]
+Selections use the real field pointer plus an integer choice index:
+
+```text
+#/actions/format/commands = 1
+#/packs/persistence/inputs/naming_strategy = 1
 ```
 
-The same grouped runner syntax applies to dependency args:
+After selection:
 
-```yaml
-dependencies:
-  args:
-    - dev:
-        (pnpm|yarn): [-D]
-        bun: [--dev]
-        npm: [--save-dev]
-
-    - (bun|pnpm|yarn|npm):
-        pinned: "$(name)@$(version)"
-        any: "$(name)"
-```
-
-Materialized Usage contains concrete commands and concrete dependency argument rules.
-
-Do not use `choose.js.package_manager` merely to choose command variants.
-
-## Import addressing
-
-Import configuration stays destination-wide:
-
-```yaml
-destinations:
-  backend:
-    path: apps/backend
-    imports:
-      root: src
-      prefix: "@/"
-```
-
-Activation root and output overrides resolve before import addressing.
+- all `$options` metadata disappears;
+- version becomes `dryv/v1alpha1`;
+- the document validates as ordinary Usage.
 
 ## Real-reference rule
 
-Anything intentionally addressed by semantic `$ref` must expose a stable keyed node.
-
-Examples:
+Semantically referenced nodes stay keyed and real:
 
 ```text
 #/needs/schema.validation
@@ -230,19 +234,4 @@ Examples:
 #/actions/format
 #/destinations/backend
 #/packs/persistence
-```
-
-Avoid positional array refs for semantic identities.
-
-## Review focus
-
-The examples should now make it possible to review these boundaries independently:
-
-```text
-unit root        -> destination.path
-pack root        -> activation destination.root
-template path    -> output.path
-workflow choice  -> example runner materialization
-runtime action   -> concrete Usage command
-capability need  -> keyed needs map
 ```
