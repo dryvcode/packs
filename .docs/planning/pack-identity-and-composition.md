@@ -208,15 +208,15 @@ USAGE chooses PROVIDERS.
 ENGINE validates bindings.
 ```
 
-## 6. Unit-level dryv.yaml.example
+## 6. Pack-level dryv.example.yaml
 
-A root-owning unit should be allowed to carry a normal usage example:
+Any pack may carry a normal usage example. Unit examples are especially useful because they can demonstrate a complete recommended composition:
 
 ```text
-dryv.yaml.example
+dryv.example.yaml
 ```
 
-This is **not runtime authority** and must not make generation implicitly activate sibling packs.
+This is **not runtime authority** and must not make generation implicitly activate sibling packs. The full example/placement contract is tracked in [pack examples and configurable placement](pack-examples-and-placements.md).
 
 Its purposes are:
 
@@ -230,7 +230,7 @@ Its purposes are:
 Example direction:
 
 ```yaml
-# unit/backend/nestjs/dryv.yaml.example
+# unit/backend/nestjs/dryv.example.yaml
 
 version: dryv/v1alpha1
 
@@ -275,14 +275,14 @@ Future tooling may:
 dryv pack validate
   -> validate dryv.pack.yaml
   -> validate templates/filesystem
-  -> validate dryv.yaml.example when present
+  -> validate dryv.example.yaml when present
   -> resolve its complete binding graph
   -> prove compatibility
 
 dryv packs add unit/backend/nestjs
   -> inspect the unit's declared needs
   -> show compatible provider choices
-  -> optionally use dryv.yaml.example as a recommended composition
+  -> optionally use dryv.example.yaml as a recommended composition
   -> write explicit activations/bindings into the user's dryv.yaml
 ```
 
@@ -618,7 +618,7 @@ Recommended sequence:
 4. Dryv: extend binding validation;
 5. packs: rename/move layouts and simplify terminal names in one repository-wide migration;
 6. packs: split duplicated unit/inject responsibilities, starting with NestJS;
-7. packs: add `dryv.yaml.example` to units;
+7. packs: add `dryv.example.yaml` to units;
 8. packs: validate every example composition;
 9. packs: remove provider-pack-key branching where capability representation contracts replace it;
 10. verify catalogue, release IDs, fixtures and native generated output.
