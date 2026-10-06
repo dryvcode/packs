@@ -25,18 +25,14 @@ selections:
     subject: schema
     scope: each
 
-placements:
-  schema:
-    description: Generated Zod schema location.
-    path: [src, generated, validation]
-    filename: "$(name).schema.ts"
-
 templates:
   schema:
     $ref: "#/selections/schemas"
     output:
-      placement: schema
       name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - dto
       symbol: "$(subject.name.pascal)Schema"
 
 provides:
