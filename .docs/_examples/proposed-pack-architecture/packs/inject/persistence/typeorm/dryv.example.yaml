@@ -1,35 +1,59 @@
-# DESIGN EXAMPLE — proposed, compact and source-neutral.
+# DESIGN EXAMPLE — source-neutral setup guidance.
 version: dryv.example/v1alpha1
 
-usage:
-  destinations:
-    code:
-      backend:
-        path: apps/backend
-        choose:
-          js.package_manager: [bun, pnpm, npm, yarn]
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-        outputs:
-          $options:
-            default: pack-default
-            pack-default: {}
-            modules:
-              persistence:
-                entity:
-                  path: [src, modules, "$(group.name.kebab)", entities]
-            generated:
-              persistence:
-                entity:
-                  path: [src, _generated, entities]
-            models:
-              persistence:
-                entity:
-                  path: [src, models]
-                  symbol: "$(subject.name.pascal)Model"
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev:
+            (pnpm|yarn): [-D]
+            bun: [--dev]
+            npm: [--save-dev]
+        - (bun|pnpm|yarn|npm):
+            pinned: "$(name)@$(version)"
+            any: "$(name)"
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
 
-  packs:
-    persistence:
-      pack: self
-      destination: { $ref: "#/destinations/code/backend" }
-      inputs:
-        naming_strategy: [snake, camel]
+destinations:
+  backend:
+    path: apps/backend
+    runner: bun
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+
+packs:
+  persistence:
+    pack: self
+    destination:
+      $ref: "#/destinations/backend"
+
+    inputs:
+      naming_strategy: [snake, camel]
+
+    outputs:
+      entity:
+        $options:
+          default: pack-default
+          pack-default: {}
+
+          modules:
+            path: [src, modules, "$(group.name.kebab)", entities]
+
+          generated:
+            path: [src, _generated, entities]
+
+          models:
+            path: [src, models]
+            symbol: "$(subject.name.pascal)Model"
