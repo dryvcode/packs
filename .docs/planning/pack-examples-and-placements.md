@@ -45,21 +45,38 @@ This applies equally to:
 
 ## 2. What dryv.example.yaml means
 
-`dryv.example.yaml` is a **real example Usage document**.
+`dryv.example.yaml` is a **Usage-shaped, validated pack example**. It should be materializable into a normal project `dryv.yaml`, but it should not hard-code repository/source coordinates that make a reusable pack non-portable.
 
 It demonstrates a realistic way to activate the pack, including where useful:
 
-- sources;
-- destinations;
+- destination intent;
 - this pack's activation;
 - pack inputs;
 - placement overrides;
-- required companion packs;
+- required or recommended companion pack identities;
 - capability bindings;
 - destination choices;
 - actions/choices needed for a realistic generated result.
 
 It is not a second semantic authority.
+
+The exact example schema is not locked yet. A key requirement from stress testing is that it remain **source-neutral**: a pack installed from an official Git source, private Git source or local path must be able to reuse the same example without rewriting embedded source URLs.
+
+A likely model is:
+
+```text
+pack example
+    ↓
+Client resolves self + suggested pack identities from available sources/catalogue
+    ↓
+preview concrete dryv.yaml edits
+    ↓
+user accepts
+    ↓
+ordinary explicit dryv.yaml
+```
+
+The Engine should validate the materialized Usage graph using normal contracts.
 
 It does not silently activate packs during normal generation.
 
@@ -789,3 +806,146 @@ The resulting `dryv.yaml` remains explicit.
 The Engine validates the complete graph and computes final artifact paths before render.
 
 That provides convenience without hidden generator magic.
+
+## 25. Stress-test decisions
+
+The design was stress-tested against feature-oriented, centralized-generated and flat-controller project layouts; repeated pack activation; same-name inject/unit pairs; wrong-language and wrong-framework bindings; representation mismatch; cross-unit imports; path traversal; undeclared placement overrides; filename ambiguity; and output collisions.
+
+The resulting design constraints are:
+
+| Problem | Required behavior |
+| --- | --- |
+| Pack usable with zero configuration | every exposed placement has a valid pack default |
+| Existing project has its own folder style | Usage may override only named public placements |
+| User moves generated DTO/entity/controller files | Planner resolves imports from final artifact paths |
+| User tries `../` or absolute output | reject before render |
+| User overrides a private template path | reject undeclared placement |
+| Two overrides resolve to one file | normal artifact collision error |
+| One template emits several resources | path override may be possible; ambiguous filename override is rejected |
+| TypeScript consumer binds Python provider | Engine rejects language incompatibility |
+| NestJS unit binds wrong server framework | Engine rejects framework incompatibility |
+| Zod/Joi/class-validator share a language but differ structurally | capability representation compatibility must be explicit |
+| Same-unit consumer binds remote package artifact | locality/import reachability must be checked |
+| Unit wants all feature registration artifacts | Engine needs aggregate capability consumption, not filesystem scanning |
+| Example recommends companion packs | recommendation may autofill/preview but never silently activates |
+| Pack comes from local/private/official source | example must remain source-neutral |
+| User only inspects/validates an example | no commands or workspace mutations are executed |
+
+### Destination rule
+
+Stress testing strongly favors treating a code destination as the **generated-unit root**, for example:
+
+```text
+apps/backend
+packages/api-client
+apps/mobile
+```
+
+and treating internal folders such as:
+
+```text
+src/modules
+src/_generated
+test
+migrations
+controllers
+dto
+entities
+```
+
+as placement concerns.
+
+This keeps unit-wide dependencies, choices, actions, package identity and same-unit validation aligned around one root.
+
+The existing activation-level named `destinations` field must be audited before adding another multi-root mechanism. Do not use placements to create hidden second units.
+
+### Pack author rule
+
+Expose the smallest useful placement API.
+
+Good:
+
+```text
+dto
+entity
+controller
+service
+test
+```
+
+Bad:
+
+```text
+every internal directory
+every template source path
+arbitrary template variables
+arbitrary Runtime IR queries
+```
+
+A pack with no placement declarations remains fully valid. Units will often expose few or none because they intentionally own their framework structure.
+
+### Safety rule
+
+A placement is planning data, not template input.
+
+The Engine must resolve:
+
+```text
+destination
++ placement default
++ Usage override
++ semantic planning tokens
++ filename
+= final artifact path
+```
+
+before rendering, dependency resolution, collision validation and trace finalization.
+
+Templates should receive resolved dependency paths/symbols and must not reason about raw placement configuration.
+
+### Compatibility rule
+
+Avoid a generic `strict: true|false`.
+
+Each need should request the compatibility dimensions that matter to that relationship, such as:
+
+```text
+language
+framework
+representation contract
+locality/import reachability
+runtime/platform (only where proven necessary)
+```
+
+If a dimension is required, the Engine must prove it or reject the binding. If it is irrelevant, the need should not request it.
+
+### Proof matrix
+
+The initial proof should generate the same NestJS semantics under at least these structures:
+
+```text
+A. feature-oriented
+src/modules/orders/controller.ts
+src/modules/orders/dto/create-order.dto.ts
+src/modules/orders/entities/order.entity.ts
+
+B. centralized generated
+src/_generated/controllers/orders.controller.ts
+src/_generated/dto/create-order.dto.ts
+src/_generated/entities/order.entity.ts
+
+C. type-oriented
+src/controllers/orders.controller.ts
+src/services/orders.service.ts
+src/contracts/create-order.dto.ts
+src/models/order.entity.ts
+```
+
+The proof passes only if:
+
+- the same semantic selections are used;
+- templates do not inspect raw placement configuration;
+- imports are derived from final planned artifact dependencies;
+- no pack-specific path convention is used for cross-pack lookup;
+- collisions and invalid paths fail before render;
+- generated output compiles with the native toolchain.
