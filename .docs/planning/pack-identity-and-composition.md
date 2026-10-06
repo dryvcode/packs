@@ -216,7 +216,7 @@ Any pack may carry a normal usage example. Unit examples are especially useful b
 dryv.example.yaml
 ```
 
-This is **not runtime authority** and must not make generation implicitly activate sibling packs. The full example/placement contract is tracked in [pack examples and configurable placement](pack-examples-and-placements.md).
+This is **not runtime authority** and must not make generation implicitly activate sibling packs. The full compact-example, output-override and import-addressing design is tracked in [pack examples and output overrides](pack-examples-and-placements.md).
 
 Its purposes are:
 
