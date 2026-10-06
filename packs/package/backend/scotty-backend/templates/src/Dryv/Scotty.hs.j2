@@ -2,6 +2,8 @@
 
 module Dryv.Scotty
   ( badRequest
+  , bodyOptional
+  , bodyRequired
   , cookieValue
   , optionalFromValues
   , parseOptional
@@ -15,6 +17,8 @@ module Dryv.Scotty
   ) where
 
 import Data.Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (parseEither)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -36,6 +40,27 @@ parseWire raw =
       case parseEither parseJSON (String raw) of
         Right value -> Right value
         Left message -> Left (T.pack message)
+
+
+bodyRequired :: FromJSON a => Text -> Value -> ActionM a
+bodyRequired label (Object objectValue) =
+  case KeyMap.lookup (Key.fromText label) objectValue of
+    Nothing -> badRequest ("missing required " <> label)
+    Just wire ->
+      case fromJSON wire of
+        Success parsed -> pure parsed
+        Error message -> badRequest ("invalid " <> label <> ": " <> T.pack message)
+bodyRequired label _ = badRequest ("expected JSON object for " <> label)
+
+bodyOptional :: FromJSON a => Text -> Value -> ActionM (Maybe a)
+bodyOptional label (Object objectValue) =
+  case KeyMap.lookup (Key.fromText label) objectValue of
+    Nothing -> pure Nothing
+    Just wire ->
+      case fromJSON wire of
+        Success parsed -> pure (Just parsed)
+        Error message -> badRequest ("invalid " <> label <> ": " <> T.pack message)
+bodyOptional label _ = badRequest ("expected JSON object for " <> label)
 
 parseRequired :: FromJSON a => Text -> Maybe Text -> ActionM a
 parseRequired label raw =
