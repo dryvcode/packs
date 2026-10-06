@@ -117,6 +117,20 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Ecto schemas — implementation present; verification deferred
 - [x] Ecto changesets — implementation present; verification deferred
 
+### Scala
+
+- [x] http4s backend — implementation present; verification deferred
+- [x] Scala Client SDK — implementation present; verification deferred
+- [x] Slick tables — implementation present; verification deferred
+- [x] Scala Circe validation — implementation present; verification deferred
+
+### Clojure
+
+- [x] Reitit backend — implementation present; verification deferred
+- [x] Clojure Client SDK — implementation present; verification deferred
+- [x] next.jdbc models — implementation present; verification deferred
+- [x] Malli schemas — implementation present; verification deferred
+
 ### C++
 
 - [x] C++ Client SDK — implementation present; verification deferred
@@ -137,6 +151,8 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [x] Ruby — backend, client, persistence and validation represented
 - [x] Elixir — backend, client, persistence and validation represented
 - [x] C++ — backend, client, persistence and validation represented
+- [x] Scala — backend, client, persistence and validation represented
+- [x] Clojure — backend, client, persistence and validation represented
 - [ ] Plain C — research-only; no baseline approved
 
 ### Cross-ecosystem validation
@@ -173,6 +189,6 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Current next step
 
-The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir and C++ across backend, client, persistence and validation baselines.
+The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir, C++, Scala and Clojure across backend, client, persistence and validation baselines.
 
 Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Cross-ecosystem documentation is now represented by the Markdown Reference pack. Next work should target portable testing/contracts, migration/schema output, project composition, and explicit semantic gaps rather than duplicating language baselines.
