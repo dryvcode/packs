@@ -25,7 +25,6 @@ inputs:
     type: string
     default: snake
     description: Database column naming strategy.
-    # Proposed richer input validation.
     allowed: [snake, camel]
 
 selections:
@@ -45,8 +44,8 @@ placements:
 templates:
   entity:
     $ref: "#/selections/entities"
-    placement: entity
     output:
+      placement: entity
       name: "$(subject.name.kebab)"
       symbol: "$(subject.name.pascal)Entity"
 
