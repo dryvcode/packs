@@ -1,0 +1,34 @@
+# DESIGN EXAMPLE — source-neutral proposed example contract.
+version: dryv.example/v1alpha1
+
+destination:
+  name: backend
+  path: apps/backend
+
+packs:
+  server:
+    pack: self
+    bind:
+      schema.validation: validation
+      schema.persistence: persistence
+
+  validation:
+    pack: inject/validation/zod
+
+  persistence:
+    pack: inject/persistence/typeorm
+
+# This example shows a feature-oriented structure.
+place:
+  server:
+    controller:
+      path: [src, modules, "$(feature.name.kebab)"]
+      filename: controller.ts
+
+    service:
+      path: [src, modules, "$(feature.name.kebab)"]
+      filename: service.ts
+
+    module:
+      path: [src, modules, "$(feature.name.kebab)"]
+      filename: module.ts
