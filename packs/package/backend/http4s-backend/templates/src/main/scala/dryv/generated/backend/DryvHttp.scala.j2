@@ -1,0 +1,135 @@
+package {{ pack.inputs.root_package }}
+
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+
+import cats.effect.IO
+
+import io.circe.{Decoder, Json, JsonObject, parser}
+
+import org.http4s.{Request, Response, Status, UrlForm}
+import org.http4s.circe.CirceEntityCodec.*
+
+object DryvHttp:
+  def matchPath(template: String, actual: String): Option[Map[String, String]] =
+    val expected = segments(template)
+    val received = segments(actual)
+
+    if expected.size != received.size then None
+    else
+      expected.zip(received).foldLeft(Option(Map.empty[String, String])) {
+        case (None, _) => None
+        case (Some(values), (pattern, value)) =>
+          if pattern.startsWith("{") && pattern.endsWith("}") then
+            Some(values.updated(pattern.drop(1).dropRight(1), decodePath(value)))
+          else if pattern == value then Some(values)
+          else None
+      }
+
+  def header(request: Request[IO], name: String): Option[String] =
+    request.headers.toList
+      .find(header => header.name.toString.equalsIgnoreCase(name))
+      .map(_.value)
+
+  def cookie(request: Request[IO], name: String): Option[String] =
+    request.cookies.find(_.name == name).map(_.content)
+
+  def query(request: Request[IO], name: String): Option[List[String]] =
+    request.multiParams.get(name).map(_.toList)
+
+  def bodyJson(request: Request[IO]): IO[Either[String, Json]] =
+    request.as[Json].attempt.map {
+      case Right(value) => Right(value)
+      case Left(error) => Left("Invalid JSON body: " + error.getMessage)
+    }
+
+  def form(request: Request[IO]): IO[Either[String, Map[String, List[String]]]] =
+    request.as[UrlForm].attempt.map {
+      case Right(value) =>
+        Right(value.values.iterator.map((name, values) => name -> values.toList).toMap)
+      case Left(error) =>
+        Left("Invalid form body: " + error.getMessage)
+    }
+
+  def decode[T: Decoder](json: Json): Either[String, T] =
+    summon[Decoder[T]].decodeJson(json).left.map(_.getMessage)
+
+  def fieldJson(
+    name: String,
+    raw: Option[List[String]],
+    kind: String,
+    isArray: Boolean,
+    required: Boolean,
+  ): Either[String, Option[(String, Json)]] =
+    raw match
+      case None | Some(Nil) =>
+        if required then Left("Missing required field " + name)
+        else Right(None)
+      case Some(values) =>
+        if isArray then
+          sequence(values.map(value => scalarJson(value, kind))).map(items =>
+            Some(name -> Json.fromValues(items))
+          )
+        else
+          scalarJson(values.head, kind).map(value => Some(name -> value))
+
+  def scalarJson(raw: String, kind: String): Either[String, Json] =
+    kind match
+      case "boolean" =>
+        raw.toBooleanOption
+          .map(Json.fromBoolean)
+          .toRight("Expected boolean value")
+      case "integer" =>
+        raw.toLongOption
+          .map(Json.fromLong)
+          .toRight("Expected integer value")
+      case "number" | "decimal" | "money" =>
+        BigDecimal(raw).toOption
+          .map(Json.fromBigDecimal)
+          .toRight("Expected numeric value")
+      case "enum" =>
+        Right(parser.parse(raw).toOption.getOrElse(Json.fromString(raw)))
+      case "json" =>
+        parser.parse(raw).left.map(_.getMessage)
+      case _ =>
+        Right(Json.fromString(raw))
+
+  def jsonObject(fields: List[Either[String, Option[(String, Json)]]]): Either[String, Json] =
+    sequence(fields).map(values =>
+      Json.fromJsonObject(JsonObject.fromIterable(values.flatten))
+    )
+
+  def jsonResponse(statusCode: Int, value: Json): IO[Response[IO]] =
+    IO.pure(Response[IO](status(statusCode)).withEntity(value))
+
+  def emptyResponse(statusCode: Int): IO[Response[IO]] =
+    IO.pure(Response[IO](status(statusCode)))
+
+  def badRequest(message: String): IO[Response[IO]] =
+    jsonResponse(
+      Status.BadRequest.code,
+      Json.obj("message" -> Json.fromString(message)),
+    )
+
+  def notImplemented(message: String): IO[Response[IO]] =
+    jsonResponse(
+      Status.NotImplemented.code,
+      Json.obj("message" -> Json.fromString(message)),
+    )
+
+  private def status(code: Int): Status =
+    Status.fromInt(code).fold(_ => Status.Ok, identity)
+
+  private def segments(path: String): List[String] =
+    path.stripPrefix("/").stripSuffix("/").split('/').toList.filter(_.nonEmpty)
+
+  private def decodePath(value: String): String =
+    URLDecoder.decode(value.replace("+", "%2B"), StandardCharsets.UTF_8)
+
+  private def sequence[A](values: List[Either[String, A]]): Either[String, List[A]] =
+    values.foldRight(Right(Nil): Either[String, List[A]]) { (value, acc) =>
+      for
+        item <- value
+        rest <- acc
+      yield item :: rest
+    }
