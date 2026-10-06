@@ -2,27 +2,21 @@
 
 These are review fixtures for expected validation behavior.
 
-## Positional/grouped needs break semantic refs
+## Positional/grouped needs
 
-Do not use:
+Wrong:
 
 ```yaml
 needs:
   - schema.validation
 ```
 
-or:
+Wrong:
 
 ```yaml
 needs:
   required:
     - schema.validation
-```
-
-because templates need a real stable node such as:
-
-```text
-#/needs/schema.validation
 ```
 
 Correct:
@@ -31,6 +25,8 @@ Correct:
 needs:
   schema.validation: required
 ```
+
+because `#/needs/schema.validation` must be a real semantic ref target.
 
 ## Invalid need strength
 
@@ -47,7 +43,78 @@ recommended
 optional
 ```
 
+## Named $options map
+
+Wrong:
+
+```yaml
+$options:
+  naming_strategy:
+    snake: snake
+    camel: camel
+```
+
+`$options.<field>` must be a non-empty ordered list.
+
+Correct:
+
+```yaml
+$options:
+  naming_strategy:
+    - snake
+    - camel
+```
+
+## Explicit default inside $options
+
+Wrong:
+
+```yaml
+$options:
+  naming_strategy:
+    default: snake
+    values: [snake, camel]
+```
+
+Use a normal hard-coded field as the default, or let the first option be the default.
+
+## Wrong option type
+
+If `commands` is an array field:
+
+```yaml
+$options:
+  commands:
+    - run: [pnpm, exec, prettier]
+```
+
+is wrong because the listed option is an object, not a complete commands array.
+
+Correct:
+
+```yaml
+$options:
+  commands:
+    -
+      - run: [pnpm, exec, prettier]
+```
+
+## Special runner field
+
+Wrong:
+
+```yaml
+destinations:
+  backend:
+    path: apps/backend
+    runner: bun
+```
+
+If command alternatives are needed, expose alternatives on the ordinary action fields.
+
 ## Nested code destination namespace
+
+Wrong:
 
 ```yaml
 destinations:
@@ -66,12 +133,14 @@ destinations:
 
 ## False destination ref
 
+Wrong:
+
 ```yaml
 destination:
   $ref: "#/destinations/code/backend"
 ```
 
-Correct target:
+Correct:
 
 ```text
 #/destinations/backend
@@ -85,43 +154,26 @@ destination:
   root: [.., secrets]
 ```
 
-Activation roots must remain portable and inside the destination unit.
+Activation roots must remain inside the destination unit.
 
 ## Missing required provider
-
-A pack declares:
 
 ```yaml
 needs:
   schema.validation: required
 ```
 
-but its activation does not bind that capability.
+requires a compatible binding.
 
-Expected:
-
-```text
-usage.bind.missing
-```
-
-Recommended/optional needs may remain unbound.
-
-## Output override names unknown template
+## Unknown output template
 
 ```yaml
-packs:
-  persistence:
-    ...
-    outputs:
-      hidden-bootstrap:
-        path: [custom]
+outputs:
+  hidden-bootstrap:
+    path: [custom]
 ```
 
-If `hidden-bootstrap` is not a real template key:
-
-```text
-usage.output.unknown_template
-```
+If `hidden-bootstrap` is not a real template key, reject it.
 
 ## Output path traversal
 
@@ -131,84 +183,37 @@ outputs:
     path: [.., secrets]
 ```
 
-Expected:
-
-```text
-usage.output.path_invalid
-```
-
-## Collision after root + override composition
-
-Two activation/template outputs resolve to the same final workspace file after:
-
-```text
-destination.path
-+ activation root
-+ output path
-```
-
-Expected:
-
-```text
-planner.output.collision
-```
+Reject before planning.
 
 ## Invalid action ref
 
 ```yaml
-destinations:
-  backend:
-    path: apps/backend
-    actions:
-      - $ref: "#/actions/missing"
+actions:
+  - $ref: "#/actions/missing"
 ```
 
-The ref must resolve to a real root action.
+Every ref must resolve to a real root action.
 
-## Runner alternative survives materialization
+## Unknown option selection
 
-Normal `dryv.yaml` still contains:
+A materialization selection such as:
 
-```yaml
-commands:
-  - run: [(pnpm|yarn), dlx, prettier, --write, $(files)]
-  - run: [bun, x, prettier, --write, $(files)]
+```text
+#/packs/server/missing = 1
 ```
 
-after setup already selected Bun.
+must fail if that field has no visible `$options`.
 
-Expected: materialization should emit only the concrete selected command(s).
+## Out-of-range option selection
 
-## Unsupported runner
-
-A destination selects `dart`, but an action only exposes Bun/pnpm/npm/Yarn variants.
-
-Expected: fail before Usage is written.
-
-## Conflicting runner rules
-
-Two matching grouped runner rules produce incompatible dependency arguments for one selected runner.
-
-Expected: deterministic failure; no hidden precedence.
-
-## Import root does not contain final producer
-
-The final artifact after activation-root/output composition is outside the configured import root.
-
-Expected import reachability failure.
+If a field exposes choices 0 and 1, selecting index 2 must fail.
 
 ## Invalid scalar input choice
 
-A pack input allows:
+If a pack input allows:
 
 ```text
 snake | camel
 ```
 
-but an example exposes `kebab`.
-
-Expected:
-
-```text
-example.option.invalid_value
-```
+an example alternative `kebab` must fail normal Usage/input validation.
