@@ -1,5 +1,5 @@
 {%- macro bound(binding) -%}
-{%- if binding.port.field is none -%}input{%- else -%}(get input :{{ binding.port.field.snake }}){%- endif -%}
+{%- if binding.port.field is none -%}input{%- else -%}(get input (keyword {{ binding.port.field.raw | tojson }})){%- endif -%}
 {%- endmacro -%}
 {%- set http = operation.facets.http -%}
 (ns dryv.generated.client.operations.{{ group.name.snake }}.{{ operation.name.snake }}
@@ -26,7 +26,7 @@
 {%- for binding in http.input_groups.query_object %}
 {%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
 {%- for field in operation.input.fields %}
-                  (client/add-param {{ field.name.raw | tojson }} (get input :{{ field.name.snake }}))
+                  (client/add-param {{ field.name.raw | tojson }} (get input (keyword {{ field.name.raw | tojson }})))
 {%- endfor %}
 {%- else %}
                   (into (mapcat (fn [[name value]]
@@ -54,7 +54,7 @@
 {%- for binding in http.input_groups.form %}
 {%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
 {%- for field in operation.input.fields %}
-                 (client/add-param {{ field.name.raw | tojson }} (get input :{{ field.name.snake }}))
+                 (client/add-param {{ field.name.raw | tojson }} (get input (keyword {{ field.name.raw | tojson }})))
 {%- endfor %}
 {%- else %}
                  (client/add-param {{ (binding.name or binding.port.name.raw) | tojson }} {{ bound(binding) }})
