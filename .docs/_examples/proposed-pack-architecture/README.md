@@ -20,7 +20,10 @@ packs/
     │       ├── dryv.pack.yaml
     │       └── dryv.example.yaml
     ├── validation/
-    │   └── zod/
+    │   ├── zod/
+    │   │   ├── dryv.pack.yaml
+    │   │   └── dryv.example.yaml
+    │   └── class-validator/
     │       ├── dryv.pack.yaml
     │       └── dryv.example.yaml
     └── persistence/
@@ -59,9 +62,9 @@ feature module
 
 It consumes validation and optional persistence representations.
 
-### `inject/validation/zod`
+### `inject/validation/zod` and `inject/validation/class-validator`
 
-Owns Zod validation schemas.
+Alternative TypeScript validation providers. Both expose a compatible public `schema` placement while preserving their own representation contracts and filename defaults.
 
 ### `inject/persistence/typeorm`
 
@@ -128,3 +131,40 @@ They are not current Dryv contract syntax.
 - [Suggested pack composition](SUGGESTED-PACKS.md) — how `dryv pack add` could turn a pack example into a reviewed explicit composition.
 - [Proposed schema notes](SCHEMA-NOTES.md) — proposed syntax and the main design questions to validate.
 - [Invalid examples](INVALID-EXAMPLES.md) — examples the Engine should reject.
+
+
+## Destination-centered placement
+
+The explicit Usage examples intentionally keep structural overrides under:
+
+```text
+destinations.code.backend.place
+```
+
+rather than under each pack activation.
+
+That means one unit shows its complete generated structure together:
+
+```text
+backend
+├── server.controller
+├── server.service
+├── server.module
+├── validation.schema
+└── persistence.entity
+```
+
+Pack activations simply target `backend`.
+
+The pack manifest still owns the placement defaults; the destination only overrides them.
+
+## Multi-option example
+
+The NestJS unit `dryv.example.yaml` demonstrates a generic `$example` wrapper for:
+
+- package manager;
+- complete source-layout profile;
+- validation provider pack;
+- TypeORM naming strategy.
+
+Resolving those choices must produce ordinary explicit Usage with no `$example` nodes remaining.
