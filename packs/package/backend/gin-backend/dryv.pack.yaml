@@ -1,0 +1,94 @@
+version: dryv.pack/v1alpha1
+key: backend.gin-backend
+layout: package
+package:
+  name: { $ref: "#/inputs.package_name" }
+
+source: templates
+
+info:
+  title: Gin Backend
+  version: 0.1.0
+  description: Generates Gin 1.12 HTTP handlers, typed models and feature service interfaces.
+
+catalog:
+  purpose: backend
+  summary: Gin handlers with typed Go models and separated service boundaries.
+  languages: [go]
+  frameworks: [gin]
+  tags: [backend, rest, http, go]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: dryvgin
+    description: Go package identifier used by generated source files.
+  module_path:
+    type: string
+    default: example.com/dryvgin
+    description: Module path written to go.mod.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  handler:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.snake)_$(feature.name.snake)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: Register$(group.name.pascal)$(feature.name.pascal)Gin
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
+
+# shared:go-actions:start
+actions:
+  files:
+    format:
+      extensions: [.go]
+      commands:
+        - run: [gofmt, -w, $(files)]
+  final:
+    install:
+      commands:
+        - run: [go, mod, tidy]
+# shared:go-actions:end
