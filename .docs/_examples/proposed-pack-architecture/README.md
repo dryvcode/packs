@@ -1,8 +1,8 @@
 # Proposed pack architecture — NestJS composition
 
-Status: **design-only example**
+Status: **design example aligned with current Dryv planning**
 
-This directory shows the latest proposed architecture before Dryv contracts are implemented.
+This directory demonstrates the latest Dryv pack/Usage model, including the open runner-materialization hardening from Dryv roadmap task 16.
 
 ## Suggested pack tree
 
@@ -20,80 +20,169 @@ packs/
     └── persistence/typeorm/
 ```
 
-Each pack example contains a minimal proposed `dryv.pack.yaml` and an optional compact `dryv.example.yaml`.
-
-## Core idea
+## Core model
 
 ```text
 dryv.pack.yaml
-    keeps rigid generation facts
+    generation contract
+    info / inputs / needs / selections / templates
+    provides / dependencies
 
-template filesystem + output
-    define zero-config default output
+pack template output
+    zero-config output default
 
 dryv.example.yaml
-    suggests useful setup choices
+    setup alternatives
+    runner alternatives
+    provider/input/output suggestions
 
-dryv.yaml destination.outputs
-    records actual project output overrides
+dryv.yaml destination
+    generated/build-unit root
+    import addressing
+    selected action refs
 
-dryv.yaml destination.imports
-    records actual import-root/prefix policy
+dryv.yaml pack activation
+    source/path
+    destination
+    bindings
+    inputs
+    outputs.<real-template-key>
+
+dryv.yaml actions
+    concrete commands selected during setup
 ```
 
-There is no proposed pack-side `placements:` registry.
+There is no pack-side `placements:` registry and no capability-keyed destination output map.
+
+## Pack metadata
+
+Discovery/compatibility metadata lives under `info`:
+
+```yaml
+info:
+  title: Zod
+  version: 0.1.0
+  purpose: validation
+  summary: Zod validation schemas.
+  languages: [typescript]
+  frameworks: [zod]
+  tags: [validation, schema]
+```
+
+Do not duplicate this with `catalog:` or `target:`.
+
+## Needs
+
+Required is the common default:
+
+```yaml
+needs:
+  - operation.server
+```
+
+When strengths differ:
+
+```yaml
+needs:
+  required:
+    - schema.validation
+  recommended:
+    - schema.persistence
+```
+
+Provider compatibility is Engine-owned; consumers do not list known provider packs.
 
 ## Pack default output
-
-Example pack output:
 
 ```yaml
 templates:
   entity:
     $ref: "#/selections/entities"
     output:
-      name: $(subject.name.kebab)
+      name: "$(subject.name.kebab)"
       path:
-        - $(group.name.kebab)
+        - "$(group.name.kebab)"
         - entities
-      symbol: $(subject.name.pascal)Entity
+      symbol: "$(subject.name.pascal)Entity"
 ```
 
-The first path segment is semantic/dynamic; later segments may be static pack-local structure.
+If Usage says nothing, pack filesystem + template output wins.
 
-If Usage says nothing, the pack filesystem and this output win.
+## Project output override
 
-## Project override
+Output customization belongs to the concrete pack activation:
 
-A project may partially override the same output:
+```yaml
+packs:
+  persistence:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/backend"
+
+    outputs:
+      entity:
+        path: [src, models]
+        symbol: "$(subject.name.pascal)Model"
+```
+
+`entity` is a real template key.
+
+The override is a partial version of the existing template output object:
+
+```text
+path
+name
+symbol
+symbols
+```
+
+## Flat destinations
 
 ```yaml
 destinations:
-  code:
-    backend:
-      path: apps/backend
-      outputs:
-        persistence:
-          entity:
-            path: [src, models]
-            symbol: "$(subject.name.pascal)Model"
+  backend:
+    path: apps/backend
 ```
 
-`persistence` is the activation name; `entity` is the template key.
+There is no `destinations.code.backend` nesting.
 
-## Compact example options
+## Actions and runners
 
-Examples deliberately prefer terse choices:
+Root actions are flat and carry their stage:
 
 ```yaml
-choose:
-  js.package_manager: [bun, pnpm, npm, yarn]
-
-inputs:
-  naming_strategy: [snake, camel]
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 ```
 
-Structured alternatives use direct values rather than `value:` wrappers.
+Destinations select them using real refs:
+
+```yaml
+destinations:
+  backend:
+    path: apps/backend
+    actions:
+      - $ref: "#/actions/format"
+```
+
+In `dryv.example.yaml`, compact command alternatives may represent supported runners:
+
+```yaml
+commands:
+  - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+  - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+  - run: [bun, x, prettier@3.9.9, --write, $(files)]
+```
+
+`(pnpm|yarn)` means those runners share that behavior.
+
+Materialized `dryv.yaml` keeps only the selected concrete command.
 
 ## Explicit Usage examples
 
@@ -103,20 +192,11 @@ Compare:
 - `usage/dryv.central-generated.yaml` — `#/` rooted imports;
 - `usage/dryv.type-oriented.yaml` — `@/` rooted imports plus symbol overrides.
 
-## Import addressing
+These files show **materialized Usage**, so their actions are concrete rather than runner-option matrices.
 
-See [IMPORT-ADDRESSING.md](IMPORT-ADDRESSING.md) for:
+## More notes
 
-- relative imports;
-- TypeScript `@/` and `#/`;
-- Python dotted modules;
-- Java package imports;
-- Dart `package:` imports.
-
-## Review helpers
-
-- [SUGGESTED-PACKS.md](SUGGESTED-PACKS.md) — setup experience;
-- [SCHEMA-NOTES.md](SCHEMA-NOTES.md) — proposed syntax and open decisions;
-- [INVALID-EXAMPLES.md](INVALID-EXAMPLES.md) — expected planning failures.
-
-All fields beyond current Dryv contracts are design-only and intentionally easy to change while planning.
+- [IMPORT-ADDRESSING.md](IMPORT-ADDRESSING.md)
+- [SUGGESTED-PACKS.md](SUGGESTED-PACKS.md)
+- [SCHEMA-NOTES.md](SCHEMA-NOTES.md)
+- [INVALID-EXAMPLES.md](INVALID-EXAMPLES.md)
