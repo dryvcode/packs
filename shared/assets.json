@@ -186,13 +186,16 @@
     "packs/project/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
   ],
   "templates/haskell/aeson-enum.hs.j2": [
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2"
+    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
+    "packs/package/validation/haskell-validation/templates/src/Dryv/Models/{enum}/$(name).hs.j2"
   ],
   "templates/haskell/aeson-model.hs.j2": [
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{model}/$(name).hs.j2"
+    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{model}/$(name).hs.j2",
+    "packs/package/validation/haskell-validation/templates/src/Dryv/Models/{model}/$(name).hs.j2"
   ],
   "templates/haskell/export-index.hs.j2": [
     "packs/package/clients/haskell-client-sdk/templates/src/Dryv/{models-index}/Models.hs.j2",
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/{operations-index}/Operations.hs.j2"
+    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/{operations-index}/Operations.hs.j2",
+    "packs/package/validation/haskell-validation/templates/src/Dryv/{models-index}/Models.hs.j2"
   ]
 }
