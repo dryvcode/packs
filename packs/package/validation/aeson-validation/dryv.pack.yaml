@@ -1,0 +1,67 @@
+version: dryv.pack/v1alpha1
+key: validation.aeson-validation
+layout: package
+package:
+  name: dryv-validation
+
+source: templates
+
+info:
+  title: Haskell Aeson Validation
+  version: 0.1.0
+  description: Generates Haskell Aeson models, canonical enum wrappers and validation functions.
+
+catalog:
+  purpose: validation
+  summary: Haskell Aeson wire models with explicit decoding and generated validation.
+  languages: [haskell]
+  frameworks: [aeson]
+  tags: [validation, schema, haskell]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Enum
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  index:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  package:
+    exports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/index"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/model"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
