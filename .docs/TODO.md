@@ -209,15 +209,20 @@ See the canonical research in the Dryv repository:
 ### Documentation / contracts
 
 - [x] Markdown Reference — `inject/documentation/markdown-reference`; verification deferred
-- [x] OpenAPI 3.1 — `package/documentation/openapi`; verification deferred
+- [x] HTTP Examples — `inject/documentation/http-examples`; verification deferred
+- [x] Persistence Reference — `inject/documentation/persistence-reference`; verification deferred
+- [x] OpenAPI 3.1 — `unit/documentation/openapi`; verification deferred
 
 ### Testing
 
 - [x] Schema Examples — `inject/testing/schema-examples`; verification deferred
-- [x] Postman Collection — `package/testing/postman-collection`; verification deferred
-- [x] Bruno Collection — `package/testing/bruno-collection`; verification deferred
-- [x] HTTP Smoke Tests — `package/testing/http-smoke-tests`; verification deferred
-- [x] k6 Smoke Tests — `package/testing/k6-smoke-tests`; verification deferred
+- [x] HTTP Contract Cases — `inject/testing/http-contract-cases`; verification deferred
+- [x] Schema Contract Cases — `inject/testing/schema-contract-cases`; verification deferred
+- [x] Persistence Contract Cases — `inject/testing/persistence-contract-cases`; verification deferred
+- [x] Postman Collection — `unit/testing/postman-collection`; verification deferred
+- [x] Bruno Collection — `unit/testing/bruno-collection`; verification deferred
+- [x] HTTP Smoke Tests — `unit/testing/http-smoke-tests`; verification deferred
+- [x] k6 Smoke Tests — `unit/testing/k6-smoke-tests`; verification deferred
 
 ### Backend projects
 
