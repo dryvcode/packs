@@ -2,9 +2,11 @@
 
 Status: **design-only**
 
-These examples intentionally use proposed fields so the complete design can be reviewed before changing Dryv contracts.
+These examples intentionally use proposed fields so the design can be reviewed before changing Dryv contracts.
 
-## Proposed pack fields
+## Pack manifest: stay small
+
+The proposed pack keeps the existing core model:
 
 ```yaml
 layout: unit | inject
@@ -13,65 +15,53 @@ target:
   languages: [...]
   frameworks: [...]
 
-placements:
-  <name>:
-    path: [...]
-    filename: ...
+inputs: ...
+needs: ...
+selections: ...
 
 templates:
-  <name>:
-    $ref: "#/selections/..."
+  entity:
+    $ref: "#/selections/entities"
     output:
-      placement: <name>
-      name: ...
-      symbol: ...
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - entities
+      symbol: $(subject.name.pascal)Entity
 
-needs:
-  <slot>:
-    required: true
-    match: ...
-    locality: ...
-    accepts:
-      contracts: [...]
-
-provides:
-  <slot>:
-    $ref: ...
-    contract: ...
-    symbol: ...
+provides: ...
+dependencies: ...
 ```
 
-### Placement belongs to output
+There is **no** proposed `placements:` registry and no `output.placement`.
 
-A template does not have a sibling `placement` field.
+## Pack output path rule
 
-Preferred:
-
-```yaml
-module:
-  $ref: "#/selections/http-features"
-  output:
-    placement: module
-    name: "$(feature.name.kebab)"
-    symbol: "$(feature.name.pascal)Module"
-```
-
-Reason:
+Proposed rule:
 
 ```text
-selection
-    decides which semantic items invoke the template
+output.path[0]
+    must contain a Dryv planning token
 
-output
-    describes the generated representation:
-      placement
-      name
-      symbols
+output.path[1:]
+    may contain dynamic or static pack-local segments
 ```
 
-## Proposed Usage placement
+Good:
 
-Placement overrides live on the generated-unit destination.
+```yaml
+path: ["$(group.name.kebab)", entities]
+```
+
+Bad reusable-pack default:
+
+```yaml
+path: [src, models]
+```
+
+Project roots and architectural folders belong to Usage.
+
+## Usage output overrides
 
 ```yaml
 destinations:
@@ -79,245 +69,150 @@ destinations:
     backend:
       path: apps/backend
 
-      place:
-        server:
-          controller:
-            path: [src, controllers]
-            filename: "$(feature.name.kebab).controller.ts"
-
-        validation:
-          schema:
-            path: [src, contracts]
-
+      outputs:
         persistence:
           entity:
-            path: [src, models]
-
-packs:
-  server:
-    path: inject/backend/nestjs
-    destination: { $ref: "#/destinations/code/backend" }
-
-  validation:
-    path: inject/validation/zod
-    destination: { $ref: "#/destinations/code/backend" }
+            path: [src, models, "$(group.name.kebab)"]
+            name: "$(subject.name.kebab)"
+            symbol: "$(subject.name.pascal)Model"
 ```
 
-The first key under `place` is the pack **activation** targeting this destination.
-
-The second key is a public placement declared by that pack.
-
-This makes the destination the one view of the unit's generated structure.
-
-## Relationship
+Address:
 
 ```text
-pack manifest:
-  placements.controller
-        ↑
-template output:
-  placement: controller
-        ↑
-project destination:
-  place.server.controller
-        ↑
-pack activation:
-  server -> destination backend
+persistence
+  = pack activation
+
+entity
+  = template key
 ```
 
-The Planner combines these facts and computes the final artifact path.
+The override is a partial normal output object.
 
-## Proposed example document
+Supported direction:
 
-```yaml
-version: dryv.example/v1alpha1
-
-usage:
-  destinations:
-    code:
-      backend:
-        path: apps/backend
-
-  packs:
-    app:
-      pack: self
-      destination: { $ref: "#/destinations/code/backend" }
+```text
+name
+path
+symbol
+symbols
 ```
 
-`pack: self` and logical pack IDs are example-time source-neutral references. A Client resolves them to normal explicit Usage sources and paths.
+## Default output
 
-## Generic setup choice
+If no destination override exists:
 
-A key design goal is that **any one normal Usage value** may be replaced by an example-time choice.
-
-```yaml
-<normal-field>:
-  $example:
-    title: Question shown during setup
-    default: one
-    options:
-      one:
-        title: First option
-        value: <normal value>
-
-      two:
-        title: Second option
-        value: <normal value>
+```text
+pack template filesystem
++ pack output.path
++ pack output.name
+= default output
 ```
 
-After the user/agent chooses, `$example` disappears.
+The pack requires no setup metadata to work.
 
-The selected `value` occupies the normal field and must validate against that field's ordinary Usage schema.
+## Compact dryv.example.yaml choices
 
-### Example: package manager
+Scalar choices should stay terse:
 
 ```yaml
 choose:
-  js.package_manager:
-    $example:
-      default: bun
-      options:
-        bun:  { value: bun }
-        pnpm: { value: pnpm }
-        npm:  { value: npm }
-        yarn: { value: yarn }
+  js.package_manager: [bun, pnpm, npm, yarn]
+
+inputs:
+  naming_strategy: [snake, camel]
 ```
 
-### Example: provider pack
+A provider may be suggested similarly:
 
 ```yaml
 packs:
   validation:
-    $example:
-      title: Validation implementation
-      default: zod
-      options:
-        zod:
-          value:
-            pack: inject/validation/zod
-            destination: { $ref: "#/destinations/code/backend" }
-
-        class-validator:
-          value:
-            pack: inject/validation/class-validator
-            destination: { $ref: "#/destinations/code/backend" }
+    pack:
+      - inject/validation/zod
+      - inject/validation/class-validator
 ```
 
-The consumer continues binding to the stable activation name `validation`.
+First item is the suggested default.
 
-### Example: pack input
+Do not write:
 
 ```yaml
-inputs:
-  naming_strategy:
-    $example:
-      default: snake
-      options:
-        snake: { value: snake }
-        camel: { value: camel }
+npm:
+  value: npm
 ```
 
-### Example: coordinated structure
+for scalar options.
 
-One `$example` can wrap the complete normal destination `place` value:
+## Structured choices
+
+For complex values use a compact named option map:
 
 ```yaml
-place:
-  $example:
-    title: Backend source structure
-    default: feature
-    options:
-      feature:
-        value:
-          server: ...
-          validation: ...
-          persistence: ...
+outputs:
+  $options:
+    default: pack-default
 
-      generated:
-        value:
-          server: ...
-          validation: ...
-          persistence: ...
+    pack-default: {}
+
+    feature:
+      server:
+        controller:
+          path: [src, modules, "$(feature.name.kebab)"]
+
+    generated:
+      server:
+        controller:
+          path: [src, _generated, controllers]
 ```
 
-This avoids JSON-pointer patches and avoids asking separate placement questions that must stay synchronized.
+The exact marker name remains open, but option values should be direct values without an extra `value:` wrapper.
 
-## Contract options versus example options
+## Import addressing
 
-These are intentionally different.
-
-```text
-pack/Engine contract
-    says what is legal
-
-dryv.example.yaml
-    says which useful choices the pack author wants to present
-
-Client/catalogue
-    may discover additional legal alternatives
-```
-
-For example, a NestJS server need may accept several validation representation contracts. Its example can recommend Zod and class-validator without making those the only legal providers.
-
-## Placement compatibility across provider choices
-
-If one activation may resolve to several interchangeable providers, destination structure should not depend on provider-private placement names.
-
-Preferred rule:
-
-- alternative providers should share compatible public placement keys where the output role is equivalent;
-- destination profiles override only common structure where possible;
-- provider-specific filename defaults remain in the provider pack.
-
-Example:
-
-```text
-inject/validation/zod
-  placement: schema
-  default filename: <name>.schema.ts
-
-inject/validation/class-validator
-  placement: schema
-  default filename: <name>.dto.ts
-```
-
-A destination structure can safely say:
-
-```yaml
-validation:
-  schema:
-    path: [src, contracts]
-```
-
-without forcing one provider's filename convention onto another.
-
-## Proposed aggregate import
-
-The unit example uses the idea:
+Destination-level proposal:
 
 ```yaml
 imports:
-  - $ref: "#/needs/operation.server"
-    mode: all
+  root: src
+  prefix: "@/"
 ```
 
-This means:
+No `imports` block means relative addressing.
 
-> give the root template every unique public representation supplied through this capability.
+The Planner should expose generic facts such as:
 
-The exact spelling may change. The behavior is what matters.
+```text
+producer final path
+consumer final path
+relative path
+unit-relative path
+import-root-relative path
+configured prefix
+provider package identity
+provider import-root-relative path
+final producer symbol(s)
+```
 
-## Questions still worth validating
+Target packs decide how those facts become:
 
-1. Are `unit` and `inject` enough as layouts?
-2. Is `target` the right name for runtime implementation compatibility metadata?
-3. Is `place` the clearest destination-level spelling?
-4. Should path values be arrays only, strings only, or accept both and normalize?
-5. Is `contract` the right term for generated representation compatibility?
-6. Is `locality` understandable for same-unit/cross-unit constraints?
-7. Should `dryv.example/v1alpha1` remain a dedicated example document wrapping a Usage-shaped `usage` object?
-8. Should example choices eventually support an explicit `omit: true` for optional fields?
-9. Does aggregate capability consumption belong inside template `imports`, or deserve a dedicated construct?
-10. Can `PackActivation.destinations` be removed once destination-root + placement covers the real use cases?
+```text
+../../models/user
+@/models/user
+dryv.models.user
+com.dryv.api.users.User
+package:riderescue_api/src/models/user.dart
+```
 
-These examples should be changed freely while the design is still in planning.
+## Questions to validate
+
+1. Is `outputs` the clearest destination-level name?
+2. Should output overrides permit all existing output fields by default?
+3. What exact opt-out spelling should a fixed output use?
+4. Is first-segment-dynamic the right reusable-pack constraint?
+5. Should the compact complex-choice marker be `$options`, `$choose`, or another name?
+6. Is first scalar-list item an acceptable suggested default?
+7. Should import configuration be `imports.root/prefix`, or use an `address` term?
+8. Which generic import-address facts belong in renderer context?
+9. How should same-unit package-style imports select the current unit's package identity?
+10. Can current `PackActivation.destinations` be removed once unit root + output overrides cover the real use cases?
