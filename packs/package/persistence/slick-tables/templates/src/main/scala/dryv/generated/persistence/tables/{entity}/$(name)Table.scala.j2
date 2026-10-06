@@ -1,0 +1,211 @@
+package {{ pack.inputs.root_package }}.tables
+
+import java.time.{Instant, LocalDate, LocalDateTime, LocalTime, OffsetDateTime, ZonedDateTime}
+import java.util.UUID
+
+import io.circe.Json
+
+import {{ pack.inputs.root_package }}.DryvProfile
+
+{%- macro scala_ident(name) -%}
+{%- if name in ['abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','forSome','given','if','implicit','import','lazy','match','new','null','object','opaque','open','override','package','private','protected','return','sealed','super','then','this','throw','trait','transparent','true','try','type','using','val','var','while','with','yield','end','extension','inline','infix','derives'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro dependency_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ loop.index0 }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro support_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and not dependency.is_self -%}{{ dependency.symbols.support }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro query_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}
+{%- if dependency.is_self -%}{{ file.symbols.query }}{%- else -%}{{ dependency.symbols.query }}{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}Json
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}UUID
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}ZonedDateTime
+{%- elif value.is.string -%}String
+{%- else -%}String
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable -%}Option[{{ base_type(field) }}]{%- else -%}{{ base_type(field) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro column_options(field, pk_count) -%}
+{%- set options = namespace(items=[]) -%}
+{%- if field.storage is not none and field.storage.primary_key and pk_count == 1 -%}
+{%- set options.items = options.items + ['O.PrimaryKey'] -%}
+{%- endif -%}
+{%- if field.storage is not none and field.storage.primary_key and pk_count == 1 and field.mutation == 'system' and field.value.is.integer -%}
+{%- set options.items = options.items + ['O.AutoInc'] -%}
+{%- endif -%}
+{%- if field.relation is not none and field.relation.is.one_to_one -%}
+{%- set options.items = options.items + ['O.Unique'] -%}
+{%- endif -%}
+{%- if field.value.is.string -%}
+{%- set length = field.value.property.primitive.constraints.length -%}
+{%- if length is not none and length.has_exact -%}
+{%- set options.items = options.items + ['O.SqlType("VARCHAR(' ~ length.exact ~ ')")'] -%}
+{%- elif length is not none and length.has_max -%}
+{%- set options.items = options.items + ['O.SqlType("VARCHAR(' ~ length.max ~ ')")'] -%}
+{%- endif -%}
+{%- endif -%}
+{%- if field.value.is.decimal or field.value.is.money -%}
+{%- set constraints = field.value.property.primitive.constraints -%}
+{%- if constraints.has_precision and constraints.has_scale -%}
+{%- set options.items = options.items + ['O.SqlType("DECIMAL(' ~ constraints.precision ~ ',' ~ constraints.scale ~ ')")'] -%}
+{%- endif -%}
+{%- endif -%}
+{%- if base_type(field) == 'Json' -%}
+{%- set options.items = options.items + ['O.SqlType("TEXT")'] -%}
+{%- endif -%}
+{{- options.items | join(', ') -}}
+{%- endmacro -%}
+
+{%- macro action(value) -%}
+{%- if value == 'restrict' -%}ForeignKeyAction.Restrict
+{%- elif value == 'cascade' -%}ForeignKeyAction.Cascade
+{%- elif value == 'detach' -%}ForeignKeyAction.SetNull
+{%- elif value == 'reset' -%}ForeignKeyAction.SetDefault
+{%- else -%}ForeignKeyAction.NoAction
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set pk = namespace(count=0) -%}
+{%- for field in schema.fields -%}
+{%- if field.storage is not none and field.storage.primary_key -%}{%- set pk.count = pk.count + 1 -%}{%- endif -%}
+{%- endfor -%}
+
+trait {{ file.symbols.support }}:
+  self: DryvProfile
+{%- set supports = namespace(items=[]) %}
+{%- for field in schema.fields %}
+{%- if field.relation is not none %}
+{%- set support = support_for(field.relation.target.schema) | trim %}
+{%- if support and support not in supports.items %}
+{%- set supports.items = supports.items + [support] %}
+    with {{ support }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+  =>
+
+  import profile.api.*
+
+  final case class {{ file.symbols.row }}(
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    {{ scala_ident(field.name.camel) }}: {{ field_type(field) }}{% if not loop.last %},{% endif %}
+{%- endif %}
+{%- endfor %}
+  )
+
+  final class {{ file.symbols.table }}(tag: Tag)
+      extends Table[{{ file.symbols.row }}](
+        tag,
+        {% if schema.facets.storage and schema.facets.storage.namespace %}Some({{ schema.facets.storage.namespace | tojson }}){% else %}None{% endif %},
+        {% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name | tojson }}{% else %}{{ schema.name.snake | tojson }}{% endif %},
+      ):
+
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+{%- set opts = column_options(field, pk.count) | trim %}
+    def {{ scala_ident(field.name.camel) }} =
+      column[{{ field_type(field) }}](
+        {{ field.name.snake | tojson }}{% if opts %},
+        {{ opts }}{% endif %}
+      )
+
+{%- endif %}
+{%- endfor %}
+{%- if pk.count > 1 %}
+    def primaryKeyConstraint =
+      primaryKey(
+        "pk_{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}",
+        (
+{%- set pkstate = namespace(first=true) %}
+{%- for field in schema.fields %}
+{%- if field.storage is not none and field.storage.primary_key %}
+          {% if not pkstate.first %},{% endif %}{{ scala_ident(field.name.camel) }}{% set pkstate.first=false %}
+{%- endif %}
+{%- endfor %}
+        ),
+      )
+
+{%- endif %}
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+    def index{{ loop.index }} =
+      index(
+        {% if index.name %}{{ index.name | tojson }}{% else %}"idx_{{ schema.name.snake }}_{{ loop.index }}"{% endif %},
+{%- if index.fields | length == 1 %}
+        {{ scala_ident(index.fields[0].camel) }},
+{%- else %}
+        (
+{%- for indexed in index.fields %}
+          {{ scala_ident(indexed.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        ),
+{%- endif %}
+        unique = {% if index.unique %}true{% else %}false{% endif %},
+      )
+
+{%- endfor %}
+{%- endif %}
+{%- for field in schema.fields %}
+{%- if field.relation is not none and query_for(field.relation.target.schema) | trim %}
+    def {{ scala_ident(field.name.camel) }}ForeignKey =
+      foreignKey(
+        "fk_{{ schema.name.snake }}_{{ field.name.snake }}",
+        {{ scala_ident(field.name.camel) }},
+        {{ query_for(field.relation.target.schema) | trim }},
+      )(
+        target => target.{{ scala_ident(field.relation.target.field.camel) }}{% if field.optional or field.nullable %}.?{% endif %},
+        onUpdate = {{ action(field.relation.on_update) }},
+        onDelete = {{ action(field.relation.on_delete) }},
+      )
+
+{%- endif %}
+{%- endfor %}
+{%- set stored = namespace(fields=[]) %}
+{%- for field in schema.fields %}
+{%- if field.related is none %}{%- set stored.fields = stored.fields + [field] -%}{%- endif %}
+{%- endfor %}
+{%- if stored.fields | length == 1 %}
+    def * =
+      {{ scala_ident(stored.fields[0].name.camel) }} <> (
+        value => {{ file.symbols.row }}(value),
+        row => Some(row.{{ scala_ident(stored.fields[0].name.camel) }}),
+      )
+{%- else %}
+    def * =
+      (
+{%- for field in stored.fields %}
+        {{ scala_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+      ).mapTo[{{ file.symbols.row }}]
+{%- endif %}
+
+  val {{ file.symbols.query }} = TableQuery[{{ file.symbols.table }}]
