@@ -8,9 +8,8 @@ usage:
         path: apps/backend
         place:
           validation:
-            dto:
+            schema:
               path: [src, modules, "$(group.name.kebab)", dto]
-              filename: "$(name).dto.ts"
 
   packs:
     validation:
