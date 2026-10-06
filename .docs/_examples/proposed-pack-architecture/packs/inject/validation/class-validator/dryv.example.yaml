@@ -1,33 +1,56 @@
-# DESIGN EXAMPLE — proposed, compact and source-neutral.
+# DESIGN EXAMPLE — source-neutral setup guidance.
 version: dryv.example/v1alpha1
 
-usage:
-  destinations:
-    code:
-      backend:
-        path: apps/backend
-        choose:
-          js.package_manager: [bun, pnpm, npm, yarn]
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-        outputs:
-          $options:
-            default: pack-default
-            pack-default: {}
-            modules:
-              validation:
-                schema:
-                  path: [src, modules, "$(group.name.kebab)", dto]
-            generated:
-              validation:
-                schema:
-                  path: [src, _generated, dto]
-            contracts:
-              validation:
-                schema:
-                  path: [src, contracts]
-                  symbol: "$(subject.name.pascal)Input"
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev:
+            (pnpm|yarn): [-D]
+            bun: [--dev]
+            npm: [--save-dev]
+        - (bun|pnpm|yarn|npm):
+            pinned: "$(name)@$(version)"
+            any: "$(name)"
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
 
-  packs:
-    validation:
-      pack: self
-      destination: { $ref: "#/destinations/code/backend" }
+destinations:
+  backend:
+    path: apps/backend
+    runner: bun
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+
+packs:
+  validation:
+    pack: self
+    destination:
+      $ref: "#/destinations/backend"
+
+    outputs:
+      schema:
+        $options:
+          default: pack-default
+          pack-default: {}
+
+          modules:
+            path: [src, modules, "$(group.name.kebab)", dto]
+
+          generated:
+            path: [src, _generated, dto]
+
+          contracts:
+            path: [src, contracts]
+            symbol: "$(subject.name.pascal)Input"
