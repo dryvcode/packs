@@ -15,10 +15,8 @@ info:
   tags: [backend, http, controller, module]
 
 needs:
-  required:
-    - schema.validation
-  recommended:
-    - schema.persistence
+  schema.validation: required
+  schema.persistence: recommended
 
 selections:
   http-features:
