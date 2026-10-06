@@ -1,0 +1,44 @@
+version: dryv.pack/v1alpha1
+key: documentation.persistence-reference
+source: templates
+
+info:
+  title: Persistence Reference
+  version: 0.1.0
+  description: Generates storage-focused Markdown documentation for persistent Dryv schemas without claiming DDL ownership.
+
+catalog:
+  purpose: documentation
+  summary: Storage, key, index and relation reference for persistent schemas.
+  languages: [markdown]
+  tags: [documentation, persistence, database, schema, relations]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
+  index:
+    $ref: "#/selections/all-entities"
+    output:
+      name: index
+    imports:
+      - $ref: "#/templates/entity"
