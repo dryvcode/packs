@@ -44,12 +44,11 @@ packs:
     outputs:
       schema:
         $options:
-
           modules:
-            path: ["$(group.name.kebab)", dto]
+            path: [modules, "$(group.name.kebab)", dto]
 
           generated:
-            path: [dto]
+            path: [_generated, dto]
 
           contracts:
             path: [contracts]
