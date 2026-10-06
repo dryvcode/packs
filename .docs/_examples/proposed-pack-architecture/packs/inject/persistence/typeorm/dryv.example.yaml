@@ -49,11 +49,11 @@ packs:
           pack-default: {}
 
           modules:
-            path: [src, modules, "$(group.name.kebab)", entities]
+            path: ["$(group.name.kebab)", entities]
 
           generated:
-            path: [src, _generated, entities]
+            path: [entities]
 
           models:
-            path: [src, models]
+            path: [models]
             symbol: "$(subject.name.pascal)Model"

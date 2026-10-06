@@ -67,6 +67,7 @@ packs:
       path: inject/backend/nestjs
     destination:
       $ref: "#/destinations/backend"
+      root: [src, modules]
     bind:
       schema.validation:
         $ref: "#/packs/validation"
@@ -74,11 +75,11 @@ packs:
         $ref: "#/packs/persistence"
     outputs:
       controller:
-        path: [src, modules, "$(feature.name.kebab)"]
+        path: ["$(feature.name.kebab)"]
       service:
-        path: [src, modules, "$(feature.name.kebab)"]
+        path: ["$(feature.name.kebab)"]
       module:
-        path: [src, modules, "$(feature.name.kebab)"]
+        path: ["$(feature.name.kebab)"]
 
   validation:
     source:
@@ -86,9 +87,10 @@ packs:
       path: inject/validation/zod
     destination:
       $ref: "#/destinations/backend"
+      root: [src, modules]
     outputs:
       schema:
-        path: [src, modules, "$(group.name.kebab)", dto]
+        path: ["$(group.name.kebab)", dto]
 
   persistence:
     source:
@@ -96,8 +98,9 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src, modules]
     inputs:
       naming_strategy: snake
     outputs:
       entity:
-        path: [src, modules, "$(group.name.kebab)", entities]
+        path: ["$(group.name.kebab)", entities]

@@ -120,10 +120,11 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src, models]
 
     outputs:
       entity:
-        path: [src, models]
+        path: [$(group.name.kebab)]
         symbol: "$(subject.name.pascal)Model"
 ```
 

@@ -127,11 +127,12 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src, models]
     inputs:
       naming_strategy: snake
     outputs:
       entity:
-        path: [src, models]
+        path: [$(group.name.kebab)]
         symbol: "$(subject.name.pascal)Model"
 ```
 

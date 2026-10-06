@@ -70,6 +70,7 @@ packs:
       path: inject/backend/nestjs
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
     bind:
       schema.validation:
         $ref: "#/packs/validation"
@@ -77,11 +78,11 @@ packs:
         $ref: "#/packs/persistence"
     outputs:
       controller:
-        path: [src, controllers]
+        path: [controllers]
       service:
-        path: [src, services]
+        path: [services]
       module:
-        path: [src, modules]
+        path: [modules]
 
   validation:
     source:
@@ -89,9 +90,10 @@ packs:
       path: inject/validation/zod
     destination:
       $ref: "#/destinations/backend"
+      root: [src, contracts]
     outputs:
       schema:
-        path: [src, contracts]
+        path: [$(group.name.kebab)]
         symbol: "$(subject.name.pascal)Validator"
 
   persistence:
@@ -100,9 +102,10 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src, models]
     inputs:
       naming_strategy: camel
     outputs:
       entity:
-        path: [src, models]
+        path: [$(group.name.kebab)]
         symbol: "$(subject.name.pascal)Model"

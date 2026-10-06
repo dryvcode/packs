@@ -70,6 +70,7 @@ packs:
       path: inject/backend/nestjs
     destination:
       $ref: "#/destinations/backend"
+      root: [src, _generated]
     bind:
       schema.validation:
         $ref: "#/packs/validation"
@@ -77,11 +78,11 @@ packs:
         $ref: "#/packs/persistence"
     outputs:
       controller:
-        path: [src, _generated, controllers]
+        path: [controllers]
       service:
-        path: [src, _generated, services]
+        path: [services]
       module:
-        path: [src, _generated, modules]
+        path: [modules]
 
   validation:
     source:
@@ -89,9 +90,10 @@ packs:
       path: inject/validation/zod
     destination:
       $ref: "#/destinations/backend"
+      root: [src, _generated]
     outputs:
       schema:
-        path: [src, _generated, dto]
+        path: [dto]
 
   persistence:
     source:
@@ -99,8 +101,9 @@ packs:
       path: inject/persistence/typeorm
     destination:
       $ref: "#/destinations/backend"
+      root: [src, _generated]
     inputs:
       naming_strategy: snake
     outputs:
       entity:
-        path: [src, _generated, entities]
+        path: [entities]

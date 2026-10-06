@@ -111,10 +111,11 @@ packs:
 
     destination:
       $ref: "#/destinations/backend"
+      root: [src, models]
 
     outputs:
       entity:
-        path: [src, models, "$(group.name.kebab)"]
+        path: ["$(group.name.kebab)"]
         name: "$(subject.name.kebab)"
         symbol: "$(subject.name.pascal)Model"
 ```
