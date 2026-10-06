@@ -1,0 +1,50 @@
+# DESIGN EXAMPLE — proposed, not current executable syntax.
+version: dryv.pack/v1alpha1
+key: inject.validation.zod
+layout: inject
+source: templates
+
+info:
+  title: Zod
+  version: 0.1.0
+  description: Generates Zod validation schemas for canonical Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: Zod validation schemas.
+  languages: [typescript]
+  frameworks: [zod]
+  tags: [validation, schema]
+
+target:
+  languages: [typescript]
+  frameworks: [zod]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+placements:
+  schema:
+    description: Generated Zod schema location.
+    path: [src, generated, validation]
+    filename: "$(name).schema.ts"
+
+templates:
+  schema:
+    $ref: "#/selections/schemas"
+    placement: schema
+    output:
+      name: "$(subject.name.kebab)"
+      symbol: "$(subject.name.pascal)Schema"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/schema"
+    contract: zod-schema
+    symbol: default
+
+dependencies:
+  runtime:
+    zod: ^3.24
