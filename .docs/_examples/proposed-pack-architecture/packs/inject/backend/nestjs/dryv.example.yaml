@@ -44,7 +44,7 @@ packs:
     pack: self
     destination:
       $ref: "#/destinations/backend"
-      root: [src, modules]
+      root: [src]
     bind:
       schema.validation:
         $ref: "#/packs/validation"
@@ -56,7 +56,7 @@ packs:
       controller:
         $options:
           modules:
-            path: ["$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           flat:
             path: [controllers]
 
