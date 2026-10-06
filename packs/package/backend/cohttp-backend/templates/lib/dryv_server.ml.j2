@@ -1,5 +1,7 @@
 open Lwt.Infix
 
+exception Binding_error of string
+
 type params = (string * string) list
 
 type route =
@@ -107,6 +109,32 @@ let wire_many kind values =
   in
   loop [] values
 
+let bind_values ~name ~kind ~many ~required values =
+  if values = [] then
+    if required then raise (Binding_error ("missing required " ^ name))
+    else None
+  else
+    let wire =
+      if many then
+        match wire_many kind values with
+        | Ok items -> `List items
+        | Error message -> raise (Binding_error (name ^ ": " ^ message))
+      else
+        match wire_of_text kind (List.hd values) with
+        | Ok value -> value
+        | Error message -> raise (Binding_error (name ^ ": " ^ message))
+    in
+    Some wire
+
+let body_field ~name ~required = function
+  | `Assoc fields ->
+      (match List.assoc_opt name fields with
+       | None ->
+           if required then raise (Binding_error ("missing required " ^ name))
+           else None
+       | Some value -> Some value)
+  | _ -> raise (Binding_error "expected JSON object body")
+
 let bad_request message =
   let body = Yojson.Safe.to_string (`Assoc [ ("message", `String message) ]) in
   Cohttp_lwt_unix.Server.respond_string
@@ -141,7 +169,12 @@ let dispatch routes _connection request body =
         else
           match match_pattern route.pattern path with
           | None -> find rest
-          | Some params -> route.handle params request body
+          | Some params ->
+              Lwt.catch
+                (fun () -> route.handle params request body)
+                (function
+                  | Binding_error message -> bad_request message
+                  | error -> Lwt.fail error)
   in
   find routes
 
