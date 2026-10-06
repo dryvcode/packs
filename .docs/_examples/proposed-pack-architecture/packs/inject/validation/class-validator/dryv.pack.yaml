@@ -1,0 +1,52 @@
+# DESIGN EXAMPLE — proposed, not current executable syntax.
+version: dryv.pack/v1alpha1
+key: inject.validation.class-validator
+layout: inject
+source: templates
+
+info:
+  title: class-validator
+  version: 0.1.0
+  description: Generates decorated TypeScript DTO classes with class-validator.
+
+catalog:
+  purpose: validation
+  summary: class-validator DTO representations.
+  languages: [typescript]
+  frameworks: [class-validator]
+  tags: [validation, dto]
+
+target:
+  languages: [typescript]
+  frameworks: [class-validator]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+placements:
+  dto:
+    description: Generated DTO location.
+    path: [src, generated, validation]
+    filename: "$(name).dto.ts"
+
+templates:
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      placement: dto
+      name: "$(subject.name.kebab)"
+      symbol: "$(subject.name.pascal)Dto"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/dto"
+    contract: class-validator-dto
+    symbol: default
+
+dependencies:
+  runtime:
+    class-transformer: ^0.5
+    class-validator: ^0.14
+    reflect-metadata: ^0.2
