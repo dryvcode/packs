@@ -63,14 +63,14 @@ packs:
       service:
         $options:
           modules:
-            path: ["$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           flat:
             path: [services]
 
       module:
         $options:
           modules:
-            path: ["$(feature.name.kebab)"]
+            path: [modules, "$(feature.name.kebab)"]
           flat:
             path: [modules]
 
