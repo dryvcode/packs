@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **77 pack manifests**.
+The repository currently contains **92 active pack manifests** under `packs/`.
 
 ### Inject
 
@@ -32,104 +32,116 @@ Validation:
 Documentation:
 
 - [x] `inject/documentation/markdown-reference`
+- [x] `inject/documentation/http-examples`
+- [x] `inject/documentation/persistence-reference`
 
 Testing:
 
 - [x] `inject/testing/schema-examples`
+- [x] `inject/testing/http-contract-cases`
+- [x] `inject/testing/schema-contract-cases`
+- [x] `inject/testing/persistence-contract-cases`
 
-### Package
+### Unit
 
 Backend:
 
-- [x] `package/backend/fastapi-backend`
-- [x] `package/backend/axum-backend`
-- [x] `package/backend/jakarta-rest-backend`
-- [x] `package/backend/go-net-http-backend`
-- [x] `package/backend/aspnet-core-backend`
-- [x] `package/backend/symfony-backend`
-- [x] `package/backend/vapor-backend`
-- [x] `package/backend/ktor-backend`
-- [x] `package/backend/phoenix-backend`
-- [x] `package/backend/crow-backend`
-- [x] `package/backend/http4s-backend`
-- [x] `package/backend/reitit-backend`
-
-Persistence:
-
-- [x] `package/persistence/seaorm-entities`
-- [x] `package/persistence/jpa-entities`
-- [x] `package/persistence/gorm-entities`
-- [x] `package/persistence/ef-core-entities`
-- [x] `package/persistence/sqlalchemy-models`
-- [x] `package/persistence/doctrine-orm-entities`
-- [x] `package/persistence/fluent-models`
-- [x] `package/persistence/exposed-tables`
-- [x] `package/persistence/ecto-schemas`
-- [x] `package/persistence/sqlite-orm-models`
-- [x] `package/persistence/active-record-models`
-- [x] `package/persistence/sequel-models`
-- [x] `package/persistence/slick-tables`
-- [x] `package/persistence/next-jdbc-models`
-
-Validation:
-
-- [x] `package/validation/jakarta-validation-dtos`
-- [x] `package/validation/validator-dtos`
-- [x] `package/validation/go-validator-dtos`
-- [x] `package/validation/fluentvalidation-dtos`
-- [x] `package/validation/pydantic-models`
-- [x] `package/validation/symfony-validator-dtos`
-- [x] `package/validation/swift-codable-validation`
-- [x] `package/validation/kotlinx-validation`
-- [x] `package/validation/ecto-changesets`
-- [x] `package/validation/cpp-validation`
-- [x] `package/validation/json-schema`
-- [x] `package/validation/dry-validation-contracts`
-- [x] `package/validation/scala-circe-validation`
-- [x] `package/validation/malli-schemas`
-
-Testing:
-
-- [x] `package/testing/postman-collection`
-- [x] `package/testing/bruno-collection`
-- [x] `package/testing/http-smoke-tests`
-- [x] `package/testing/k6-smoke-tests`
-
-Documentation:
-
-- [x] `package/documentation/openapi`
+- [x] `unit/backend/actix-web-backend`
+- [x] `unit/backend/aspnet-core-backend`
+- [x] `unit/backend/axum-backend`
+- [x] `unit/backend/cohttp-backend`
+- [x] `unit/backend/crow-backend`
+- [x] `unit/backend/fastapi-backend`
+- [x] `unit/backend/gin-backend`
+- [x] `unit/backend/go-net-http-backend`
+- [x] `unit/backend/http4s-backend`
+- [x] `unit/backend/jakarta-rest-backend`
+- [x] `unit/backend/ktor-backend`
+- [x] `unit/backend/nestjs-app`
+- [x] `unit/backend/phoenix-backend`
+- [x] `unit/backend/reitit-backend`
+- [x] `unit/backend/scotty-backend`
+- [x] `unit/backend/sinatra-backend`
+- [x] `unit/backend/spring-boot-backend`
+- [x] `unit/backend/symfony-backend`
+- [x] `unit/backend/vapor-backend`
 
 Clients:
 
-- [x] `package/clients/dart-client-sdk`
-- [x] `package/clients/flutter-api-bridge`
-- [x] `package/clients/next-api-bridge`
-- [x] `package/clients/ts-api-client`
-- [x] `package/clients/go-client-sdk`
-- [x] `package/clients/rust-client-sdk`
-- [x] `package/clients/java-client-sdk`
-- [x] `package/clients/csharp-client-sdk`
-- [x] `package/clients/python-client-sdk`
-- [x] `package/clients/php-client-sdk`
-- [x] `package/clients/swift-client-sdk`
-- [x] `package/clients/kotlin-client-sdk`
-- [x] `package/clients/elixir-client-sdk`
-- [x] `package/clients/cpp-client-sdk`
-- [x] `package/clients/ruby-client-sdk`
-- [x] `package/clients/scala-client-sdk`
-- [x] `package/clients/clojure-client-sdk`
+- [x] `unit/clients/clojure-client-sdk`
+- [x] `unit/clients/cpp-client-sdk`
+- [x] `unit/clients/csharp-client-sdk`
+- [x] `unit/clients/dart-client-sdk`
+- [x] `unit/clients/elixir-client-sdk`
+- [x] `unit/clients/flutter-api-bridge`
+- [x] `unit/clients/go-client-sdk`
+- [x] `unit/clients/haskell-client-sdk`
+- [x] `unit/clients/java-client-sdk`
+- [x] `unit/clients/kotlin-client-sdk`
+- [x] `unit/clients/next-api-bridge`
+- [x] `unit/clients/ocaml-client-sdk`
+- [x] `unit/clients/php-client-sdk`
+- [x] `unit/clients/python-client-sdk`
+- [x] `unit/clients/ruby-client-sdk`
+- [x] `unit/clients/rust-client-sdk`
+- [x] `unit/clients/scala-client-sdk`
+- [x] `unit/clients/swift-client-sdk`
+- [x] `unit/clients/ts-api-client`
 
-### Project
+Persistence:
 
-Backend:
+- [x] `unit/persistence/active-record-models`
+- [x] `unit/persistence/doctrine-orm-entities`
+- [x] `unit/persistence/ecto-schemas`
+- [x] `unit/persistence/ef-core-entities`
+- [x] `unit/persistence/exposed-tables`
+- [x] `unit/persistence/fluent-models`
+- [x] `unit/persistence/gorm-entities`
+- [x] `unit/persistence/jpa-entities`
+- [x] `unit/persistence/next-jdbc-models`
+- [x] `unit/persistence/persistent-models`
+- [x] `unit/persistence/seaorm-entities`
+- [x] `unit/persistence/sequel-models`
+- [x] `unit/persistence/slick-tables`
+- [x] `unit/persistence/sqlalchemy-models`
+- [x] `unit/persistence/sqlite-orm-models`
 
-- [x] `project/backend/nestjs-app`
+Validation:
+
+- [x] `unit/validation/aeson-validation`
+- [x] `unit/validation/cpp-validation`
+- [x] `unit/validation/dry-validation-contracts`
+- [x] `unit/validation/ecto-changesets`
+- [x] `unit/validation/fluentvalidation-dtos`
+- [x] `unit/validation/go-validator-dtos`
+- [x] `unit/validation/haskell-validation`
+- [x] `unit/validation/jakarta-validation-dtos`
+- [x] `unit/validation/json-schema`
+- [x] `unit/validation/kotlinx-validation`
+- [x] `unit/validation/malli-schemas`
+- [x] `unit/validation/pydantic-models`
+- [x] `unit/validation/scala-circe-validation`
+- [x] `unit/validation/swift-codable-validation`
+- [x] `unit/validation/symfony-validator-dtos`
+- [x] `unit/validation/validator-dtos`
+- [x] `unit/validation/yojson-validation`
+
+Documentation:
+
+- [x] `unit/documentation/openapi`
+
+Testing:
+
+- [x] `unit/testing/postman-collection`
+- [x] `unit/testing/bruno-collection`
+- [x] `unit/testing/http-smoke-tests`
+- [x] `unit/testing/k6-smoke-tests`
 
 Frontend:
 
-- [x] `project/frontend/nextjs-app`
-- [x] `project/frontend/flutter-app`
-- [x] `project/frontend/react-native-app`
+- [x] `unit/frontend/nextjs-app`
+- [x] `unit/frontend/flutter-app`
+- [x] `unit/frontend/react-native-app`
 
 ## Language-family baseline coverage
 
@@ -164,8 +176,8 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
-- documentation/reference → `markdown-reference`, `openapi`
-- testing/fixtures and HTTP contract suites → `schema-examples`, `postman-collection`, `bruno-collection`, `http-smoke-tests`, `k6-smoke-tests`
+- documentation/reference → `markdown-reference`, `http-examples`, `persistence-reference`, `openapi`
+- testing/fixtures and contract suites → `schema-examples`, `http-contract-cases`, `schema-contract-cases`, `persistence-contract-cases`, `postman-collection`, `bruno-collection`, `http-smoke-tests`, `k6-smoke-tests`
 - backend project composition → `nestjs-app`
 
 ## Current thin areas
