@@ -1,0 +1,77 @@
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}(get input :{{ binding.port.field.snake }}){%- endif -%}
+{%- endmacro -%}
+{%- set http = operation.facets.http -%}
+(ns dryv.generated.client.operations.{{ group.name.snake }}.{{ operation.name.snake }}
+  (:require
+   [clojure.string :as str]
+   [dryv.generated.client.core :as client]))
+
+(defn {{ file.symbol }}
+  [client{% if operation.input %} input{% endif %}]
+{%- if http.input_groups.multipart %}
+  (throw (ex-info "Multipart bindings require an explicit Clojure semantic mapping." {:status 501}))
+{%- else %}
+  (let [path0 {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+        path{{ loop.index }} (str/replace path{{ loop.index0 }}
+                                  (str "{" {{ (binding.name or binding.port.name.raw) | tojson }} "}")
+                                  (client/encode-component (client/wire {{ bound(binding) }})))
+{%- endfor %}
+        path {% if http.input_groups.path %}path{{ http.input_groups.path | length }}{% else %}path0{% endif %}
+        query (-> []
+{%- for binding in http.input_groups.query %}
+                  (client/add-param {{ (binding.name or binding.port.name.raw) | tojson }} {{ bound(binding) }})
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+{%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
+{%- for field in operation.input.fields %}
+                  (client/add-param {{ field.name.raw | tojson }} (get input :{{ field.name.snake }}))
+{%- endfor %}
+{%- else %}
+                  (into (mapcat (fn [[name value]]
+                                  (let [pairs (client/add-param [] (name name) value)]
+                                    pairs))
+                                {{ bound(binding) }}))
+{%- endif %}
+{%- endfor %}
+                  )
+        path (client/append-query path query)
+        headers (cond-> {}
+{%- for binding in http.input_groups.header %}
+                  (some? {{ bound(binding) }})
+                  (assoc {{ (binding.name or binding.port.name.raw) | tojson }} (str (client/wire {{ bound(binding) }})))
+{%- endfor %}
+                  )
+        cookies (cond-> {}
+{%- for binding in http.input_groups.cookie %}
+                  (some? {{ bound(binding) }})
+                  (assoc {{ (binding.name or binding.port.name.raw) | tojson }} (str (client/wire {{ bound(binding) }})))
+{%- endfor %}
+                  )
+{%- if http.input_groups.form %}
+        form (-> []
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none and operation.input and operation.input.kind == 'schema' %}
+{%- for field in operation.input.fields %}
+                 (client/add-param {{ field.name.raw | tojson }} (get input :{{ field.name.snake }}))
+{%- endfor %}
+{%- else %}
+                 (client/add-param {{ (binding.name or binding.port.name.raw) | tojson }} {{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+                 )
+{%- endif %}
+        request {:method {{ http.method | tojson }}
+                 :path path
+                 :headers headers
+                 :cookies cookies
+{%- for binding in http.input_groups.body %}
+                 :body {{ bound(binding) }}
+{%- endfor %}
+{%- if http.input_groups.form %}
+                 :form form
+{%- endif %}
+                 }]
+    (client/request client request))
+{%- endif %})
