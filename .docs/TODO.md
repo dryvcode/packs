@@ -26,9 +26,9 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 - [ ] Let the user run fixture/toolchain tests locally before claiming a pack passes.
 
 
-## Pack layout migration
+## Scheduled next: pack layout refactor
 
-The current repository still uses `inject | package | project`, but the approved roadmap direction is to simplify runtime layout to `inject | unit`.
+This is the next repository-wide structural refactor. The current repository still uses `inject | package | project`, but the approved direction is `inject | unit`. Execution plan: [planning/pack-layout-refactor.md](planning/pack-layout-refactor.md).
 
 - [ ] Update Dryv `dryv.pack/v1alpha1` layout contract from `inject | package | project` to `inject | unit`.
 - [ ] Make package/import identity optional metadata on root-owning units rather than a layout.
@@ -217,6 +217,6 @@ See the canonical research in the Dryv repository:
 
 ## Current next step
 
-The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir, C++, Scala and Clojure across backend, client, persistence and validation baselines.
+Do the scheduled `inject | unit` layout refactor as soon as the Dryv `dryv.pack/v1alpha1` contract supports it. Until then, limit work to pack fixes, verification and research that does not deepen the obsolete `package | project` distinction.
 
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. OpenAPI, Postman, Bruno, plain HTTP and k6 now cover portable API contracts/testing, and NestJS proves explicit backend project composition. Next work should target migration/schema ownership, more project shells where composition is real, and explicit multipart/streaming/auth semantic gaps.
+After the migration, resume ecosystem expansion and broader generated-testing work.
