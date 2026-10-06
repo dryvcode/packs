@@ -1,0 +1,42 @@
+version: dryv.pack/v1alpha1
+key: testing.bruno-collection
+layout: package
+package:
+  name: dryv-bruno
+
+source: templates
+
+info:
+  title: Bruno Collection
+  version: 0.1.0
+  description: Generates an OpenCollection YAML Bruno collection from Dryv HTTP operations.
+
+catalog:
+  purpose: testing
+  summary: Runnable Bruno/OpenCollection YAML requests with status assertions.
+  languages: [yaml]
+  frameworks: [bruno, opencollection]
+  tags: [testing, http, api, bruno, collection]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  base_url:
+    type: string
+    default: http://localhost:3000
+    description: Default base URL stored in the generated Local environment.
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  request:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
