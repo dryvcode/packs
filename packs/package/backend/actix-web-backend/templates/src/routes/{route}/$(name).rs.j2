@@ -169,7 +169,7 @@ async fn {{ rust_ident(operation.name.snake) }}(
     query: web::Query<{{ operation.name.pascal }}Query>,
 {%- endif %}
 {%- for binding in http.input_groups.query_object %}
-    query_object_{{ binding.port.name.snake }}: web::Query<{{ rust_type(binding.port.value) }}>,
+    {% if binding.port.field is none %}query_input{% else %}query_object_{{ binding.port.name.snake }}{% endif %}: web::Query<{{ rust_type(binding.port.value) }}>,
 {%- endfor %}
 {%- if http.input_groups.header or http.input_groups.cookie %}
     request: HttpRequest,
@@ -199,7 +199,8 @@ async fn {{ rust_ident(operation.name.snake) }}(
     let query = query.into_inner();
 {%- endif %}
 {%- for binding in http.input_groups.query_object %}
-    let query_object_{{ binding.port.name.snake }} = query_object_{{ binding.port.name.snake }}.into_inner();
+    let {% if binding.port.field is none %}input{% else %}query_object_{{ binding.port.name.snake }}{% endif %} =
+        {% if binding.port.field is none %}query_input{% else %}query_object_{{ binding.port.name.snake }}{% endif %}.into_inner();
 {%- endfor %}
 {%- if http.input_groups.form %}
 {%- if binds_whole(http) %}
