@@ -176,7 +176,7 @@ public final class {{ file.symbol }} {
 {%- set whole = whole_kind(http) | trim %}
 {%- if operation.input.kind == 'schema' %}
 {%- if whole == 'body' %}
-        {{ base_type(operation.input.value) }} input = binding.decode(body, {{ class_literal(operation.input.value) }});
+        {{ base_type(operation.input.value) }} input = binding.decode(binding.requiredBody(body), {{ class_literal(operation.input.value) }});
 {%- else %}
         {{ base_type(operation.input.value) }} input = new {{ base_type(operation.input.value) }}();
 {%- for field in operation.input.fields %}
@@ -189,7 +189,13 @@ public final class {{ file.symbol }} {
 {%- endif %}
 {%- else %}
 {%- for field in operation.input.fields %}
+{%- if whole == 'body' %}
+        {{ field_type(field) }} {{ java_ident(field.name.camel) }} = {{ decode_body(field) }};
+{%- elif whole == 'params' %}
+        {{ field_type(field) }} {{ java_ident(field.name.camel) }} = {{ decode_text(field, param_raw(field, field.name.raw)) }};
+{%- else %}
         {{ field_type(field) }} {{ java_ident(field.name.camel) }} = {{ field_value(operation, field) }};
+{%- endif %}
 {%- endfor %}
         {{ service_symbol() }}.{{ operation.name.pascal }}Input input =
                 new {{ service_symbol() }}.{{ operation.name.pascal }}Input(
