@@ -1,95 +1,127 @@
 # Proposed syntax review notes
 
-Status: **design-only**
+Status: **aligned with the latest Dryv pack/Usage design**
 
-These examples intentionally use proposed fields so the design can be reviewed before changing Dryv contracts.
-
-## Pack manifest: stay small
-
-The proposed pack keeps the existing core model:
+## Pack manifest stays small
 
 ```yaml
 layout: unit | inject
 
-target:
-  languages: [...]
-  frameworks: [...]
+info:
+  title: TypeORM
+  version: 0.1.0
+  purpose: persistence
+  summary: TypeORM entities.
+  languages: [typescript]
+  frameworks: [typeorm]
+  tags: [persistence, orm, entity]
 
 inputs: ...
 needs: ...
 selections: ...
-
-templates:
-  entity:
-    $ref: "#/selections/entities"
-    output:
-      name: $(subject.name.kebab)
-      path:
-        - $(group.name.kebab)
-        - entities
-      symbol: $(subject.name.pascal)Entity
-
+templates: ...
 provides: ...
 dependencies: ...
 ```
 
-There is **no** proposed `placements:` registry and no `output.placement`.
+Do not add duplicate `catalog:` or `target:` metadata.
 
-## Pack output path rule
+## Needs
 
-Proposed rule:
-
-```text
-output.path[0]
-    must contain a Dryv planning token
-
-output.path[1:]
-    may contain dynamic or static pack-local segments
-```
-
-Good:
+Common required-only case:
 
 ```yaml
-path: ["$(group.name.kebab)", entities]
+needs:
+  - operation.server
 ```
 
-Bad reusable-pack default:
+Mixed strengths:
 
 ```yaml
-path: [src, models]
+needs:
+  required:
+    - schema.validation
+  recommended:
+    - schema.persistence
+  optional:
+    - property.enum.types
 ```
 
-Project roots and architectural folders belong to Usage.
+Required must be bound. Recommended and optional may remain unbound, with recommended surfaced more strongly by setup tooling.
 
-## Usage output overrides
+Compatibility rules belong to Dryv's capability model, not consumer-side `accepts` lists.
+
+## Provides
+
+Keep real template refs:
+
+```yaml
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
+```
+
+One capability has one public provider template per activation.
+
+## Pack output defaults
+
+There is no `placements:` registry and no `output.placement`.
+
+```yaml
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - entities
+      symbol: "$(subject.name.pascal)Entity"
+```
+
+Reusable pack defaults remain semantic/local. Project-root folders belong to Usage.
+
+## Flat destination map
 
 ```yaml
 destinations:
-  code:
-    backend:
-      path: apps/backend
-
-      outputs:
-        persistence:
-          entity:
-            path: [src, models, "$(group.name.kebab)"]
-            name: "$(subject.name.kebab)"
-            symbol: "$(subject.name.pascal)Model"
+  backend:
+    path: apps/backend
 ```
 
-Address:
+Pack refs therefore use:
 
-```text
-persistence
-  = pack activation
-
-entity
-  = template key
+```yaml
+destination:
+  $ref: "#/destinations/backend"
 ```
 
-The override is a partial normal output object.
+not `#/destinations/code/backend`.
 
-Supported direction:
+## Pack activation output overrides
+
+Output overrides live beside the activation that owns the template:
+
+```yaml
+packs:
+  persistence:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+
+    destination:
+      $ref: "#/destinations/backend"
+
+    outputs:
+      entity:
+        path: [src, models, "$(group.name.kebab)"]
+        name: "$(subject.name.kebab)"
+        symbol: "$(subject.name.pascal)Model"
+```
+
+`entity` must be a real template key.
+
+The override is partial and uses the existing output vocabulary:
 
 ```text
 name
@@ -98,150 +130,120 @@ symbol
 symbols
 ```
 
-## Default output
-
-If no destination override exists:
+Bindings and outputs solve different problems:
 
 ```text
-pack template filesystem
-+ pack output.path
-+ pack output.name
-= default output
+bind
+    which provider activation satisfies a capability
+
+outputs
+    how this activation's real template is placed/named
 ```
 
-The pack requires no setup metadata to work.
+## Flat actions
 
-## Compact dryv.example.yaml choices
-
-Scalar choices should stay terse:
+Actions are keyed once and carry their stage:
 
 ```yaml
-choose:
-  js.package_manager: [bun, pnpm, npm, yarn]
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-inputs:
-  naming_strategy: [snake, camel]
+  build:
+    stage: final
+    commands:
+      - run: [bun, run, build]
 ```
 
-A provider may be suggested similarly:
+Destination action selection uses real refs:
 
 ```yaml
-packs:
-  validation:
-    pack:
-      - inject/validation/zod
-      - inject/validation/class-validator
+actions:
+  - $ref: "#/actions/format"
+  - $ref: "#/actions/build"
 ```
 
-First item is the suggested default.
+## Example runners
 
-Do not write:
+`dryv.example.yaml` may contain compact runner alternatives:
 
 ```yaml
-npm:
-  value: npm
+commands:
+  - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+  - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+  - run: [bun, x, prettier@3.9.9, --write, $(files)]
 ```
 
-for scalar options.
+Grouped selectors such as `(pnpm|yarn)` mean identical behavior for those runners.
 
-## Structured choices
-
-For complex values use a compact named option map:
+The same grouping can be used for runner-specific dependency argument rules:
 
 ```yaml
-outputs:
-  $options:
-    default: pack-default
+dependencies:
+  args:
+    - dev:
+        (pnpm|yarn): [-D]
+        bun: [--dev]
+        npm: [--save-dev]
 
-    pack-default: {}
-
-    feature:
-      server:
-        controller:
-          path: [src, modules, "$(feature.name.kebab)"]
-
-    generated:
-      server:
-        controller:
-          path: [src, _generated, controllers]
+    - (bun|pnpm|yarn|npm):
+        pinned: "$(name)@$(version)"
+        any: "$(name)"
 ```
 
-The exact marker name remains open, but option values should be direct values without an extra `value:` wrapper.
+An example destination may provide the setup default:
+
+```yaml
+destinations:
+  backend:
+    path: apps/backend
+    runner: bun
+```
+
+A selected action may override it when required.
+
+Runner choices are materialization input. Normal Usage should contain the resolved commands, not the alternative matrix.
+
+## Multiple commands
+
+In an example, command matching chooses the commands for the selected runner.
+
+In materialized Usage, multiple commands are genuine sequential commands.
+
+## Environment choices
+
+Do not use `choose.js.package_manager` merely to decide which action command variant to run.
+
+Use runner materialization for that.
+
+The general `choose` mechanism may still exist for genuine non-runner project choices.
 
 ## Import addressing
 
-Destination-level proposal:
+Import configuration remains destination-wide:
 
 ```yaml
-imports:
-  root: src
-  prefix: "@/"
+destinations:
+  backend:
+    path: apps/backend
+    imports:
+      root: src
+      prefix: "@/"
 ```
 
-No `imports` block means relative addressing.
+Final output overrides resolve first. Import addressing uses the final producer path and symbols.
 
-The Planner should expose generic facts such as:
+## Real refs
 
-```text
-producer final path
-consumer final path
-relative path
-unit-relative path
-import-root-relative path
-configured prefix
-provider package identity
-provider import-root-relative path
-final producer symbol(s)
-```
+Every `$ref` in an example must resolve to a real node in that exact document.
 
-Target packs decide how those facts become:
+Do not add a `usage:` wrapper around a Usage-shaped example while continuing to use root refs such as `#/destinations/backend`.
 
-```text
-../../models/user
-@/models/user
-dryv.models.user
-com.dryv.api.users.User
-package:riderescue_api/src/models/user.dart
-```
+## Still open / hardening
 
-## Questions to validate
+Dryv roadmap task 16 owns the exact runner-materialization contract and validation.
 
-1. Is `outputs` the clearest destination-level name?
-2. Should output overrides permit all existing output fields by default?
-3. What exact opt-out spelling should a fixed output use?
-4. Is first-segment-dynamic the right reusable-pack constraint?
-5. Should the compact complex-choice marker be `$options`, `$choose`, or another name?
-6. Is first scalar-list item an acceptable suggested default?
-7. Should import configuration be `imports.root/prefix`, or use an `address` term?
-8. Which generic import-address facts belong in renderer context?
-9. How should same-unit package-style imports select the current unit's package identity?
-10. Can current `PackActivation.destinations` be removed once unit root + output overrides cover the real use cases?
-
-
-## Environment choices are not pack authority
-
-If ordinary packs stop declaring repeated package-manager option groups, the legal vocabulary must come from a Dryv/shared command-environment contract rather than from `dryv.example.yaml`.
-
-Example:
-
-```yaml
-choose:
-  js.package_manager: [bun, pnpm, npm, yarn]
-```
-
-means:
-
-- Dryv already knows `js.package_manager` is a valid destination environment choice;
-- the example recommends an ordered subset/default for setup;
-- the materialized Usage stores one selected value;
-- the example itself does not define a new choice key or make an unsupported value legal.
-
-This keeps examples advisory and keeps packs from repeating global tooling vocabulary.
-
-## Import support in packs
-
-Destination import configuration is only useful if consuming templates use planner-provided generic address facts.
-
-Official packs should migrate away from reconstructing imports from semantic names or hard-coding `path.relative` when they want to support rooted/package addressing.
-
-The exact way the Engine proves a pack supports the requested address form remains an open implementation detail. Candidate evidence includes renderer/template context analysis plus pack validation; avoid adding a large import-strategy manifest unless real packs require it.
+Do not use this directory to invent another runner schema.
