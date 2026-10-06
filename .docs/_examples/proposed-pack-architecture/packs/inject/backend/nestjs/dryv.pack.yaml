@@ -1,0 +1,111 @@
+# DESIGN EXAMPLE — proposed, not current executable syntax.
+version: dryv.pack/v1alpha1
+key: inject.backend.nestjs
+layout: inject
+source: templates
+
+info:
+  title: NestJS
+  version: 0.1.0
+  description: Generates NestJS feature controllers, service boundaries and feature modules.
+
+catalog:
+  purpose: backend
+  summary: NestJS feature-level HTTP implementation.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, http, controller, module]
+
+target:
+  languages: [typescript]
+  frameworks: [nestjs]
+
+needs:
+  schema.validation:
+    required: true
+    match:
+      languages: compatible
+    locality: same-unit
+    accepts:
+      contracts:
+        - zod-schema
+        - class-validator-dto
+        - joi-schema
+
+  schema.persistence:
+    required: false
+    match:
+      languages: compatible
+    locality: same-unit
+    accepts:
+      contracts:
+        - typeorm-entity
+
+selections:
+  # One feature-level controller/service/module family for HTTP Operations.
+  http-features:
+    subject: operation
+    filter:
+      all:
+        facet: http
+    scope: collects.feature
+
+# Proposed named public placement API.
+placements:
+  controller:
+    description: NestJS feature controller.
+    path: [src, modules, "$(feature.name.kebab)"]
+    filename: controller.ts
+
+  service:
+    description: NestJS feature service boundary.
+    path: [src, modules, "$(feature.name.kebab)"]
+    filename: service.ts
+
+  module:
+    description: NestJS feature module.
+    path: [src, modules, "$(feature.name.kebab)"]
+    filename: module.ts
+
+templates:
+  controller:
+    $ref: "#/selections/http-features"
+    placement: controller
+    output:
+      name: "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Controller"
+    imports:
+      - $ref: "#/needs/schema.validation"
+      - $ref: "#/needs/schema.persistence"
+
+  service:
+    $ref: "#/selections/http-features"
+    placement: service
+    output:
+      name: "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Service"
+    imports:
+      - $ref: "#/needs/schema.validation"
+      - $ref: "#/needs/schema.persistence"
+
+  module:
+    $ref: "#/selections/http-features"
+    placement: module
+    output:
+      name: "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Module"
+    imports:
+      - $ref: "#/templates/controller"
+      - $ref: "#/templates/service"
+
+# operation.server is satisfied by the public feature-module representation.
+provides:
+  operation.server:
+    $ref: "#/templates/module"
+    contract: nestjs-feature-module
+    symbol: default
+
+dependencies:
+  runtime:
+    "@nestjs/common": ^11
+    reflect-metadata: ^0.2
