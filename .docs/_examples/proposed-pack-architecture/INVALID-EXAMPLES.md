@@ -64,9 +64,14 @@ usage.bind.representation_mismatch
 ## Placement traversal
 
 ```yaml
-place:
-  entity:
-    path: [.., .., secrets]
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      place:
+        persistence:
+          entity:
+            path: [.., .., secrets]
 ```
 
 Expected:
@@ -88,9 +93,13 @@ module
 Usage tries:
 
 ```yaml
-place:
-  hidden-bootstrap:
-    path: [src, custom]
+destinations:
+  code:
+    backend:
+      place:
+        server:
+          hidden-bootstrap:
+            path: [src, custom]
 ```
 
 Expected:
@@ -102,14 +111,18 @@ usage.place.unknown
 ## Collision after override
 
 ```yaml
-place:
-  controller:
-    path: [src, generated]
-    filename: "$(feature.name.kebab).ts"
+destinations:
+  code:
+    backend:
+      place:
+        server:
+          controller:
+            path: [src, generated]
+            filename: "$(feature.name.kebab).ts"
 
-  service:
-    path: [src, generated]
-    filename: "$(feature.name.kebab).ts"
+          service:
+            path: [src, generated]
+            filename: "$(feature.name.kebab).ts"
 ```
 
 Expected:
@@ -127,3 +140,58 @@ Expected:
 ```text
 usage.bind.locality_mismatch
 ```
+
+
+## Placement for activation targeting another destination
+
+```yaml
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      place:
+        mobile:
+          screen:
+            path: [src, screens]
+
+    mobile:
+      path: apps/mobile
+
+packs:
+  mobile:
+    pack: unit/frontend/flutter
+    destination: { $ref: "#/destinations/code/mobile" }
+```
+
+Expected:
+
+```text
+usage.place.activation_destination_mismatch
+```
+
+## Invalid example option value
+
+A package-manager example wraps a field that accepts only a declared choice:
+
+```yaml
+js.package_manager:
+  $example:
+    default: deno
+    options:
+      deno:
+        value: deno
+```
+
+but the unit accepts only:
+
+```text
+bun | pnpm | npm | yarn
+```
+
+Expected:
+
+```text
+example.option.invalid_value
+```
+
+The example system must validate each option using the schema of the normal Usage field it replaces.
