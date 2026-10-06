@@ -38,6 +38,7 @@ packs:
     pack: self
     destination:
       $ref: "#/destinations/backend"
+      root: [src]
 
     inputs:
       naming_strategy: [snake, camel]
@@ -49,11 +50,11 @@ packs:
           pack-default: {}
 
           modules:
-            path: [src, modules, "$(group.name.kebab)", entities]
+            path: [modules, "$(group.name.kebab)", entities]
 
           generated:
-            path: [src, _generated, entities]
+            path: [_generated, entities]
 
           models:
-            path: [src, models]
+            path: [models]
             symbol: "$(subject.name.pascal)Model"
