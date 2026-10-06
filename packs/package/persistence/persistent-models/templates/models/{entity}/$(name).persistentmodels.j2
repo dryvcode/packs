@@ -1,3 +1,9 @@
+{%- macro dep_symbol(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
 {%- macro hs_ident(name) -%}
 {%- if name in ['case','class','data','default','deriving','do','else','foreign','if','import','in','infix','infixl','infixr','instance','let','module','newtype','of','then','type','where','qualified','as','hiding','forall','mdo','family','role','pattern','static','group','by','using','stock','anyclass','via'] -%}{{ name }}_{%- else -%}{{ name }}
 {%- endif -%}
@@ -58,7 +64,7 @@
 
 {%- for field in schema.fields %}
 {%- if field.related is none and field.relation is not none %}
-    Foreign {{ field.relation.target.schema.name.pascal }}Entity{% if field.relation.on_delete %} {{ delete_action(field.relation.on_delete) }}{% endif %}{% if field.relation.on_update %} {{ update_action(field.relation.on_update) }}{% endif %} fk{{ file.symbol }}{{ field.name.pascal }} {{ hs_ident(field.name.camel) }} References {{ hs_ident(field.relation.target.field.camel) }}
+    Foreign {{ dep_symbol(field.relation.target.schema) or field.relation.target.schema.name.pascal ~ 'Entity' }}{% if field.relation.on_delete %} {{ delete_action(field.relation.on_delete) }}{% endif %}{% if field.relation.on_update %} {{ update_action(field.relation.on_update) }}{% endif %} fk{{ file.symbol }}{{ field.name.pascal }} {{ hs_ident(field.name.camel) }} References {{ hs_ident(field.relation.target.field.camel) }}
 {%- endif %}
 {%- endfor %}
 
