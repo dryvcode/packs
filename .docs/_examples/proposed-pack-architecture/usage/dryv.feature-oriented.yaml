@@ -1,11 +1,10 @@
-# DESIGN EXAMPLE — proposed future project Usage.
+# DESIGN EXAMPLE — proposed final project Usage.
 version: dryv/v1alpha1
 
 sources:
   authoring:
-    ir:
-      type: ir
-      path: dryv.ir.yaml
+    ir: { type: ir, path: dryv.ir.yaml }
+
   packs:
     official:
       repository: https://github.com/dryvcode/packs
@@ -18,35 +17,36 @@ destinations:
       path: apps/backend
       choose:
         js.package_manager: bun
-      place:
+
+      # No imports block: relative addressing is the default.
+
+      outputs:
         server:
           controller:
             path: [src, modules, "$(feature.name.kebab)"]
-            filename: controller.ts
           service:
             path: [src, modules, "$(feature.name.kebab)"]
-            filename: service.ts
           module:
             path: [src, modules, "$(feature.name.kebab)"]
-            filename: module.ts
+
         validation:
           schema:
             path: [src, modules, "$(group.name.kebab)", dto]
-            filename: "$(name).schema.ts"
+
         persistence:
           entity:
             path: [src, modules, "$(group.name.kebab)", entities]
-            filename: "$(name).entity.ts"
 
 authoring:
-  source:
-    $ref: "#/sources/authoring/ir"
+  source: { $ref: "#/sources/authoring/ir" }
 
 packs:
   app:
     source: { $ref: "#/sources/packs/official" }
     path: unit/backend/nestjs
     destination: { $ref: "#/destinations/code/backend" }
+    inputs:
+      package_name: dryv-backend
     bind:
       operation.server: { $ref: "#/packs/server" }
 
