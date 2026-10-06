@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — proposed, not current executable syntax.
+# DESIGN EXAMPLE — tracks the proposed unit/inject architecture.
 version: dryv.pack/v1alpha1
 key: unit.backend.nestjs
 layout: unit
@@ -8,17 +8,11 @@ info:
   title: NestJS
   version: 0.1.0
   description: Runnable NestJS unit shell that assembles bound NestJS server feature modules.
-
-catalog:
   purpose: backend
   summary: Runnable NestJS application unit.
   languages: [typescript]
   frameworks: [nestjs]
   tags: [backend, http, application]
-
-target:
-  languages: [typescript]
-  frameworks: [nestjs]
 
 inputs:
   package_name:
@@ -27,14 +21,7 @@ inputs:
     description: npm package name for the generated unit.
 
 needs:
-  operation.server:
-    required: true
-    match:
-      languages: compatible
-      frameworks: compatible
-    locality: same-unit
-    accepts:
-      contracts: [nestjs-feature-module]
+  - operation.server
 
 templates:
   app-module:
@@ -55,5 +42,5 @@ dependencies:
     "@types/node": ^24
     typescript: ^5.9
 
-# No package-manager choice, placement registry or ordinary format/install
-# workflow is required in the pack manifest. Those are project/setup concerns.
+# Normal format/install/build workflows belong in dryv.example.yaml and
+# materialized Usage, not in this pack manifest.
