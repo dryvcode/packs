@@ -1,0 +1,16 @@
+package {{ pack.inputs.root_package }}.models
+
+import io.circe.Json
+
+trait DryvWireValue:
+  def wireJson: Json
+
+  final def wireString: String =
+    wireJson.asString.getOrElse(wireJson.noSpaces)
+
+object DryvWire:
+  def scalar(value: Any): String =
+    value match
+      case null => ""
+      case wire: DryvWireValue => wire.wireString
+      case other => other.toString
