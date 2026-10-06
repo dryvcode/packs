@@ -191,3 +191,13 @@ Also review:
 - [SUGGESTED-PACKS.md](SUGGESTED-PACKS.md)
 - [IMPORT-ADDRESSING.md](IMPORT-ADDRESSING.md)
 - [INVALID-EXAMPLES.md](INVALID-EXAMPLES.md)
+
+
+## Remaining review gaps
+
+The example architecture now exposes two pre-existing Engine gaps clearly:
+
+1. The NestJS composition uses `operation.server` as the capability between the project pack and the injected server pack, but the current Engine slot catalogue does not yet include `operation.server`.
+2. The import-addressing review examples use destination `imports` configuration, but the current Engine `CodeDestination` contract does not yet expose that field.
+
+These are separate from the `$options` refactor. They should be resolved explicitly rather than hidden with example-only syntax.
