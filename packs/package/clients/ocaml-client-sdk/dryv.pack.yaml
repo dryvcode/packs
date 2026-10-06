@@ -1,0 +1,71 @@
+version: dryv.pack/v1alpha1
+key: clients.ocaml-client-sdk
+layout: package
+package:
+  name: dryv-ocaml-client
+
+source: templates
+
+info:
+  title: OCaml Client SDK
+  version: 0.1.0
+  description: Generates a typed OCaml Lwt client using Cohttp 6.3 and Yojson 3.
+
+catalog:
+  purpose: clients
+  summary: Typed OCaml Cohttp/Lwt client with Yojson wire models and generated operations.
+  languages: [ocaml]
+  frameworks: [cohttp-lwt-unix, yojson]
+  tags: [client, sdk, ocaml, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
