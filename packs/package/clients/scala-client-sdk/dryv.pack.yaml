@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: clients.scala-client-sdk
+layout: package
+package:
+  name: dryv-scala-client
+
+source: templates
+
+info:
+  title: Scala Client SDK
+  version: 0.1.0
+  description: Generates a Scala 3.9 URL/JDK HttpClient SDK with Circe wire models and typed async operations.
+
+catalog:
+  purpose: clients
+  summary: Scala 3.9 async HTTP client SDK using JDK HttpClient and Circe.
+  languages: [scala]
+  frameworks: [jdk-http-client, circe]
+  tags: [client, sdk, scala, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_package:
+    type: string
+    default: dryv.generated.client
+    description: Root Scala package for generated client code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.camel)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
