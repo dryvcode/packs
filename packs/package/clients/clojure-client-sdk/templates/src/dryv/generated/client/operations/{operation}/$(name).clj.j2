@@ -68,6 +68,7 @@
                  :cookies cookies
 {%- for binding in http.input_groups.body %}
                  :body {{ bound(binding) }}
+                 :has-body? true
 {%- endfor %}
 {%- if http.input_groups.form %}
                  :form form
