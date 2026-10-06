@@ -1,0 +1,82 @@
+# DESIGN EXAMPLE — proposed future project Usage.
+version: dryv/v1alpha1
+
+sources:
+  authoring:
+    ir:
+      type: ir
+      path: dryv.ir.yaml
+
+  packs:
+    official:
+      repository: https://github.com/dryvcode/packs
+      ref: develop
+      root: packs
+
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      choose:
+        js.package_manager: bun
+
+authoring:
+  source:
+    $ref: "#/sources/authoring/ir"
+
+packs:
+  app:
+    source:
+      $ref: "#/sources/packs/official"
+    path: unit/backend/nestjs
+    destination:
+      $ref: "#/destinations/code/backend"
+    bind:
+      operation.server:
+        $ref: "#/packs/server"
+
+  server:
+    source:
+      $ref: "#/sources/packs/official"
+    path: inject/backend/nestjs
+    destination:
+      $ref: "#/destinations/code/backend"
+    bind:
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
+    place:
+      controller:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: controller.ts
+      service:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: service.ts
+      module:
+        path: [src, modules, "$(feature.name.kebab)"]
+        filename: module.ts
+
+  validation:
+    source:
+      $ref: "#/sources/packs/official"
+    path: inject/validation/zod
+    destination:
+      $ref: "#/destinations/code/backend"
+    place:
+      schema:
+        path: [src, modules, "$(group.name.kebab)", dto]
+        filename: "$(name).schema.ts"
+
+  persistence:
+    source:
+      $ref: "#/sources/packs/official"
+    path: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/code/backend"
+    inputs:
+      naming_strategy: snake
+    place:
+      entity:
+        path: [src, modules, "$(group.name.kebab)", entities]
+        filename: "$(name).entity.ts"
