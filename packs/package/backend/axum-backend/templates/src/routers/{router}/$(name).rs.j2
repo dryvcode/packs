@@ -165,7 +165,7 @@ pub fn {{ file.symbols.router }}(service: Arc<dyn {{ file.symbols.service }}>) -
     Router::new()
 {%- for operation in operations %}
         .route(
-            "{{ operation.facets.http.path.local }}",
+            "{{ operation.facets.http.path.effective }}",
             on(MethodFilter::{{ operation.facets.http.method }}, {{ rust_ident(operation.name.snake) }}),
         )
 {%- endfor %}
