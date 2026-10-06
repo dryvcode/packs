@@ -1,0 +1,44 @@
+version: dryv.pack/v1alpha1
+key: testing.http-contract-cases
+source: templates
+
+info:
+  title: HTTP Contract Cases
+  version: 0.1.0
+  description: Generates machine-readable HTTP contract case descriptors from Dryv HTTP operations.
+
+catalog:
+  purpose: testing
+  summary: Portable JSON contract cases for cross-language backend and client test harnesses.
+  languages: [json]
+  tags: [testing, http, contracts, fixtures, cross-language]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+  all-operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  case:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
+  index:
+    $ref: "#/selections/all-operations"
+    output:
+      name: index
+    imports:
+      - $ref: "#/templates/case"
