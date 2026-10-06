@@ -25,23 +25,21 @@ selections:
     subject: schema
     scope: each
 
-placements:
-  schema:
-    description: Generated DTO location.
-    path: [src, generated, validation]
-    filename: "$(name).dto.ts"
-
+# The template key intentionally matches other interchangeable validation
+# providers so destination output profiles can address validation.schema.
 templates:
-  dto:
+  schema:
     $ref: "#/selections/schemas"
     output:
-      placement: schema
       name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - dto
       symbol: "$(subject.name.pascal)Dto"
 
 provides:
   schema.validation:
-    $ref: "#/templates/dto"
+    $ref: "#/templates/schema"
     contract: class-validator-dto
     symbol: default
 
