@@ -66,6 +66,21 @@ public final class DryvSpringBinding {
         return result;
     }
 
+    public JsonNode requiredBody(JsonNode body, String name) {
+        if (body == null || !body.has(name)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing required body field " + name);
+        }
+        return body.get(name);
+    }
+
+    public List<String> requiredHeaders(HttpHeaders headers, String name) {
+        List<String> values = headers.get(name);
+        if (values == null || values.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing required header " + name);
+        }
+        return values;
+    }
+
     public String requiredParam(MultiValueMap<String, String> params, String name) {
         String value = params.getFirst(name);
         if (value == null) {
