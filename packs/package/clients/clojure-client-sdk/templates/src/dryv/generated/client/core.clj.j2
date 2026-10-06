@@ -49,7 +49,7 @@
       (conj pairs [name value]))))
 
 (defn request
-  [{:keys [base-url http-client]} {:keys [method path headers cookies body form timeout-seconds]}]
+  [{:keys [base-url http-client]} {:keys [method path headers cookies body has-body? form timeout-seconds]}]
   (let [builder (doto (HttpRequest/newBuilder (URI/create (str base-url path)))
                   (.timeout (Duration/ofSeconds (long (or timeout-seconds 60)))))
         cookie-header (when (seq cookies)
@@ -60,7 +60,7 @@
                               cookies)))
         body-publisher
         (cond
-          (some? body)
+          has-body?
           (do
             (.header builder "Content-Type" "application/json")
             (HttpRequest$BodyPublishers/ofString
