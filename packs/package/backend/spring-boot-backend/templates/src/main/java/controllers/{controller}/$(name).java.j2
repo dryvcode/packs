@@ -1,0 +1,215 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default','do','double','else','enum','extends','final','finally','float','for','goto','if','implements','import','instanceof','int','interface','long','native','new','package','private','protected','public','return','short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try','void','volatile','while','record','sealed','permits','yield','var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro service_symbol() -%}{{ group.name.pascal }}{{ feature.name.pascal }}Service{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value) -%}
+{%- if value is none -%}Object
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}OffsetDateTime
+{%- elif value.is.temporal and value.is.duration -%}Duration
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay
+{%- elif value.is.record -%}Map<String, Object>
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+{%- macro class_literal(value) -%}
+{%- if value is none -%}Object.class
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}.class
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}.class
+{%- elif value.is.boolean -%}Boolean.class
+{%- elif value.is.integer -%}Long.class
+{%- elif value.is.decimal or value.is.money -%}BigDecimal.class
+{%- elif value.is.number -%}Double.class
+{%- elif value.is.temporal and value.is.date -%}LocalDate.class
+{%- elif value.is.temporal and value.is.time -%}LocalTime.class
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime.class
+{%- elif value.is.temporal and value.is.instant -%}Instant.class
+{%- elif value.is.temporal and value.is.zoned_date_time -%}OffsetDateTime.class
+{%- elif value.is.temporal and value.is.duration -%}Duration.class
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth.class
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay.class
+{%- elif value.is.string -%}String.class
+{%- else -%}Object.class
+{%- endif -%}
+{%- endmacro -%}
+{%- macro whole_kind(http) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and binding.is.body -%}body
+{%- elif binding.port.field is none and binding.is.query_object -%}params
+{%- elif binding.port.field is none and binding.is.form -%}params
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro decode_text(field, raw) -%}
+{%- if field.array is not none -%}binding.decodeMany({{ raw }}, {{ class_literal(field.value) }})
+{%- else -%}binding.decode({{ raw }}, {{ class_literal(field.value) }})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro param_raw(field, name) -%}
+{%- if field.array is not none -%}
+{%- if field.optional -%}params.get({{ name | tojson }}){%- else -%}binding.requiredParams(params, {{ name | tojson }}){%- endif -%}
+{%- else -%}
+{%- if field.optional -%}params.getFirst({{ name | tojson }}){%- else -%}binding.requiredParam(params, {{ name | tojson }}){%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro path_raw(field, name) -%}
+{%- if field.optional -%}pathVariables.get({{ name | tojson }}){%- else -%}binding.requiredPath(pathVariables, {{ name | tojson }}){%- endif -%}
+{%- endmacro -%}
+{%- macro header_raw(field, name) -%}
+{%- if field.array is not none -%}
+{%- if field.optional -%}headers.get({{ name | tojson }}){%- else -%}binding.requiredHeaders(headers, {{ name | tojson }}){%- endif -%}
+{%- else -%}
+{%- if field.optional -%}headers.getFirst({{ name | tojson }}){%- else -%}binding.requiredHeader(headers, {{ name | tojson }}){%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro cookie_raw(field, name) -%}
+{%- if field.optional -%}binding.cookie(request, {{ name | tojson }}){%- else -%}binding.requiredCookie(request, {{ name | tojson }}){%- endif -%}
+{%- endmacro -%}
+{%- macro body_raw(field) -%}
+{%- if field.optional -%}(body == null ? null : body.get({{ field.name.raw | tojson }})){%- else -%}binding.requiredBody(body, {{ field.name.raw | tojson }}){%- endif -%}
+{%- endmacro -%}
+{%- macro decode_body(field) -%}
+{%- if field.array is not none -%}binding.decodeMany({{ body_raw(field) }}, {{ class_literal(field.value) }})
+{%- else -%}binding.decode({{ body_raw(field) }}, {{ class_literal(field.value) }})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_value(operation, field) -%}
+{%- set state = namespace(value='null') -%}
+{%- for b in operation.facets.http.inputs -%}
+{%- if b.port.field is not none and b.port.field.raw == field.name.raw -%}
+{%- if b.is.path -%}{%- set state.value = decode_text(field, path_raw(field, b.name or b.port.name.raw)) | trim -%}
+{%- elif b.is.query or b.is.query_object or b.is.form -%}{%- set state.value = decode_text(field, param_raw(field, b.name or b.port.name.raw)) | trim -%}
+{%- elif b.is.header -%}{%- set state.value = decode_text(field, header_raw(field, b.name or b.port.name.raw)) | trim -%}
+{%- elif b.is.cookie -%}{%- set state.value = decode_text(field, cookie_raw(field, b.name or b.port.name.raw)) | trim -%}
+{%- elif b.is.body -%}{%- set state.value = decode_body(field) | trim -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{{- state.value -}}
+{%- endmacro -%}
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for output in http.outputs -%}{%- set result.code=output.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+package {{ pack.inputs.java_package }}.controllers;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import {{ pack.inputs.java_package }}.DryvSpringBinding;
+import {{ pack.inputs.java_package }}.services.{{ service_symbol() }};
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != service_symbol() %}
+import {{ pack.inputs.java_package }}.models.{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public final class {{ file.symbol }} {
+    private final {{ service_symbol() }} service;
+    private final DryvSpringBinding binding;
+
+    public {{ file.symbol }}(
+            {{ service_symbol() }} service,
+            DryvSpringBinding binding
+    ) {
+        this.service = service;
+        this.binding = binding;
+    }
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    @RequestMapping(path = "{{ http.path.effective }}", method = RequestMethod.{{ http.method }})
+    public ResponseEntity<?> {{ java_ident(operation.name.camel) }}(
+            @PathVariable Map<String, String> pathVariables,
+            @RequestParam MultiValueMap<String, String> params,
+            @RequestHeader HttpHeaders headers,
+            HttpServletRequest request{% if http.input_groups.body %},
+            @RequestBody(required = false) JsonNode body{% endif %}
+    ) {
+{%- if http.input_groups.multipart %}
+        return ResponseEntity.status(501)
+                .body(Map.of("message", "multipart bindings require an explicit Java semantic mapping"));
+{%- else %}
+{%- if operation.input %}
+{%- set whole = whole_kind(http) | trim %}
+{%- if operation.input.kind == 'schema' %}
+{%- if whole == 'body' %}
+        {{ base_type(operation.input.value) }} input = binding.decode(body, {{ class_literal(operation.input.value) }});
+{%- else %}
+        {{ base_type(operation.input.value) }} input = new {{ base_type(operation.input.value) }}();
+{%- for field in operation.input.fields %}
+{%- if whole == 'params' %}
+        input.{{ java_ident(field.name.camel) }} = {{ decode_text(field, param_raw(field, field.name.raw)) }};
+{%- else %}
+        input.{{ java_ident(field.name.camel) }} = {{ field_value(operation, field) }};
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- else %}
+{%- for field in operation.input.fields %}
+        {{ field_type(field) }} {{ java_ident(field.name.camel) }} = {{ field_value(operation, field) }};
+{%- endfor %}
+        {{ service_symbol() }}.{{ operation.name.pascal }}Input input =
+                new {{ service_symbol() }}.{{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+                    {{ java_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+                );
+{%- endif %}
+{%- endif %}
+
+{%- if operation.output %}
+        {{ base_type(operation.output.value) }} output =
+                service.{{ java_ident(operation.name.camel) }}({% if operation.input %}input{% endif %});
+        return ResponseEntity.status({{ success_status(http) }}).body(output);
+{%- else %}
+        service.{{ java_ident(operation.name.camel) }}({% if operation.input %}input{% endif %});
+        return ResponseEntity.status({{ success_status(http) }}).build();
+{%- endif %}
+{%- endif %}
+    }
+
+{%- endfor %}
+}
