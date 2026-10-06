@@ -1,0 +1,66 @@
+version: dryv.pack/v1alpha1
+key: validation.yojson-validation
+layout: package
+package:
+  name: dryv-yojson-validation
+
+source: templates
+
+info:
+  title: OCaml Yojson Validation
+  version: 0.1.0
+  description: Generates Yojson wire models and pure OCaml validation functions from Dryv schemas.
+
+catalog:
+  purpose: validation
+  summary: OCaml Yojson models with generated pure validation helpers.
+  languages: [ocaml]
+  frameworks: [yojson, re]
+  tags: [validation, schema, ocaml]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)_validation
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
