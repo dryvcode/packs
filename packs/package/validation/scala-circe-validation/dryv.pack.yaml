@@ -1,0 +1,72 @@
+version: dryv.pack/v1alpha1
+key: validation.scala-circe-validation
+layout: package
+package:
+  name: dryv-scala-validation
+
+source: templates
+
+info:
+  title: Scala Circe Validation
+  version: 0.1.0
+  description: Generates Scala 3.9 Circe wire models with pure generated validation functions.
+
+catalog:
+  purpose: validation
+  summary: Scala 3.9 Circe models with reusable generated validators.
+  languages: [scala]
+  frameworks: [circe]
+  tags: [validation, schema, dto, scala]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_package:
+    type: string
+    default: dryv.generated.validation
+    description: Root Scala package for generated models and validators.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  validator:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Validator
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/validator"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/validator"
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
