@@ -1,109 +1,146 @@
-# DESIGN EXAMPLE — proposed, compact and source-neutral.
+# DESIGN EXAMPLE — source-neutral setup guidance for a composed NestJS unit.
 version: dryv.example/v1alpha1
 
-usage:
-  destinations:
-    code:
-      backend:
-        path: apps/backend
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-        # Scalar list = setup choices; first item is the suggested default.
-        choose:
-          js.package_manager: [bun, pnpm, npm, yarn]
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev:
+            (pnpm|yarn): [-D]
+            bun: [--dev]
+            npm: [--save-dev]
+        - (bun|pnpm|yarn|npm):
+            pinned: "$(name)@$(version)"
+            any: "$(name)"
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
 
-        # Complex alternatives use direct named values, without value: wrappers.
-        imports:
-          $options:
-            default: relative
-            relative: {}
-            at-alias: { root: src, prefix: "@/" }
-            hash-alias: { root: src, prefix: "#/" }
+  build:
+    stage: final
+    commands:
+      - run: [(pnpm|bun|yarn), run, build]
+      - run: [npm, run, build]
 
-        outputs:
-          $options:
-            default: pack-default
+destinations:
+  backend:
+    path: apps/backend
 
-            # No override: pack filesystem + pack output wins.
-            pack-default: {}
+    # Suggested setup runner. Available runners are inferred from action alternatives.
+    runner: bun
 
-            feature:
-              server:
-                controller:
-                  path: [src, modules, "$(feature.name.kebab)"]
-                service:
-                  path: [src, modules, "$(feature.name.kebab)"]
-                module:
-                  path: [src, modules, "$(feature.name.kebab)"]
+    imports:
+      $options:
+        default: relative
+        relative: {}
+        at-alias: { root: src, prefix: "@/" }
+        hash-alias: { root: src, prefix: "#/" }
 
-              validation:
-                schema:
-                  path: [src, modules, "$(group.name.kebab)", dto]
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+      - $ref: "#/actions/build"
 
-              persistence:
-                entity:
-                  path: [src, modules, "$(group.name.kebab)", entities]
+packs:
+  app:
+    pack: self
+    destination:
+      $ref: "#/destinations/backend"
+    inputs:
+      package_name: dryv-backend
+    bind:
+      operation.server:
+        $ref: "#/packs/server"
 
-            generated:
-              server:
-                controller:
-                  path: [src, _generated, controllers]
-                service:
-                  path: [src, _generated, services]
-                module:
-                  path: [src, _generated, modules]
+  server:
+    pack: inject/backend/nestjs
+    destination:
+      $ref: "#/destinations/backend"
+    bind:
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
 
-              validation:
-                schema:
-                  path: [src, _generated, dto]
+    outputs:
+      controller:
+        $options:
+          default: pack-default
+          pack-default: {}
+          feature:
+            path: [src, modules, "$(feature.name.kebab)"]
+          generated:
+            path: [src, _generated, controllers]
+          type-oriented:
+            path: [src, controllers]
 
-              persistence:
-                entity:
-                  path: [src, _generated, entities]
+      service:
+        $options:
+          default: pack-default
+          pack-default: {}
+          feature:
+            path: [src, modules, "$(feature.name.kebab)"]
+          generated:
+            path: [src, _generated, services]
+          type-oriented:
+            path: [src, services]
 
-            type-oriented:
-              server:
-                controller:
-                  path: [src, controllers]
-                service:
-                  path: [src, services]
-                module:
-                  path: [src, modules]
+      module:
+        $options:
+          default: pack-default
+          pack-default: {}
+          feature:
+            path: [src, modules, "$(feature.name.kebab)"]
+          generated:
+            path: [src, _generated, modules]
+          type-oriented:
+            path: [src, modules]
 
-              validation:
-                schema:
-                  path: [src, contracts]
-                  symbol: "$(subject.name.pascal)Validator"
+  validation:
+    pack:
+      - inject/validation/zod
+      - inject/validation/class-validator
+    destination:
+      $ref: "#/destinations/backend"
 
-              persistence:
-                entity:
-                  path: [src, models]
-                  symbol: "$(subject.name.pascal)Model"
+    outputs:
+      schema:
+        $options:
+          default: pack-default
+          pack-default: {}
+          feature:
+            path: [src, modules, "$(group.name.kebab)", dto]
+          generated:
+            path: [src, _generated, dto]
+          type-oriented:
+            path: [src, contracts]
+            symbol: "$(subject.name.pascal)Validator"
 
-  packs:
-    app:
-      pack: self
-      destination: { $ref: "#/destinations/code/backend" }
-      inputs:
-        package_name: dryv-backend
-      bind:
-        operation.server: { $ref: "#/packs/server" }
+  persistence:
+    pack: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/backend"
+    inputs:
+      naming_strategy: [snake, camel]
 
-    server:
-      pack: inject/backend/nestjs
-      destination: { $ref: "#/destinations/code/backend" }
-      bind:
-        schema.validation: { $ref: "#/packs/validation" }
-        schema.persistence: { $ref: "#/packs/persistence" }
-
-    validation:
-      # Source-neutral pack choice. First item is suggested.
-      pack:
-        - inject/validation/zod
-        - inject/validation/class-validator
-      destination: { $ref: "#/destinations/code/backend" }
-
-    persistence:
-      pack: inject/persistence/typeorm
-      destination: { $ref: "#/destinations/code/backend" }
-      inputs:
-        naming_strategy: [snake, camel]
+    outputs:
+      entity:
+        $options:
+          default: pack-default
+          pack-default: {}
+          feature:
+            path: [src, modules, "$(group.name.kebab)", entities]
+          generated:
+            path: [src, _generated, entities]
+          type-oriented:
+            path: [src, models]
+            symbol: "$(subject.name.pascal)Model"
