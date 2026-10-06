@@ -121,3 +121,10 @@ See the corresponding explicit Usage examples under `usage/`.
 Fields such as `target`, `placements`, `match`, `accepts`, `locality`, `contract`, aggregate imports and `dryv.example/v1alpha1` are **proposed syntax** used to make the design reviewable.
 
 They are not current Dryv contract syntax.
+
+
+## Review helpers
+
+- [Suggested pack composition](SUGGESTED-PACKS.md) — how `dryv pack add` could turn a pack example into a reviewed explicit composition.
+- [Proposed schema notes](SCHEMA-NOTES.md) — proposed syntax and the main design questions to validate.
+- [Invalid examples](INVALID-EXAMPLES.md) — examples the Engine should reject.
