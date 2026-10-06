@@ -1,0 +1,62 @@
+# DESIGN EXAMPLE — proposed, not current executable syntax.
+version: dryv.pack/v1alpha1
+key: inject.persistence.typeorm
+layout: inject
+source: templates
+
+info:
+  title: TypeORM
+  version: 0.1.0
+  description: Generates TypeORM entity representations for entity-role schemas.
+
+catalog:
+  purpose: persistence
+  summary: TypeORM entities.
+  languages: [typescript]
+  frameworks: [typeorm]
+  tags: [persistence, orm, entity]
+
+target:
+  languages: [typescript]
+  frameworks: [typeorm]
+
+inputs:
+  naming_strategy:
+    type: string
+    default: snake
+    description: Database column naming strategy.
+    # Proposed richer input validation.
+    allowed: [snake, camel]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all:
+        role: entity
+    scope: each
+
+placements:
+  entity:
+    description: Generated entity location.
+    path: [src, generated, persistence]
+    filename: "$(name).entity.ts"
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    placement: entity
+    output:
+      name: "$(subject.name.kebab)"
+      symbol: "$(subject.name.pascal)Entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
+    contract: typeorm-entity
+    symbol: default
+
+dependencies:
+  runtime:
+    reflect-metadata: ^0.2
+    typeorm: ^0.3
