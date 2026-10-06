@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **71 pack manifests**.
+The repository currently contains **77 pack manifests**.
 
 ### Inject
 
@@ -88,6 +88,17 @@ Validation:
 - [x] `package/validation/scala-circe-validation`
 - [x] `package/validation/malli-schemas`
 
+Testing:
+
+- [x] `package/testing/postman-collection`
+- [x] `package/testing/bruno-collection`
+- [x] `package/testing/http-smoke-tests`
+- [x] `package/testing/k6-smoke-tests`
+
+Documentation:
+
+- [x] `package/documentation/openapi`
+
 Clients:
 
 - [x] `package/clients/dart-client-sdk`
@@ -109,6 +120,10 @@ Clients:
 - [x] `package/clients/clojure-client-sdk`
 
 ### Project
+
+Backend:
+
+- [x] `project/backend/nestjs-app`
 
 Frontend:
 
@@ -149,18 +164,19 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
-- documentation/reference → `markdown-reference`
-- testing/fixtures → `schema-examples`
+- documentation/reference → `markdown-reference`, `openapi`
+- testing/fixtures and HTTP contract suites → `schema-examples`, `postman-collection`, `bruno-collection`, `http-smoke-tests`, `k6-smoke-tests`
+- backend project composition → `nestjs-app`
 
 ## Current thin areas
 
 - Plain C feasibility and ABI/ownership research
-- backend/project application packs
-- explicit backend project composition capability contracts
+- additional backend/project application packs beyond the first NestJS composition baseline
+- pack-level/root-file binding context for project files that need provider metadata
 - multipart/file semantics
 - streaming semantics
 - auth/security generation contracts
-- cross-language contract output beyond Markdown reference (OpenAPI is blocked on effective route resolution)
+- cross-language contract output beyond Markdown Reference, OpenAPI and HTTP testing collections
 - additional UI ecosystems and native/mobile application packs
 - portable JSON Schema 2020-12 is now represented by `package/validation/json-schema`
 - database migration/schema packs for defaults, checks and target-specific DDL semantics that ORMs cannot express portably
