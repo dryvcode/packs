@@ -1,0 +1,80 @@
+version: dryv.pack/v1alpha1
+key: backend.scotty-backend
+layout: package
+package:
+  name: dryv-scotty-backend
+
+source: templates
+
+info:
+  title: Scotty Backend
+  version: 0.1.0
+  description: Generates Scotty 0.30 routes, Aeson models and feature service boundaries.
+
+catalog:
+  purpose: backend
+  summary: Haskell Scotty routes with Aeson models and separated IO service records.
+  languages: [haskell]
+  frameworks: [scotty, aeson]
+  tags: [backend, http, haskell]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        register: register$(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  models-index:
+    exports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+  routes-index:
+    exports:
+      - $ref: "#/templates/route"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
