@@ -43,11 +43,10 @@ packs:
     inputs:
       naming_strategy: [snake, camel]
 
+    # True pack default = omit destination.root and outputs entirely.
     outputs:
       entity:
         $options:
-          default: pack-default
-          pack-default: {}
 
           modules:
             path: [modules, "$(group.name.kebab)", entities]
