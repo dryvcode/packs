@@ -99,7 +99,7 @@
 {%- elif value.is.record -%}
 {"type": "object"}
 {%- elif value.is.literal -%}
-{"const": {{ value.property.literal.value_json }}
+{"const": {{ value.property.literal.value.value | tojson }}}
 {%- else -%}
 {}
 {%- endif -%}
@@ -176,7 +176,7 @@
 {% if not state.first %},{% endif %}
 {
   "name": {{ (binding.name or binding.port.name.raw) | tojson }},
-  "in": {{ binding.kind | tojson }},
+  "in": {% if binding.is.query_object %}"query"{% else %}{{ binding.kind | tojson }}{% endif %},
   "required": {% if binding.is.path or not field.optional %}true{% else %}false{% endif %},
   "schema": {{ field_schema(field) }}
 {%- if binding.is.query and field.array is not none %},
