@@ -16,7 +16,6 @@ catalog:
   frameworks: [nestjs]
   tags: [backend, http, application]
 
-# Proposed runtime implementation-target metadata.
 target:
   languages: [typescript]
   frameworks: [nestjs]
@@ -27,28 +26,16 @@ inputs:
     default: dryv-backend
     description: npm package name for the generated unit.
 
-# The unit does not know which concrete server implementation pack is used.
-# It only knows what capability representation it needs.
 needs:
   operation.server:
     required: true
-
-    # Proposed per-need compatibility rules.
     match:
       languages: compatible
       frameworks: compatible
-
-    # Server feature modules must be part of the same compilation unit.
     locality: same-unit
-
-    # Proposed representation contract.
     accepts:
-      contracts:
-        - nestjs-feature-module
+      contracts: [nestjs-feature-module]
 
-# The root module is global/root output rather than a semantic Operation.
-# Proposed aggregate import asks the Planner for every unique public
-# representation provided through operation.server.
 templates:
   app-module:
     imports:
@@ -56,10 +43,6 @@ templates:
         mode: all
 
   bootstrap: {}
-
-choose:
-  js.package_manager:
-    options: [pnpm, npm, bun, yarn]
 
 dependencies:
   runtime:
@@ -72,5 +55,5 @@ dependencies:
     "@types/node": ^24
     typescript: ^5.9
 
-# Notice: this unit intentionally exposes no placements.
-# It owns its root NestJS application structure.
+# No package-manager choice, placement registry or ordinary format/install
+# workflow is required in the pack manifest. Those are project/setup concerns.
