@@ -1,0 +1,44 @@
+version: dryv.pack/v1alpha1
+key: testing.persistence-contract-cases
+source: templates
+
+info:
+  title: Persistence Contract Cases
+  version: 0.1.0
+  description: Generates machine-readable persistence contract descriptors from Dryv entity schemas.
+
+catalog:
+  purpose: testing
+  summary: Portable JSON persistence cases for testing ORM and migration mappings across languages.
+  languages: [json]
+  tags: [testing, persistence, database, orm, contracts, cross-language]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
+
+templates:
+  case:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
+  index:
+    $ref: "#/selections/all-entities"
+    output:
+      name: index
+    imports:
+      - $ref: "#/templates/case"
