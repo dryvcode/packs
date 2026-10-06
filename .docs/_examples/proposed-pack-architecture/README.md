@@ -1,20 +1,18 @@
 # Proposed pack architecture — NestJS composition
 
-Status: **design example aligned with the latest Dryv decisions**
+Status: **review example aligned with the latest Dryv design**
 
-This directory is the review surface for the latest pack/Usage architecture.
+This directory is the review surface for the pack/Usage architecture.
 
-It includes:
+The key rule is now:
 
-- keyed, addressable `needs`;
-- `info`-owned language/framework metadata;
-- flat destinations and flat actions;
-- real refs only;
-- activation-owned template output overrides;
-- activation `destination.root` for shared placement prefixes;
-- compact runner alternatives in `dryv.example.yaml`;
-- concrete commands in materialized `dryv.yaml`;
-- final-output-aware import addressing.
+```text
+dryv.example.yaml
+    = ordinary dryv.yaml shape
+    + optional ordered $options metadata
+```
+
+No second setup DSL is introduced.
 
 ## Core model
 
@@ -25,13 +23,11 @@ dryv.pack.yaml
     provides / dependencies
 
 dryv.example.yaml
-    setup alternatives
-    provider/input/output suggestions
-    compact runner alternatives
+    same structure as dryv.yaml
+    plus sibling $options metadata
 
 dryv.yaml destination
     generated/build-unit root
-    import addressing
     selected action refs
 
 dryv.yaml pack activation
@@ -43,14 +39,10 @@ dryv.yaml pack activation
     outputs.<real-template-key>
 
 dryv.yaml actions
-    concrete commands selected during setup
+    concrete commands
 ```
 
-There is no pack-side `placements:` registry and no capability-keyed destination output map.
-
 ## Keyed needs preserve real refs
-
-Needs are a semantic map because templates import them by stable refs:
 
 ```yaml
 needs:
@@ -58,7 +50,7 @@ needs:
   schema.persistence: recommended
 ```
 
-This makes these real JSON Pointer targets:
+This makes these real semantic targets:
 
 ```yaml
 imports:
@@ -75,8 +67,6 @@ optional
 ```
 
 ## Three placement layers
-
-The final output path is composed from three distinct layers:
 
 ```text
 destination.path
@@ -95,139 +85,105 @@ packs:
   server:
     destination:
       $ref: "#/destinations/backend"
-      root: [src, modules]
+      root: [src]
 
     outputs:
       controller:
-        path: ["$(feature.name.kebab)"]
+        path: [modules, "$(feature.name.kebab)"]
 ```
 
-Conceptually:
+## Generic $options
+
+A hard-coded normal value is the default:
+
+```yaml
+inputs:
+  naming_strategy: snake
+
+  $options:
+    naming_strategy:
+      - camel
+```
+
+Effective choices:
 
 ```text
-apps/backend
-+ src/modules
-+ <feature>
+0 -> snake
+1 -> camel
 ```
 
-The destination owns the generated/build-unit root.
+If the normal field is absent, the first listed value is the default:
 
-The activation root owns this pack activation's placement inside that unit.
+```yaml
+inputs:
+  $options:
+    naming_strategy:
+      - snake
+      - camel
+```
 
-The template/output path owns template-specific structure.
+There are no option IDs and no `default:` entry.
 
-For a `dryv.example.yaml` that exposes several layout profiles, use the largest root shared by every profile, such as `[src]`. Once setup selects one profile, materialized Usage may fold a deeper common prefix into the activation root, such as `[src, modules]` or `[src, _generated]`.
-
-## Why activation root exists
-
-Without it:
+## Object alternatives
 
 ```yaml
 outputs:
-  controller:
-    path: [src, modules, "$(feature.name.kebab)"]
-  service:
-    path: [src, modules, "$(feature.name.kebab)"]
-  module:
-    path: [src, modules, "$(feature.name.kebab)"]
-```
-
-With it:
-
-```yaml
-destination:
-  $ref: "#/destinations/backend"
-  root: [src, modules]
-
-outputs:
-  controller:
-    path: ["$(feature.name.kebab)"]
-  service:
-    path: ["$(feature.name.kebab)"]
-  module:
-    path: ["$(feature.name.kebab)"]
-```
-
-The root is activation-specific rather than destination-wide because several packs can share one unit while using different internal roots.
-
-## Pack default output remains portable
-
-Pack manifests still define zero-config semantic/local defaults:
-
-```yaml
-templates:
   entity:
-    $ref: "#/selections/entities"
-    output:
-      name: "$(subject.name.kebab)"
-      path:
-        - "$(group.name.kebab)"
-        - entities
-      symbol: "$(subject.name.pascal)Entity"
+    path: [models]
+    symbol: "$(subject.name.pascal)Model"
+
+$options:
+  outputs:
+    - entity:
+        path: [modules, "$(group.name.kebab)", entities]
+
+    - entity:
+        path: [_generated, entities]
 ```
 
-Project conventions such as `src/models` belong to Usage/example configuration.
+Each listed item is one complete valid value for the normal `outputs` field.
 
-## Output overrides remain template-keyed
+## Array alternatives
 
-```yaml
-packs:
-  persistence:
-    destination:
-      $ref: "#/destinations/backend"
-      root: [src, models]
-
-    outputs:
-      entity:
-        path: [$(group.name.kebab)]
-        symbol: "$(subject.name.pascal)Model"
-```
-
-`entity` is the real template key.
-
-## Flat destinations
-
-```yaml
-destinations:
-  backend:
-    path: apps/backend
-```
-
-There is no `destinations.code.backend`.
-
-## Flat actions and runner materialization
-
-Root actions carry their stage:
+If the target field itself is an array, every option is a complete array.
 
 ```yaml
 actions:
   format:
     stage: files
-    extensions: [.ts]
     commands:
-      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+      - run: [bun, x, prettier, --write, $(files)]
+
+    $options:
+      commands:
+        -
+          - run: [pnpm, dlx, prettier, --write, $(files)]
+
+        -
+          - run: [npm, exec, --, prettier, --write, $(files)]
 ```
 
-Examples may compactly describe runner alternatives:
+## No special runner schema
 
-```yaml
-commands:
-  - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
-  - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
-  - run: [bun, x, prettier@3.9.9, --write, $(files)]
+Examples do not add:
+
+```text
+runner:
+runners:
+profile:
+default:
+named option IDs
 ```
 
-`(pnpm|yarn)` means those runners share the same behavior.
-
-Materialized Usage contains only the selected concrete command(s).
+Different command/dependency strategies are alternatives for the ordinary action fields or the complete action definition.
 
 ## Review fixtures
 
-Compare:
-
-- `usage/dryv.feature-oriented.yaml` — activation root `[src, modules]`;
-- `usage/dryv.central-generated.yaml` — activation root `[src, _generated]`;
-- `usage/dryv.type-oriented.yaml` — activation root `[src]` plus type-specific output folders.
+- `packs/unit/backend/nestjs/dryv.example.yaml` — composed example.
+- `packs/inject/backend/nestjs/dryv.example.yaml` — server-only example.
+- `packs/inject/validation/*/dryv.example.yaml` — validation alternatives.
+- `packs/inject/persistence/typeorm/dryv.example.yaml` — inputs and output alternatives.
+- `usage/*.yaml` — fully materialized ordinary Usage with no `$options`.
 
 Also review:
 
