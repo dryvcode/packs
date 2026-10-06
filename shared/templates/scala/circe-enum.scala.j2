@@ -1,0 +1,37 @@
+package {{ pack.inputs.root_package }}.models
+
+import io.circe.{Decoder, Encoder, Json}
+import io.circe.parser
+
+final case class {{ file.symbol }} private (wireJson: Json) extends DryvWireValue
+
+object {{ file.symbol }}:
+  private def parse(raw: String): Json =
+    parser.parse(raw).fold(
+      error => throw new IllegalArgumentException(s"Invalid generated enum JSON: $error"),
+      identity,
+    )
+
+{%- for item in property.enum.values %}
+  val {{ item.name.pascal }}: {{ file.symbol }} =
+    {{ file.symbol }}(parse({{ item.value_json | tojson }}))
+{%- endfor %}
+
+  val values: Set[{{ file.symbol }}] =
+    Set(
+{%- for item in property.enum.values %}
+      {{ item.name.pascal }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    )
+
+  def fromJson(value: Json): Option[{{ file.symbol }}] =
+    val candidate = {{ file.symbol }}(value)
+    values.find(_ == candidate)
+
+  given Encoder[{{ file.symbol }}] =
+    Encoder.instance(_.wireJson)
+
+  given Decoder[{{ file.symbol }}] =
+    Decoder[Json].emap(value =>
+      fromJson(value).toRight("Invalid {{ property.enum.name.local }} value")
+    )
