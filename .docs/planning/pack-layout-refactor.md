@@ -13,7 +13,7 @@ The architectural reasoning is maintained in the Dryv repository at:
 .docs/planning/research/frameworks-design-templating/08-pack-layout-model.md
 ```
 
-This file owns only the packs-repository migration sequence.
+This file owns the packs-repository layout migration sequence. Pack naming, unit composition and binding-compatibility work is tracked in [pack identity and composition](pack-identity-and-composition.md).
 
 ## Goal
 
@@ -85,6 +85,19 @@ No `v1alpha2` is introduced.
 
 Old layout spellings should be rewritten in place rather than supported through long-lived compatibility aliases.
 
+## Phase 0 — composition prerequisites
+
+Before moving folders, complete the binding/composition prerequisites described in [pack identity and composition](pack-identity-and-composition.md):
+
+- layout-aware pack identity so inject/unit pairs may share the same short name;
+- simple terminal-name rules;
+- runtime target metadata for compatibility validation;
+- server-side operation capability/aggregate consumption needed by thin units;
+- Engine binding checks for declared compatibility dimensions;
+- validated `dryv.yaml.example` composition guidance for units.
+
+The layout move must not preserve duplicated unit/inject implementation merely under new paths.
+
 ## Phase 1 — repository model and tooling
 
 Update repository helpers first so one identity model is used everywhere.
@@ -107,7 +120,22 @@ Target identity:
 layout = inject | unit
 ```
 
-## Phase 2 — move root-owning packs
+## Phase 2 — move and simplify pack identities
+
+Perform the layout move and terminal-name simplification together so public IDs change once.
+
+Examples:
+
+```text
+inject/backend/nestjs-backend -> inject/backend/nestjs
+project/backend/nestjs-app    -> unit/backend/nestjs
+inject/validation/zod-schemas -> inject/validation/zod
+package/clients/dart-client-sdk -> unit/clients/dart
+```
+
+Audit every name using the rule: the terminal name is the smallest stable discriminator inside its layout/purpose.
+
+## Phase 3 — move root-owning packs
 
 Mechanical mapping:
 
@@ -133,7 +161,7 @@ For every moved pack update together:
 - documentation references;
 - catalogue expectations.
 
-## Phase 3 — clean package identity
+## Phase 4 — clean package identity
 
 Audit every former `package` pack.
 
@@ -156,7 +184,7 @@ Remove artificial package identity when the unit is simply a root-owned generate
 
 Do not infer package identity from `catalog.purpose`.
 
-## Phase 4 — preserve ownership independently
+## Phase 5 — preserve ownership independently
 
 No managed/scaffold behavior should change as a side effect of the layout migration.
 
@@ -171,9 +199,9 @@ works identically for both `inject` and `unit` packs.
 
 A unit may contain all managed files, all scaffold files, or a mixture.
 
-## Phase 5 — update usage fixtures
+## Phase 6 — update usage fixtures and unit examples
 
-Update every `tests/fixture/dryv.yaml` and repository example that references:
+Update every `tests/fixture/dryv.yaml` and repository example that references old pack IDs. Add and validate `dryv.yaml.example` for unit packs where a recommended multi-pack composition materially helps users and agents.
 
 ```text
 package/<purpose>/<name>
@@ -188,7 +216,7 @@ unit/<purpose>/<name>
 
 Keep usage explicit. No aliasing or implicit redirect should hide stale pack paths.
 
-## Phase 6 — verification
+## Phase 7 — verification
 
 Repository-level checks after migration:
 
