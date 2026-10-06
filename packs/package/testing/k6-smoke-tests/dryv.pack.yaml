@@ -1,0 +1,42 @@
+version: dryv.pack/v1alpha1
+key: testing.k6-smoke-tests
+layout: package
+package:
+  name: dryv-k6-smoke
+
+source: templates
+
+info:
+  title: k6 Smoke Tests
+  version: 0.1.0
+  description: Generates a runnable k6 smoke suite from Dryv HTTP operations and declared success statuses.
+
+catalog:
+  purpose: testing
+  summary: k6 HTTP smoke/load script generated from canonical effective routes.
+  languages: [javascript]
+  frameworks: [k6]
+  tags: [testing, http, smoke, load, k6]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  base_url:
+    type: string
+    default: http://localhost:3000
+    description: Default base URL used unless BASE_URL is supplied to k6.
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  suite:
+    $ref: "#/selections/operations"
+    output:
+      name: smoke
