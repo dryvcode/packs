@@ -1,0 +1,41 @@
+version: dryv.pack/v1alpha1
+key: clients.clojure-client-sdk
+layout: package
+package:
+  name: dryv-generated-client
+
+source: templates
+
+info:
+  title: Clojure Client SDK
+  version: 0.1.0
+  description: Generates a Clojure 1.12.5 HTTP client using JDK HttpClient and Jsonista.
+
+catalog:
+  purpose: clients
+  summary: Clojure SDK using java.net.http with map-based JSON operations.
+  languages: [clojure]
+  frameworks: [java-http-client, jsonista]
+  tags: [client, sdk, clojure, http]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  operation:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.snake)_$(subject.name.snake)
+
+provides:
+  operation.client:
+    $ref: "#/templates/operation"
