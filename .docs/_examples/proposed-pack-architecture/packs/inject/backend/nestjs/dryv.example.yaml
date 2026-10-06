@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — source-neutral proposed example contract.
+# DESIGN EXAMPLE — proposed, compact and source-neutral.
 version: dryv.example/v1alpha1
 
 usage:
@@ -6,17 +6,37 @@ usage:
     code:
       backend:
         path: apps/backend
-        place:
-          server:
-            controller:
-              path: [src, modules, "$(feature.name.kebab)"]
-              filename: controller.ts
-            service:
-              path: [src, modules, "$(feature.name.kebab)"]
-              filename: service.ts
-            module:
-              path: [src, modules, "$(feature.name.kebab)"]
-              filename: module.ts
+        choose:
+          js.package_manager: [bun, pnpm, npm, yarn]
+
+        imports:
+          $options:
+            default: relative
+            relative: {}
+            alias: { root: src, prefix: "@/" }
+
+        outputs:
+          $options:
+            default: pack-default
+            pack-default: {}
+
+            modules:
+              server:
+                controller:
+                  path: [src, modules, "$(feature.name.kebab)"]
+                service:
+                  path: [src, modules, "$(feature.name.kebab)"]
+                module:
+                  path: [src, modules, "$(feature.name.kebab)"]
+
+            flat:
+              server:
+                controller:
+                  path: [src, controllers]
+                service:
+                  path: [src, services]
+                module:
+                  path: [src, modules]
 
   packs:
     server:
@@ -27,20 +47,10 @@ usage:
         schema.persistence: { $ref: "#/packs/persistence" }
 
     validation:
-      $example:
-        title: Validation implementation
-        default: zod
-        options:
-          zod:
-            title: Zod
-            value:
-              pack: inject/validation/zod
-              destination: { $ref: "#/destinations/code/backend" }
-          class-validator:
-            title: class-validator
-            value:
-              pack: inject/validation/class-validator
-              destination: { $ref: "#/destinations/code/backend" }
+      pack:
+        - inject/validation/zod
+        - inject/validation/class-validator
+      destination: { $ref: "#/destinations/code/backend" }
 
     persistence:
       pack: inject/persistence/typeorm
