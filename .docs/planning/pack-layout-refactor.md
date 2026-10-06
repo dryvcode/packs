@@ -13,7 +13,7 @@ The architectural reasoning is maintained in the Dryv repository at:
 .docs/planning/research/frameworks-design-templating/08-pack-layout-model.md
 ```
 
-This file owns the packs-repository layout migration sequence. Pack naming, unit composition and binding-compatibility work is tracked in [pack identity and composition](pack-identity-and-composition.md).
+This file owns the packs-repository layout migration sequence. Pack naming, unit composition and binding-compatibility work is tracked in [pack identity and composition](pack-identity-and-composition.md). Pack examples and configurable inject placement are tracked in [pack examples and placements](pack-examples-and-placements.md).
 
 ## Goal
 
@@ -94,7 +94,8 @@ Before moving folders, complete the binding/composition prerequisites described 
 - runtime target metadata for compatibility validation;
 - server-side operation capability/aggregate consumption needed by thin units;
 - Engine binding checks for declared compatibility dimensions;
-- validated `dryv.yaml.example` composition guidance for units.
+- validated `dryv.example.yaml` composition guidance for any pack, with units using it to demonstrate complete recommended compositions;
+- controlled named placement overrides for inject-pack output structure.
 
 The layout move must not preserve duplicated unit/inject implementation merely under new paths.
 
@@ -201,7 +202,7 @@ A unit may contain all managed files, all scaffold files, or a mixture.
 
 ## Phase 6 — update usage fixtures and unit examples
 
-Update every `tests/fixture/dryv.yaml` and repository example that references old pack IDs. Add and validate `dryv.yaml.example` for unit packs where a recommended multi-pack composition materially helps users and agents.
+Update every `tests/fixture/dryv.yaml` and repository example that references old pack IDs. Add and validate `dryv.example.yaml` wherever a realistic usage example helps users, agents or pack verification. Unit examples should demonstrate complete recommended compositions; inject examples should demonstrate realistic bindings and placement where relevant.
 
 ```text
 package/<purpose>/<name>
