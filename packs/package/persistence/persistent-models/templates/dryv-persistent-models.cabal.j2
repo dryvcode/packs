@@ -1,0 +1,16 @@
+cabal-version:      3.0
+name:               dryv-persistent-models
+version:            0.1.0
+build-type:         Simple
+extra-source-files:
+    models/*.persistentmodels
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+      Dryv.Persistence
+  build-depends:
+      base >=4.18 && <5,
+      persistent >=2.18 && <2.19,
+      text
+  default-language:    GHC2021
