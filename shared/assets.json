@@ -172,5 +172,9 @@
   "templates/typescript/nestjs-schema-validation.pipe.ts": [
     "packs/inject/backend/nestjs-backend/templates/common/server/validation/schema-validation.pipe.ts",
     "packs/project/backend/nestjs-app/templates/src/common/server/validation/schema-validation.pipe.ts"
+  ],
+  "templates/typescript/nestjs-controller.ts.j2": [
+    "packs/inject/backend/nestjs-backend/templates/{controller}/$(name).controller.ts.j2",
+    "packs/project/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
   ]
 }
