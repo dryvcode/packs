@@ -1,0 +1,77 @@
+version: dryv.pack/v1alpha1
+key: backend.http4s-backend
+layout: package
+package:
+  name: dryv-http4s-backend
+
+source: templates
+
+info:
+  title: http4s Backend
+  version: 0.1.0
+  description: Generates Scala 3.9 http4s 0.23 routes, Circe models and feature service traits.
+
+catalog:
+  purpose: backend
+  summary: http4s route libraries with typed Circe models and separated service traits.
+  languages: [scala]
+  frameworks: [http4s, cats-effect, circe]
+  tags: [backend, rest, http, scala]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  root_package:
+    type: string
+    default: dryv.generated.backend
+    description: Root Scala package for generated backend code.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  models:
+    subject: schema
+    scope: each
+
+  routes:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+
+  model:
+    $ref: "#/selections/models"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbol: $(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/model"
+
+  route:
+    $ref: "#/selections/routes"
+    output:
+      name: $(group.name.pascal)$(feature.name.pascal)
+      symbols:
+        service: $(group.name.pascal)$(feature.name.pascal)Service
+        routes: $(group.name.pascal)$(feature.name.pascal)Routes
+    imports:
+      - $ref: "#/templates/model"
+      - $ref: "#/templates/enum"
+
+provides:
+  schema.types:
+    $ref: "#/templates/model"
+  property.enum.types:
+    $ref: "#/templates/enum"
