@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — proposed, not current executable syntax.
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
 version: dryv.pack/v1alpha1
 key: inject.validation.class-validator
 layout: inject
@@ -8,25 +8,17 @@ info:
   title: class-validator
   version: 0.1.0
   description: Generates decorated TypeScript DTO classes with class-validator.
-
-catalog:
   purpose: validation
   summary: class-validator DTO representations.
   languages: [typescript]
   frameworks: [class-validator]
   tags: [validation, dto]
 
-target:
-  languages: [typescript]
-  frameworks: [class-validator]
-
 selections:
   schemas:
     subject: schema
     scope: each
 
-# The template key intentionally matches other interchangeable validation
-# providers so destination output profiles can address validation.schema.
 templates:
   schema:
     $ref: "#/selections/schemas"
@@ -40,8 +32,6 @@ templates:
 provides:
   schema.validation:
     $ref: "#/templates/schema"
-    contract: class-validator-dto
-    symbol: default
 
 dependencies:
   runtime:
