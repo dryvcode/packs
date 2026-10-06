@@ -1,0 +1,49 @@
+version: dryv.pack/v1alpha1
+key: documentation.openapi
+layout: package
+package:
+  name: dryv-openapi
+
+source: templates
+
+info:
+  title: OpenAPI
+  version: 0.1.0
+  description: Generates an OpenAPI 3.1 document plus referenced JSON Schema 2020-12 artifacts from Dryv HTTP operations.
+
+catalog:
+  purpose: documentation
+  summary: OpenAPI 3.1 API description using canonical effective HTTP paths and JSON Schema artifacts.
+  languages: [json]
+  frameworks: [openapi-3.1, json-schema-2020-12]
+  tags: [documentation, contract, http, openapi]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  schema:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+    imports:
+      - $ref: "#/templates/schema"
+
+  document:
+    $ref: "#/selections/operations"
+    output:
+      name: openapi
+    imports:
+      - $ref: "#/templates/schema"
