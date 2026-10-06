@@ -66,6 +66,13 @@ public final class DryvSpringBinding {
         return result;
     }
 
+    public JsonNode requiredBody(JsonNode body) {
+        if (body == null || body.isNull()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request body is required");
+        }
+        return body;
+    }
+
     public JsonNode requiredBody(JsonNode body, String name) {
         if (body == null || !body.has(name)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing required body field " + name);
