@@ -1,0 +1,173 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Dryv.Client
+  ( ApiError(..)
+  , DryvClient(..)
+  , appendWire
+  , newDryvClient
+  , renderWire
+  , sendEmpty
+  , sendJson
+  ) where
+
+import Control.Exception (Exception, throwIO)
+import Data.Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.CaseInsensitive as CI
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import qualified Data.Vector as V
+import Network.HTTP.Client
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.HTTP.Types.Status (statusCode)
+import Network.HTTP.Types.URI (renderQuery)
+
+data DryvClient = DryvClient
+  { baseUrl :: Text
+  , manager :: Manager
+  }
+
+data ApiError = ApiError
+  { apiStatus :: Int
+  , apiMessage :: Text
+  , apiPayload :: Maybe Value
+  }
+  deriving (Eq, Show)
+
+instance Exception ApiError
+
+newDryvClient :: Text -> IO DryvClient
+newDryvClient url = do
+  httpManager <- newManager tlsManagerSettings
+  pure DryvClient
+    { baseUrl = T.dropWhileEnd (== '/') url
+    , manager = httpManager
+    }
+
+renderWire :: ToJSON a => a -> Text
+renderWire value =
+  case toJSON value of
+    String textValue -> textValue
+    Null -> ""
+    wire -> decodeUtf8 (BL.toStrict (encode wire))
+
+appendWire :: ToJSON a => [(Text, Text)] -> Text -> a -> [(Text, Text)]
+appendWire target name value =
+  case toJSON value of
+    Null -> target
+    Array values ->
+      target <> fmap (\item -> (name, renderValue item)) (V.toList values)
+    wire -> target <> [(name, renderValue wire)]
+
+renderValue :: Value -> Text
+renderValue (String value) = value
+renderValue Null = ""
+renderValue value = decodeUtf8 (BL.toStrict (encode value))
+
+sendJson
+  :: FromJSON output
+  => DryvClient
+  -> Text
+  -> Text
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> Maybe Value
+  -> Maybe [(Text, Text)]
+  -> IO output
+sendJson client methodName path query headers cookies jsonBody formBody = do
+  response <- perform client methodName path query headers cookies jsonBody formBody
+  case eitherDecode (responseBody response) of
+    Right output -> pure output
+    Left message ->
+      throwIO ApiError
+        { apiStatus = statusCode (responseStatus response)
+        , apiMessage = T.pack ("invalid JSON response: " <> message)
+        , apiPayload = Nothing
+        }
+
+sendEmpty
+  :: DryvClient
+  -> Text
+  -> Text
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> Maybe Value
+  -> Maybe [(Text, Text)]
+  -> IO ()
+sendEmpty client methodName path query headers cookies jsonBody formBody = do
+  _ <- perform client methodName path query headers cookies jsonBody formBody
+  pure ()
+
+perform
+  :: DryvClient
+  -> Text
+  -> Text
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> [(Text, Text)]
+  -> Maybe Value
+  -> Maybe [(Text, Text)]
+  -> IO (Response BL.ByteString)
+perform client methodName path query headers cookies jsonBody formBody = do
+  baseRequest <- parseRequest (T.unpack (baseUrl client <> path))
+  let queryBytes =
+        [ (encodeUtf8 name, Just (encodeUtf8 value))
+        | (name, value) <- query
+        ]
+      cookieHeader =
+        if null cookies
+          then []
+          else
+            [ (CI.mk "Cookie", encodeUtf8 (T.intercalate "; " [name <> "=" <> value | (name, value) <- cookies]))
+            ]
+      ordinaryHeaders =
+        [ (CI.mk (encodeUtf8 name), encodeUtf8 value)
+        | (name, value) <- headers
+        ]
+      withQuery = setQueryString queryBytes baseRequest
+      withMethod = withQuery { method = encodeUtf8 methodName }
+      withHeaders = withMethod { requestHeaders = ordinaryHeaders <> cookieHeader <> requestHeaders withMethod }
+      request =
+        case (jsonBody, formBody) of
+          (Just value, _) ->
+            withHeaders
+              { requestBody = RequestBodyLBS (encode value)
+              , requestHeaders = (CI.mk "Content-Type", "application/json") : requestHeaders withHeaders
+              }
+          (_, Just values) ->
+            let encoded = renderQuery False [(encodeUtf8 name, Just (encodeUtf8 value)) | (name, value) <- values]
+            in withHeaders
+                { requestBody = RequestBodyBS encoded
+                , requestHeaders = (CI.mk "Content-Type", "application/x-www-form-urlencoded") : requestHeaders withHeaders
+                }
+          _ -> withHeaders
+
+  response <- httpLbs request (manager client)
+  let code = statusCode (responseStatus response)
+  if code >= 200 && code < 300
+    then pure response
+    else do
+      let payload = decode (responseBody response) :: Maybe Value
+          message =
+            case payload of
+              Just (Object objectValue) ->
+                case lookupMessage objectValue of
+                  Just value -> value
+                  Nothing -> decodeUtf8 (BL.toStrict (responseBody response))
+              _ -> decodeUtf8 (BL.toStrict (responseBody response))
+      throwIO ApiError
+        { apiStatus = code
+        , apiMessage = message
+        , apiPayload = payload
+        }
+
+lookupMessage :: Object -> Maybe Text
+lookupMessage objectValue =
+  case lookup "message" objectValue of
+    Just (String message) -> Just message
+    _ -> Nothing
