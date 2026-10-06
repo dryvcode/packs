@@ -1,0 +1,70 @@
+# DESIGN EXAMPLE — same packs, type-oriented structure.
+version: dryv/v1alpha1
+
+sources:
+  authoring:
+    ir:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    official:
+      repository: https://github.com/dryvcode/packs
+      ref: develop
+      root: packs
+
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      choose:
+        js.package_manager: pnpm
+
+authoring:
+  source:
+    $ref: "#/sources/authoring/ir"
+
+packs:
+  app:
+    source: { $ref: "#/sources/packs/official" }
+    path: unit/backend/nestjs
+    destination: { $ref: "#/destinations/code/backend" }
+    bind:
+      operation.server: { $ref: "#/packs/server" }
+
+  server:
+    source: { $ref: "#/sources/packs/official" }
+    path: inject/backend/nestjs
+    destination: { $ref: "#/destinations/code/backend" }
+    bind:
+      schema.validation: { $ref: "#/packs/validation" }
+      schema.persistence: { $ref: "#/packs/persistence" }
+    place:
+      controller:
+        path: [src, controllers]
+        filename: "$(feature.name.kebab).controller.ts"
+      service:
+        path: [src, services]
+        filename: "$(feature.name.kebab).service.ts"
+      module:
+        path: [src, modules]
+        filename: "$(feature.name.kebab).module.ts"
+
+  validation:
+    source: { $ref: "#/sources/packs/official" }
+    path: inject/validation/zod
+    destination: { $ref: "#/destinations/code/backend" }
+    place:
+      schema:
+        path: [src, contracts]
+        filename: "$(name).schema.ts"
+
+  persistence:
+    source: { $ref: "#/sources/packs/official" }
+    path: inject/persistence/typeorm
+    destination: { $ref: "#/destinations/code/backend" }
+    inputs:
+      naming_strategy: camel
+    place:
+      entity:
+        path: [src, models]
+        filename: "$(name).entity.ts"
