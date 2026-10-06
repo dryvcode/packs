@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — source-neutral proposed example contract.
+# DESIGN EXAMPLE — proposed, compact and source-neutral.
 version: dryv.example/v1alpha1
 
 usage:
@@ -6,25 +6,30 @@ usage:
     code:
       backend:
         path: apps/backend
-        place:
-          persistence:
-            entity:
-              path: [src, modules, "$(group.name.kebab)", entities]
-              filename: "$(name).entity.ts"
+        choose:
+          js.package_manager: [bun, pnpm, npm, yarn]
+
+        outputs:
+          $options:
+            default: pack-default
+            pack-default: {}
+            modules:
+              persistence:
+                entity:
+                  path: [src, modules, "$(group.name.kebab)", entities]
+            generated:
+              persistence:
+                entity:
+                  path: [src, _generated, entities]
+            models:
+              persistence:
+                entity:
+                  path: [src, models]
+                  symbol: "$(subject.name.pascal)Model"
 
   packs:
     persistence:
       pack: self
       destination: { $ref: "#/destinations/code/backend" }
       inputs:
-        naming_strategy:
-          $example:
-            title: Database naming
-            default: snake
-            options:
-              snake:
-                title: snake_case
-                value: snake
-              camel:
-                title: camelCase
-                value: camel
+        naming_strategy: [snake, camel]
