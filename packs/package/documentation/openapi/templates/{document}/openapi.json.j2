@@ -1,0 +1,360 @@
+{%- macro ref_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.path.relative }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro media_type(representation) -%}
+{%- if representation is not none and representation.media_type -%}{{ representation.media_type }}
+{%- elif representation is not none and representation.is.xml -%}application/xml
+{%- elif representation is not none and representation.is.csv -%}text/csv
+{%- elif representation is not none and representation.is.text -%}text/plain
+{%- elif representation is not none and representation.is.bytes -%}application/octet-stream
+{%- elif representation is not none and representation.is.event_stream -%}text/event-stream
+{%- else -%}application/json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro primitive_schema(primitive) -%}
+{
+{%- if primitive.is.integer %}
+  "type": "integer"
+{%- elif primitive.is.number %}
+  "type": "number"
+{%- elif primitive.is.boolean %}
+  "type": "boolean"
+{%- else %}
+  "type": "string"
+{%- endif %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %},
+  "minLength": {{ constraints.length.exact }},
+  "maxLength": {{ constraints.length.exact }}
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %},
+  "minLength": {{ constraints.length.min }}
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %},
+  "maxLength": {{ constraints.length.max }}
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.uuid %},
+  "format": "uuid"
+{%- elif primitive.is.email %},
+  "format": "email"
+{%- elif primitive.is.url or primitive.is.uri %},
+  "format": "uri"
+{%- elif primitive.is.hostname %},
+  "format": "hostname"
+{%- elif primitive.is.ipv4 %},
+  "format": "ipv4"
+{%- elif primitive.is.ipv6 %},
+  "format": "ipv6"
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %},
+  "minimum": {{ constraints.range.min }}
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %},
+  "maximum": {{ constraints.range.max }}
+{%- endif %}
+{%- endif %}
+}
+{%- endmacro -%}
+
+{%- macro temporal_schema(temporal) -%}
+{
+  "type": "string"
+{%- if temporal.is.date %},
+  "format": "date"
+{%- elif temporal.is.time %},
+  "format": "time"
+{%- elif temporal.is.date_time or temporal.is.instant or temporal.is.zoned_date_time %},
+  "format": "date-time"
+{%- elif temporal.is.duration %},
+  "format": "duration"
+{%- endif %}
+}
+{%- endmacro -%}
+
+{%- macro value_schema(value) -%}
+{%- if value is none -%}
+{}
+{%- elif value.is.schema -%}
+{%- set ref = ref_for(value.schema) | trim -%}
+{%- if ref -%}{"$ref": {{ ref | tojson }}}{%- else -%}{}{%- endif -%}
+{%- elif value.is.primitive -%}
+{{ primitive_schema(value.property.primitive) }}
+{%- elif value.is.enum -%}
+{
+  "enum": [
+{%- for item in value.property.enum.values %}
+    {{ item.value_json }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}
+{%- elif value.is.temporal -%}
+{{ temporal_schema(value.property.temporal) }}
+{%- elif value.is.record -%}
+{"type": "object"}
+{%- elif value.is.literal -%}
+{"const": {{ value.property.literal.value_json }}
+{%- else -%}
+{}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro core_field_schema(field) -%}
+{%- if field.array is not none -%}
+{
+  "type": "array",
+  "items": {{ value_schema(field.value) }}
+{%- if field.array.has_min %},
+  "minItems": {{ field.array.min }}
+{%- endif %}
+{%- if field.array.has_max %},
+  "maxItems": {{ field.array.max }}
+{%- endif %}
+}
+{%- else -%}
+{{ value_schema(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_schema(field) -%}
+{%- if field.nullable -%}
+{
+  "anyOf": [
+    {{ core_field_schema(field) }},
+    {"type": "null"}
+  ]
+{%- if field.default is not none and field.default.kind == 'value' %},
+  "default": {{ field.default.value_json }}
+{%- endif %}
+}
+{%- elif field.default is not none and field.default.kind == 'value' -%}
+{
+  "allOf": [{{ core_field_schema(field) }}],
+  "default": {{ field.default.value_json }}
+}
+{%- else -%}
+{{ core_field_schema(field) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_schema(operation) -%}
+{%- if operation.input is none -%}
+{}
+{%- elif operation.input.kind == 'schema' -%}
+{{ value_schema(operation.input.value) }}
+{%- else -%}
+{
+  "type": "object",
+  "properties": {
+{%- for field in operation.input.fields %}
+    {{ field.name.raw | tojson }}: {{ field_schema(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  },
+  "required": [
+{%- set required = namespace(first=true) %}
+{%- for field in operation.input.fields %}
+{%- if not field.optional %}
+    {% if not required.first %},{% endif %}{{ field.name.raw | tojson }}{% set required.first=false %}
+{%- endif %}
+{%- endfor %}
+  ],
+  "additionalProperties": false
+}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_for_parameter(operation, binding, state) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw -%}
+{% if not state.first %},{% endif %}
+{
+  "name": {{ (binding.name or binding.port.name.raw) | tojson }},
+  "in": {{ binding.kind | tojson }},
+  "required": {% if binding.is.path or not field.optional %}true{% else %}false{% endif %},
+  "schema": {{ field_schema(field) }}
+{%- if binding.is.query and field.array is not none %},
+  "style": "form",
+  "explode": true
+{%- endif %}
+}{% set state.first=false %}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parameters(operation) -%}
+[
+{%- set state = namespace(first=true) %}
+{%- for binding in operation.facets.http.inputs %}
+{%- if binding.is.path or binding.is.query or binding.is.header or binding.is.cookie %}
+{{ field_for_parameter(operation, binding, state) }}
+{%- elif binding.is.query_object and binding.port.field is none %}
+{%- for field in operation.input.fields %}
+{% if not state.first %},{% endif %}
+{
+  "name": {{ field.name.raw | tojson }},
+  "in": "query",
+  "required": {% if field.optional %}false{% else %}true{% endif %},
+  "schema": {{ field_schema(field) }}
+{%- if field.array is not none %},
+  "style": "form",
+  "explode": true
+{%- endif %}
+}{% set state.first=false %}
+{%- endfor %}
+{%- elif binding.is.query_object %}
+{{ field_for_parameter(operation, binding, state) }}
+{%- endif %}
+{%- endfor %}
+]
+{%- endmacro -%}
+
+{%- macro object_for_bindings(operation, bindings) -%}
+{%- set whole = namespace(found=false) %}
+{%- for binding in bindings %}
+{%- if binding.port.field is none %}{% set whole.found=true %}{% endif %}
+{%- endfor %}
+{%- if whole.found %}
+{{ input_schema(operation) }}
+{%- else %}
+{
+  "type": "object",
+  "properties": {
+{%- set props = namespace(first=true) %}
+{%- for binding in bindings %}
+{%- for field in operation.input.fields %}
+{%- if binding.port.field is not none and field.name.raw == binding.port.field.raw %}
+    {% if not props.first %},{% endif %}{{ field.name.raw | tojson }}: {{ field_schema(field) }}{% set props.first=false %}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+  },
+  "required": [
+{%- set req = namespace(first=true) %}
+{%- for binding in bindings %}
+{%- for field in operation.input.fields %}
+{%- if binding.port.field is not none and field.name.raw == binding.port.field.raw and not field.optional %}
+    {% if not req.first %},{% endif %}{{ field.name.raw | tojson }}{% set req.first=false %}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+  ],
+  "additionalProperties": false
+}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro request_body(operation) -%}
+{%- set http = operation.facets.http %}
+{
+  "required": true,
+  "content": {
+{%- set content = namespace(first=true) %}
+{%- for binding in http.input_groups.body %}
+    {% if not content.first %},{% endif %}{{ media_type(binding.representation) | trim | tojson }}: {
+      "schema": {% if binding.port.field is none %}{{ input_schema(operation) }}{% else %}
+{%- for field in operation.input.fields %}{% if field.name.raw == binding.port.field.raw %}{{ field_schema(field) }}{% endif %}{% endfor %}
+      {% endif %}
+    }{% set content.first=false %}
+{%- endfor %}
+{%- if http.input_groups.form %}
+    {% if not content.first %},{% endif %}"application/x-www-form-urlencoded": {
+      "schema": {{ object_for_bindings(operation, http.input_groups.form) }}
+    }{% set content.first=false %}
+{%- endif %}
+{%- if http.input_groups.multipart %}
+    {% if not content.first %},{% endif %}"multipart/form-data": {
+      "schema": {{ object_for_bindings(operation, http.input_groups.multipart) }}
+    }{% set content.first=false %}
+{%- endif %}
+  }
+}
+{%- endmacro -%}
+
+{%- macro responses(operation) -%}
+{
+{%- set seen = namespace(values=[], first=true) %}
+{%- if operation.facets.http.outputs %}
+{%- for binding in operation.facets.http.outputs %}
+  {% if not seen.first %},{% endif %}{{ binding.status | string | tojson }}: {
+    "description": "Success"
+{%- if operation.output %},
+    "content": {
+{%- if binding.representations %}
+{%- for representation in binding.representations %}
+      {{ media_type(representation) | trim | tojson }}: {
+        "schema": {{ value_schema(operation.output.value) }}
+      }{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- else %}
+      "application/json": {
+        "schema": {{ value_schema(operation.output.value) }}
+      }
+{%- endif %}
+    }
+{%- endif %}
+  }{% set _ = seen.values.append(binding.status) %}{% set seen.first=false %}
+{%- endfor %}
+{%- else %}
+  "200": {"description": "Success"}{% set _ = seen.values.append(200) %}{% set seen.first=false %}
+{%- endif %}
+{%- for failure in operation.facets.http.failures %}
+{%- if failure.status not in seen.values %}
+  {% if not seen.first %},{% endif %}{{ failure.status | string | tojson }}: {
+    "description": {{ failure.failure.name.title | tojson }}
+  }{% set _ = seen.values.append(failure.status) %}{% set seen.first=false %}
+{%- endif %}
+{%- endfor %}
+}
+{%- endmacro -%}
+
+{%- set unique = namespace(paths=[]) %}
+{%- for operation in operations %}
+{%- set path = operation.facets.http.path.effective %}
+{%- if path not in unique.paths %}{% set _ = unique.paths.append(path) %}{% endif %}
+{%- endfor %}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": {{ application.name.title | tojson }},
+    "version": "0.1.0"
+{%- if application.description %},
+    "description": {{ application.description | tojson }}
+{%- endif %}
+  },
+  "paths": {
+{%- for path in unique.paths %}
+    {{ path | tojson }}: {
+{%- set method_state = namespace(first=true) %}
+{%- for operation in operations %}
+{%- if operation.facets.http.path.effective == path %}
+      {% if not method_state.first %},{% endif %}{{ operation.facets.http.method | lower | tojson }}: {
+        "operationId": {{ operation.id | tojson }},
+        "summary": {{ operation.name.title | tojson }}
+{%- if operation.description %},
+        "description": {{ operation.description | tojson }}
+{%- endif %}
+{%- if operation.tags %},
+        "tags": {{ operation.tags | tojson }}
+{%- endif %}
+{%- if operation.facets.http.input_groups.path or operation.facets.http.input_groups.query or operation.facets.http.input_groups.query_object or operation.facets.http.input_groups.header or operation.facets.http.input_groups.cookie %},
+        "parameters": {{ parameters(operation) }}
+{%- endif %}
+{%- if operation.facets.http.input_groups.body or operation.facets.http.input_groups.form or operation.facets.http.input_groups.multipart %},
+        "requestBody": {{ request_body(operation) }}
+{%- endif %},
+        "responses": {{ responses(operation) }}
+      }{% set method_state.first=false %}
+{%- endif %}
+{%- endfor %}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  }
+}
