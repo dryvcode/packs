@@ -1,0 +1,240 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self','super','crate','as','break','const','continue','else','enum','extern','false','fn','for','if','impl','in','let','loop','match','mod','move','mut','pub','ref','return','static','struct','trait','true','type','unsafe','use','where','while','async','await','dyn','abstract','become','box','do','final','macro','override','priv','typeof','unsized','virtual','yield','try','gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro rust_type(value) -%}
+{%- if value is none -%}serde_json::Value
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'serde_json::Value' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'serde_json::Value' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}i64
+{%- elif value.is.number -%}f64
+{%- elif value.is.record -%}std::collections::HashMap<String, serde_json::Value>
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}serde_json::Value
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_optional(operation, binding) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound_type(operation, binding) -%}
+{%- if binding_optional(operation, binding) -%}Option<{{ rust_type(binding.port.value) }}>{%- else -%}{{ rust_type(binding.port.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binds_whole(http) -%}
+{%- for binding in http.inputs -%}{%- if binding.port.field is none -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro binding_expr(http, field) -%}
+{%- set state = namespace(found=false) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.found = true -%}
+{%- if binding.is.path -%}path.{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.query -%}query.{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.header or binding.is.cookie -%}{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.form -%}form.{{ rust_ident(field.name.snake) }}
+{%- elif binding.is.query_object -%}query_object_{{ field.name.snake }}
+{%- elif binding.is.body -%}body_{{ field.name.snake }}
+{%- else -%}unreachable!()
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if not state.found -%}None{%- endif -%}
+{%- endmacro -%}
+
+{%- macro service_params(operation) -%}
+{%- if operation.input -%}
+{%- if operation.input.kind == 'schema' -%}, input: {{ rust_type(operation.input.value) }}
+{%- else -%}
+{%- for field in operation.input.fields -%}, {{ rust_ident(field.name.snake) }}: {% if field.optional %}Option<{% endif %}{{ rust_type(field.value) }}{% if field.optional %}>{% endif %}
+{%- endfor -%}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro service_args(operation, http) -%}
+{%- if operation.input -%}
+{%- if operation.input.kind == 'schema' -%}
+{%- if binds_whole(http) -%}input
+{%- else -%}{{ rust_type(operation.input.value) }} {
+{%- for field in operation.input.fields %}
+            {{ rust_ident(field.name.snake) }}: {{ binding_expr(http, field) }},
+{%- endfor %}
+        }
+{%- endif -%}
+{%- else -%}
+{%- for field in operation.input.fields -%}
+{{ binding_expr(http, field) }}{% if not loop.last %}, {% endif %}
+{%- endfor -%}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse, http::{Method, StatusCode}, web};
+use async_trait::async_trait;
+use serde::Deserialize;
+
+use crate::{
+    ApiError,
+    http::{optional_cookie, optional_header, required_cookie, required_header},
+};
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+use crate::models::{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+#[async_trait]
+pub trait {{ file.symbols.service }}: Send + Sync + 'static {
+{%- for operation in operations %}
+    async fn {{ rust_ident(operation.name.snake) }}(&self{{ service_params(operation) }}) -> Result<{% if operation.output %}{{ rust_type(operation.output.value) }}{% else %}(){% endif %}, ApiError>;
+{%- endfor %}
+}
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+{%- if http.input_groups.path %}
+#[derive(Deserialize)]
+struct {{ operation.name.pascal }}Path {
+{%- for binding in http.input_groups.path %}
+    #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
+{%- endfor %}
+}
+{%- endif %}
+{%- if http.input_groups.query %}
+#[derive(Deserialize)]
+struct {{ operation.name.pascal }}Query {
+{%- for binding in http.input_groups.query %}
+    #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
+{%- endfor %}
+}
+{%- endif %}
+{%- if http.input_groups.form and not binds_whole(http) %}
+#[derive(Deserialize)]
+struct {{ operation.name.pascal }}Form {
+{%- for binding in http.input_groups.form %}
+    #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
+    {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }},
+{%- endfor %}
+}
+{%- endif %}
+{%- endfor %}
+
+pub fn {{ file.symbols.configure }}(
+    config: &mut web::ServiceConfig,
+    service: Arc<dyn {{ file.symbols.service }}>,
+) {
+    config.app_data(web::Data::new(service));
+{%- for operation in operations %}
+    config.route(
+        "{{ operation.facets.http.path.effective }}",
+        web::route()
+            .method(Method::{{ operation.facets.http.method }})
+            .to({{ rust_ident(operation.name.snake) }}),
+    );
+{%- endfor %}
+}
+
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+async fn {{ rust_ident(operation.name.snake) }}(
+    service: web::Data<Arc<dyn {{ file.symbols.service }}>>,
+{%- if http.input_groups.path %}
+    path: web::Path<{{ operation.name.pascal }}Path>,
+{%- endif %}
+{%- if http.input_groups.query %}
+    query: web::Query<{{ operation.name.pascal }}Query>,
+{%- endif %}
+{%- for binding in http.input_groups.query_object %}
+    query_object_{{ binding.port.name.snake }}: web::Query<{{ rust_type(binding.port.value) }}>,
+{%- endfor %}
+{%- if http.input_groups.header or http.input_groups.cookie %}
+    request: HttpRequest,
+{%- endif %}
+{%- if http.input_groups.form %}
+{%- if binds_whole(http) %}
+{%- for binding in http.input_groups.form %}{% if binding.port.field is none %}
+    form_input: web::Form<{{ rust_type(binding.port.value) }}>,
+{%- endif %}{% endfor %}
+{%- else %}
+    form: web::Form<{{ operation.name.pascal }}Form>,
+{%- endif %}
+{%- endif %}
+{%- for binding in http.input_groups.body %}
+    body_{{ binding.port.name.snake }}: web::Json<{{ rust_type(binding.port.value) }}>,
+{%- endfor %}
+) -> Result<HttpResponse, ApiError> {
+{%- if http.input_groups.multipart %}
+    Err(ApiError::not_implemented(
+        "multipart bindings require an explicit Rust semantic mapping",
+    ))
+{%- else %}
+{%- if http.input_groups.path %}
+    let path = path.into_inner();
+{%- endif %}
+{%- if http.input_groups.query %}
+    let query = query.into_inner();
+{%- endif %}
+{%- for binding in http.input_groups.query_object %}
+    let query_object_{{ binding.port.name.snake }} = query_object_{{ binding.port.name.snake }}.into_inner();
+{%- endfor %}
+{%- if http.input_groups.form %}
+{%- if binds_whole(http) %}
+    let input = form_input.into_inner();
+{%- else %}
+    let form = form.into_inner();
+{%- endif %}
+{%- endif %}
+{%- for binding in http.input_groups.body %}
+    let {% if binding.port.field is none %}input{% else %}body_{{ binding.port.name.snake }}{% endif %} = body_{{ binding.port.name.snake }}.into_inner();
+{%- endfor %}
+{%- for binding in http.input_groups.header %}
+    let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
+        {% if binding_optional(operation, binding) %}optional_header{% else %}required_header{% endif %}::<{{ rust_type(binding.port.value) }}>(
+            &request,
+            "{{ binding.name or binding.port.name.raw }}",
+        )?;
+{%- endfor %}
+{%- for binding in http.input_groups.cookie %}
+    let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
+        {% if binding_optional(operation, binding) %}optional_cookie{% else %}required_cookie{% endif %}::<{{ rust_type(binding.port.value) }}>(
+            &request,
+            "{{ binding.name or binding.port.name.raw }}",
+        )?;
+{%- endfor %}
+
+    let output = service.{{ rust_ident(operation.name.snake) }}({{ service_args(operation, http) }}).await?;
+    let status = StatusCode::from_u16({{ success_status(http) }})
+        .expect("Dryv validates HTTP status codes");
+{%- if operation.output %}
+    Ok(HttpResponse::build(status).json(output))
+{%- else %}
+    let _ = output;
+    Ok(HttpResponse::build(status).finish())
+{%- endif %}
+{%- endif %}
+}
+{%- endfor %}
