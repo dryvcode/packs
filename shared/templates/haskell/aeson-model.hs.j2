@@ -70,40 +70,63 @@ import qualified {{ dependency.path.relative | replace('src/', '') | replace('/'
 {%- endmacro -%}
 
 {%- macro scalar_checks(field, expression, label) -%}
+[]
 {%- set value = field.value -%}
 {%- if value.is.string -%}
 {%- set constraints = value.property.primitive.constraints -%}
 {%- set length = constraints.length -%}
 {%- if length is not none and length.has_exact %}
-  [{{ label | tojson }} <> " must contain exactly {{ length.exact }} characters" | T.length {{ expression }} /= {{ length.exact }}]
+  ++ [{{ label | tojson }} <> " must contain exactly {{ length.exact }} characters" | T.length {{ expression }} /= {{ length.exact }}]
 {%- endif %}
 {%- if length is not none and length.has_min %}
-  [{{ label | tojson }} <> " is too short" | T.length {{ expression }} < {{ length.min }}]
+  ++ [{{ label | tojson }} <> " is too short" | T.length {{ expression }} < {{ length.min }}]
 {%- endif %}
 {%- if length is not none and length.has_max %}
-  [{{ label | tojson }} <> " is too long" | T.length {{ expression }} > {{ length.max }}]
+  ++ [{{ label | tojson }} <> " is too long" | T.length {{ expression }} > {{ length.max }}]
 {%- endif %}
 {%- if value.is.email %}
-  [{{ label | tojson }} <> " must be a valid email" | not ((T.unpack {{ expression }}) =~ ("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$" :: String))]
+  ++ [{{ label | tojson }} <> " must be a valid email" | not ((T.unpack {{ expression }}) =~ ("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$" :: String))]
 {%- elif value.is.url or value.is.uri %}
-  [{{ label | tojson }} <> " must be a valid URL" | not ((T.unpack {{ expression }}) =~ ("^[A-Za-z][A-Za-z0-9+.-]*://[^[:space:]]+$" :: String))]
+  ++ [{{ label | tojson }} <> " must be a valid URL" | not ((T.unpack {{ expression }}) =~ ("^[A-Za-z][A-Za-z0-9+.-]*://[^[:space:]]+$" :: String))]
 {%- endif %}
 {%- if format_regex(value) %}
-  [{{ label | tojson }} <> " has invalid format" | not ((T.unpack {{ expression }}) =~ ({{ format_regex(value) | tojson }} :: String))]
+  ++ [{{ label | tojson }} <> " has invalid format" | not ((T.unpack {{ expression }}) =~ ({{ format_regex(value) | tojson }} :: String))]
 {%- endif %}
 {%- if constraints.pattern is not none %}
 {%- for pattern in constraints.pattern.match %}
-  [{{ label | tojson }} <> " does not match required pattern" | not ((T.unpack {{ expression }}) =~ ({{ pattern | tojson }} :: String))]
+  ++ [{{ label | tojson }} <> " does not match required pattern" | not ((T.unpack {{ expression }}) =~ ({{ pattern | tojson }} :: String))]
 {%- endfor %}
 {%- endif %}
 {%- elif value.is.integer or value.is.number or value.is.decimal or value.is.money -%}
 {%- set range = value.property.primitive.constraints.range -%}
 {%- if range is not none and range.has_min %}
-  [{{ label | tojson }} <> " is below minimum" | {{ expression }} < {{ range.min }}]
+  ++ [{{ label | tojson }} <> " is below minimum" | {{ expression }} < {{ range.min }}]
 {%- endif %}
 {%- if range is not none and range.has_max %}
-  [{{ label | tojson }} <> " is above maximum" | {{ expression }} > {{ range.max }}]
+  ++ [{{ label | tojson }} <> " is above maximum" | {{ expression }} > {{ range.max }}]
 {%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro value_checks(field, expression) -%}
+{{ scalar_checks(field, expression, field.name.raw) }}
+{%- if field.value.is.schema and dep_validator(field.value.schema) %}
+  ++ {{ dep_validator(field.value.schema) }} {{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_checks(field, expression) -%}
+{%- if field.array is not none -%}
+[]
+{%- if field.array.has_min %}
+  ++ [{{ field.name.raw | tojson }} <> " has too few items" | length {{ expression }} < {{ field.array.min }}]
+{%- endif %}
+{%- if field.array.has_max %}
+  ++ [{{ field.name.raw | tojson }} <> " has too many items" | length {{ expression }} > {{ field.array.max }}]
+{%- endif %}
+  ++ concatMap (\\item -> {{ value_checks(field, 'item') }}) {{ expression }}
+{%- else -%}
+{{ value_checks(field, expression) }}
 {%- endif -%}
 {%- endmacro -%}
 
@@ -136,42 +159,12 @@ instance ToJSON {{ file.symbol }} where
 
 validate{{ file.symbol }} :: {{ file.symbol }} -> [Text]
 validate{{ file.symbol }} value =
-  concat
-    [
+  []
 {%- for field in schema.fields %}
 {%- set accessor = hs_ident(field.name.camel) ~ ' value' %}
 {%- if field.optional or field.nullable %}
-      maybe [] (\item -> concat [
-{%- if field.array is not none %}
-        [{{ field.name.raw | tojson }} <> " has too few items" | length item < {{ field.array.min if field.array.has_min else 0 }}]{% if field.array.has_max %},
-        [{{ field.name.raw | tojson }} <> " has too many items" | length item > {{ field.array.max }}]{% endif %}
-{%- if field.value.is.schema and dep_validator(field.value.schema) %},
-        concatMap {{ dep_validator(field.value.schema) }} item
-{%- endif %}
+  ++ maybe [] (\\item -> {{ field_checks(field, 'item') }}) ({{ accessor }})
 {%- else %}
-{{ scalar_checks(field, 'item', field.name.raw) }}
-{%- if field.value.is.schema and dep_validator(field.value.schema) %}
-        {{ dep_validator(field.value.schema) }} item
-{%- endif %}
-{%- endif %}
-        ]) ({{ accessor }}){% if not loop.last %},{% endif %}
-{%- else %}
-{%- if field.array is not none %}
-      concat [
-        [{{ field.name.raw | tojson }} <> " has too few items" | length ({{ accessor }}) < {{ field.array.min if field.array.has_min else 0 }}]{% if field.array.has_max %},
-        [{{ field.name.raw | tojson }} <> " has too many items" | length ({{ accessor }}) > {{ field.array.max }}]{% endif %}
-{%- if field.value.is.schema and dep_validator(field.value.schema) %},
-        concatMap {{ dep_validator(field.value.schema) }} ({{ accessor }})
-{%- endif %}
-      ]{% if not loop.last %},{% endif %}
-{%- else %}
-      concat [
-{{ scalar_checks(field, accessor, field.name.raw) }}
-{%- if field.value.is.schema and dep_validator(field.value.schema) %}
-        {{ dep_validator(field.value.schema) }} ({{ accessor }})
-{%- endif %}
-      ]{% if not loop.last %},{% endif %}
-{%- endif %}
+  ++ ({{ field_checks(field, accessor) }})
 {%- endif %}
 {%- endfor %}
-    ]
