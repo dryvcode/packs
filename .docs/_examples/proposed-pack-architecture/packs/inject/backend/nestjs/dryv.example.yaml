@@ -1,57 +1,91 @@
-# DESIGN EXAMPLE — proposed, compact and source-neutral.
+# DESIGN EXAMPLE — source-neutral setup guidance.
+# Runner alternatives are materialized to concrete commands before normal Usage.
 version: dryv.example/v1alpha1
 
-usage:
-  destinations:
-    code:
-      backend:
-        path: apps/backend
-        choose:
-          js.package_manager: [bun, pnpm, npm, yarn]
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
 
-        imports:
-          $options:
-            default: relative
-            relative: {}
-            alias: { root: src, prefix: "@/" }
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev:
+            (pnpm|yarn): [-D]
+            bun: [--dev]
+            npm: [--save-dev]
+        - (bun|pnpm|yarn|npm):
+            pinned: "$(name)@$(version)"
+            any: "$(name)"
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
 
-        outputs:
-          $options:
-            default: pack-default
-            pack-default: {}
+destinations:
+  backend:
+    path: apps/backend
+    runner: bun
+    imports:
+      $options:
+        default: relative
+        relative: {}
+        alias: { root: src, prefix: "@/" }
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
 
-            modules:
-              server:
-                controller:
-                  path: [src, modules, "$(feature.name.kebab)"]
-                service:
-                  path: [src, modules, "$(feature.name.kebab)"]
-                module:
-                  path: [src, modules, "$(feature.name.kebab)"]
+packs:
+  server:
+    pack: self
+    destination:
+      $ref: "#/destinations/backend"
+    bind:
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
 
-            flat:
-              server:
-                controller:
-                  path: [src, controllers]
-                service:
-                  path: [src, services]
-                module:
-                  path: [src, modules]
+    outputs:
+      controller:
+        $options:
+          default: pack-default
+          pack-default: {}
+          modules:
+            path: [src, modules, "$(feature.name.kebab)"]
+          flat:
+            path: [src, controllers]
 
-  packs:
-    server:
-      pack: self
-      destination: { $ref: "#/destinations/code/backend" }
-      bind:
-        schema.validation: { $ref: "#/packs/validation" }
-        schema.persistence: { $ref: "#/packs/persistence" }
+      service:
+        $options:
+          default: pack-default
+          pack-default: {}
+          modules:
+            path: [src, modules, "$(feature.name.kebab)"]
+          flat:
+            path: [src, services]
 
-    validation:
-      pack:
-        - inject/validation/zod
-        - inject/validation/class-validator
-      destination: { $ref: "#/destinations/code/backend" }
+      module:
+        $options:
+          default: pack-default
+          pack-default: {}
+          modules:
+            path: [src, modules, "$(feature.name.kebab)"]
+          flat:
+            path: [src, modules]
 
-    persistence:
-      pack: inject/persistence/typeorm
-      destination: { $ref: "#/destinations/code/backend" }
+  validation:
+    pack:
+      - inject/validation/zod
+      - inject/validation/class-validator
+    destination:
+      $ref: "#/destinations/backend"
+
+  persistence:
+    pack: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/backend"
