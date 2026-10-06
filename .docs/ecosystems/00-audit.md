@@ -6,7 +6,7 @@ This document records the public-pack coverage visible on `develop`. The numbere
 
 ## Current catalog
 
-The repository currently contains **62 pack manifests**.
+The repository currently contains **71 pack manifests**.
 
 ### Inject
 
@@ -51,6 +51,8 @@ Backend:
 - [x] `package/backend/ktor-backend`
 - [x] `package/backend/phoenix-backend`
 - [x] `package/backend/crow-backend`
+- [x] `package/backend/http4s-backend`
+- [x] `package/backend/reitit-backend`
 
 Persistence:
 
@@ -64,6 +66,10 @@ Persistence:
 - [x] `package/persistence/exposed-tables`
 - [x] `package/persistence/ecto-schemas`
 - [x] `package/persistence/sqlite-orm-models`
+- [x] `package/persistence/active-record-models`
+- [x] `package/persistence/sequel-models`
+- [x] `package/persistence/slick-tables`
+- [x] `package/persistence/next-jdbc-models`
 
 Validation:
 
@@ -78,6 +84,9 @@ Validation:
 - [x] `package/validation/ecto-changesets`
 - [x] `package/validation/cpp-validation`
 - [x] `package/validation/json-schema`
+- [x] `package/validation/dry-validation-contracts`
+- [x] `package/validation/scala-circe-validation`
+- [x] `package/validation/malli-schemas`
 
 Clients:
 
@@ -95,6 +104,9 @@ Clients:
 - [x] `package/clients/kotlin-client-sdk`
 - [x] `package/clients/elixir-client-sdk`
 - [x] `package/clients/cpp-client-sdk`
+- [x] `package/clients/ruby-client-sdk`
+- [x] `package/clients/scala-client-sdk`
+- [x] `package/clients/clojure-client-sdk`
 
 ### Project
 
@@ -120,6 +132,8 @@ A baseline means backend + API client + persistence + validation are represented
 - [x] Ruby — Sinatra, Net::HTTP, Active Record, dry-validation
 - [x] Elixir — Phoenix, Req, Ecto schemas, Ecto changesets
 - [x] C++ — Crow, cpr, sqlite_orm, generated validation
+- [x] Scala — http4s, sttp, Slick, Circe validation
+- [x] Clojure — Reitit/Ring, JDK HttpClient, next.jdbc, Malli
 - [ ] Plain C — research only
 
 Dart/Flutter is represented strongly for clients and frontend projects, but is not treated as a server/persistence baseline.
@@ -130,8 +144,8 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - document persistence → `mongoose-models`
 - validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`
-- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`
+- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`, `http4s-backend`, `reitit-backend`
+- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`, `scala-client-sdk`, `clojure-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
