@@ -1,0 +1,18 @@
+# DESIGN EXAMPLE — source-neutral proposed example contract.
+version: dryv.example/v1alpha1
+
+destination:
+  name: backend
+  path: apps/backend
+
+packs:
+  persistence:
+    pack: self
+    inputs:
+      naming_strategy: snake
+
+place:
+  persistence:
+    entity:
+      path: [src, modules, "$(group.name.kebab)", entities]
+      filename: "$(name).entity.ts"
