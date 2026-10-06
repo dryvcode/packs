@@ -158,6 +158,13 @@ See the canonical research in the Dryv repository:
 - [x] sqlite_orm models — implementation present; verification deferred
 - [x] C++ validation — implementation present; verification deferred
 
+### Haskell
+
+- [x] Haskell Client SDK — implementation present; verification deferred
+- [x] Scotty backend — implementation present; verification deferred
+- [x] Persistent models — implementation present; verification deferred
+- [x] Haskell validation — implementation present; verification deferred
+
 ### Language coverage
 
 - [x] Go — client SDK verified; backend, persistence and validation implemented
@@ -165,6 +172,7 @@ See the canonical research in the Dryv repository:
 - [x] Java — backend, client, persistence and validation represented
 - [x] .NET / C# — backend, client, persistence and validation represented
 - [x] Python — backend, client, persistence and validation represented
+- [x] Haskell — backend, client, persistence and validation represented
 - [x] PHP — backend, client, persistence and validation represented
 - [x] Swift — backend, client, persistence and validation represented
 - [x] Kotlin — backend, client, persistence and validation represented
