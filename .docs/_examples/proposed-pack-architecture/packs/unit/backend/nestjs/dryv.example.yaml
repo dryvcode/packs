@@ -70,11 +70,10 @@ packs:
       schema.persistence:
         $ref: "#/packs/persistence"
 
+    # True pack default = omit destination.root and outputs entirely.
     outputs:
       controller:
         $options:
-          default: pack-default
-          pack-default: {}
           feature:
             path: [modules, "$(feature.name.kebab)"]
           generated:
@@ -84,8 +83,6 @@ packs:
 
       service:
         $options:
-          default: pack-default
-          pack-default: {}
           feature:
             path: [modules, "$(feature.name.kebab)"]
           generated:
@@ -95,8 +92,6 @@ packs:
 
       module:
         $options:
-          default: pack-default
-          pack-default: {}
           feature:
             path: [modules, "$(feature.name.kebab)"]
           generated:
@@ -115,8 +110,6 @@ packs:
     outputs:
       schema:
         $options:
-          default: pack-default
-          pack-default: {}
           feature:
             path: [modules, "$(group.name.kebab)", dto]
           generated:
@@ -136,8 +129,6 @@ packs:
     outputs:
       entity:
         $options:
-          default: pack-default
-          pack-default: {}
           feature:
             path: [modules, "$(group.name.kebab)", entities]
           generated:
