@@ -13,7 +13,7 @@ The architectural reasoning is maintained in the Dryv repository at:
 .docs/planning/research/frameworks-design-templating/08-pack-layout-model.md
 ```
 
-This file owns the packs-repository layout migration sequence. Pack naming, unit composition and binding-compatibility work is tracked in [pack identity and composition](pack-identity-and-composition.md). Pack examples and configurable inject placement are tracked in [pack examples and placements](pack-examples-and-placements.md).
+This file owns the packs-repository layout migration sequence. Pack naming, unit composition and binding-compatibility work is tracked in [pack identity and composition](pack-identity-and-composition.md). Pack examples, destination output overrides and import addressing are tracked in [pack examples and outputs](pack-examples-and-placements.md).
 
 ## Goal
 
@@ -95,7 +95,7 @@ Before moving folders, complete the binding/composition prerequisites described 
 - server-side operation capability/aggregate consumption needed by thin units;
 - Engine binding checks for declared compatibility dimensions;
 - validated `dryv.example.yaml` composition guidance for any pack, with units using it to demonstrate complete recommended compositions;
-- controlled named placement overrides for inject-pack output structure.
+- destination-scoped partial output overrides keyed by activation + template, with pack filesystem/output as the default;
 
 The layout move must not preserve duplicated unit/inject implementation merely under new paths.
 
@@ -202,7 +202,7 @@ A unit may contain all managed files, all scaffold files, or a mixture.
 
 ## Phase 6 — update usage fixtures and unit examples
 
-Update every `tests/fixture/dryv.yaml` and repository example that references old pack IDs. Add and validate `dryv.example.yaml` wherever a realistic usage example helps users, agents or pack verification. Unit examples should demonstrate complete recommended compositions; inject examples should demonstrate realistic bindings and placement where relevant.
+Update every `tests/fixture/dryv.yaml` and repository example that references old pack IDs. Add and validate `dryv.example.yaml` wherever a realistic usage example helps users, agents or pack verification. Unit examples should demonstrate complete recommended compositions; inject examples should demonstrate realistic bindings, output overrides and import-address choices where relevant.
 
 ```text
 package/<purpose>/<name>
