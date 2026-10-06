@@ -1,0 +1,41 @@
+version: dryv.pack/v1alpha1
+key: testing.http-smoke-tests
+layout: package
+package:
+  name: dryv-http-smoke
+
+source: templates
+
+info:
+  title: HTTP Smoke Tests
+  version: 0.1.0
+  description: Generates portable .http request files from Dryv HTTP operations using canonical effective routes.
+
+catalog:
+  purpose: testing
+  summary: Plain .http smoke requests for IDE and REST-client workflows.
+  languages: [http]
+  tags: [testing, http, smoke, api]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  base_url:
+    type: string
+    default: http://localhost:3000
+    description: Default base URL embedded as a request-file variable.
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+templates:
+  request:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
