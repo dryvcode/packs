@@ -162,11 +162,19 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 ### Documentation / contracts
 
 - [x] Markdown Reference — `inject/documentation/markdown-reference`; verification deferred
-- [ ] OpenAPI — blocked on canonical effective HTTP path resolution; do not approximate
+- [x] OpenAPI 3.1 — `package/documentation/openapi`; verification deferred
 
 ### Testing
 
 - [x] Schema Examples — `inject/testing/schema-examples`; verification deferred
+- [x] Postman Collection — `package/testing/postman-collection`; verification deferred
+- [x] Bruno Collection — `package/testing/bruno-collection`; verification deferred
+- [x] HTTP Smoke Tests — `package/testing/http-smoke-tests`; verification deferred
+- [x] k6 Smoke Tests — `package/testing/k6-smoke-tests`; verification deferred
+
+### Backend projects
+
+- [x] NestJS Application — `project/backend/nestjs-app`; verification deferred
 
 ## Ecosystem research
 
@@ -191,4 +199,4 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 The multi-language expansion now covers Go, Rust, Java, .NET/C#, Python, PHP, Swift, Kotlin, Ruby, Elixir, C++, Scala and Clojure across backend, client, persistence and validation baselines.
 
-Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. Cross-ecosystem documentation is now represented by the Markdown Reference pack. Next work should target portable testing/contracts, migration/schema output, project composition, and explicit semantic gaps rather than duplicating language baselines.
+Runtime/toolchain verification remains deferred while the Dryv Engine is under maintenance. OpenAPI, Postman, Bruno, plain HTTP and k6 now cover portable API contracts/testing, and NestJS proves explicit backend project composition. Next work should target migration/schema ownership, more project shells where composition is real, and explicit multipart/streaming/auth semantic gaps.
