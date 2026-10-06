@@ -84,7 +84,7 @@
    ])
 
 (def ^:private sql-options
-  {:builder-fn rs/as-unqualified-maps})
+  {:builder-fn rs/as-unqualified-lower-maps})
 
 (defn- find-wire
   [value wire-key]
