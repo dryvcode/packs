@@ -52,7 +52,7 @@ packs:
   app:
     source:
       $ref: "#/sources/packs/official"
-      path: unit/backend/nestjs
+      path: project/backend/nestjs
     destination:
       $ref: "#/destinations/backend"
     inputs:
