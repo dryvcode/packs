@@ -1,0 +1,251 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro go_type(value) -%}
+{%- if value is none -%}any
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'any' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'any' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int64
+{%- elif value.is.number -%}float64
+{%- elif value.is.string or value.is.temporal -%}string
+{%- elif value.is.record -%}map[string]any
+{%- else -%}any
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable %}*{% endif -%}
+{%- if field.array is not none %}[]{% endif -%}
+{{- go_type(field.value) -}}
+{%- endmacro -%}
+
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ go_type(operation.input.value) }}{%- else -%}{{ operation.name.pascal }}Input{%- endif -%}
+{%- endmacro -%}
+
+{%- macro enum_check(value, var) -%}
+{%- if value.is.enum %}
+			if !{{ var }}.IsValid() {
+				badGinRequest(c, fmt.Errorf("invalid enum value"))
+				return
+			}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_scalar(field, raw, target) -%}
+			var parsed{{ field.name.pascal }} {{ go_type(field.value) }}
+			if err := parseGinScalar({{ raw }}, &parsed{{ field.name.pascal }}); err != nil {
+				badGinRequest(c, fmt.Errorf("invalid {{ field.name.raw }}: %w", err))
+				return
+			}
+{{ enum_check(field.value, 'parsed' ~ field.name.pascal) }}
+{%- if field.optional or field.nullable %}
+			{{ target }} = &parsed{{ field.name.pascal }}
+{%- else %}
+			{{ target }} = parsed{{ field.name.pascal }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_array(field, raws, target) -%}
+			parsed{{ field.name.pascal }} := make([]{{ go_type(field.value) }}, 0, len({{ raws }}))
+			for _, raw := range {{ raws }} {
+				var item {{ go_type(field.value) }}
+				if err := parseGinScalar(raw, &item); err != nil {
+					badGinRequest(c, fmt.Errorf("invalid {{ field.name.raw }}: %w", err))
+					return
+				}
+{{ enum_check(field.value, 'item') }}
+				parsed{{ field.name.pascal }} = append(parsed{{ field.name.pascal }}, item)
+			}
+{%- if field.optional or field.nullable %}
+			{{ target }} = &parsed{{ field.name.pascal }}
+{%- else %}
+			{{ target }} = parsed{{ field.name.pascal }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_query(field, name, target) -%}
+{%- if field.array is not none %}
+		if rawValues := c.QueryArray({{ name | tojson }}); len(rawValues) > 0 {
+{{ parse_array(field, 'rawValues', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required query parameter {{ name }}"))
+			return
+		}{% endif %}
+{%- else %}
+		if rawValue, present := c.GetQuery({{ name | tojson }}); present {
+{{ parse_scalar(field, 'rawValue', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required query parameter {{ name }}"))
+			return
+		}{% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_form(field, name, target) -%}
+{%- if field.array is not none %}
+		if rawValues := c.PostFormArray({{ name | tojson }}); len(rawValues) > 0 {
+{{ parse_array(field, 'rawValues', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required form field {{ name }}"))
+			return
+		}{% endif %}
+{%- else %}
+		if rawValue, present := c.GetPostForm({{ name | tojson }}); present {
+{{ parse_scalar(field, 'rawValue', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required form field {{ name }}"))
+			return
+		}{% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro assign_bound(operation, field, target) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- if binding.is.path %}
+		{
+			rawValue := c.Param({{ (binding.name or binding.port.name.raw) | tojson }})
+{{ parse_scalar(field, 'rawValue', target) }}
+		}
+{%- elif binding.is.query %}
+{{ parse_query(field, binding.name or binding.port.name.raw, target) }}
+{%- elif binding.is.form %}
+{{ parse_form(field, binding.name or binding.port.name.raw, target) }}
+{%- elif binding.is.header %}
+		if rawValue := c.GetHeader({{ (binding.name or binding.port.name.raw) | tojson }}); rawValue != "" {
+{{ parse_scalar(field, 'rawValue', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required header {{ binding.name or binding.port.name.raw }}"))
+			return
+		}{% endif %}
+{%- elif binding.is.cookie %}
+		if rawValue, err := c.Cookie({{ (binding.name or binding.port.name.raw) | tojson }}); err == nil {
+{{ parse_scalar(field, 'rawValue', target) }}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required cookie {{ binding.name or binding.port.name.raw }}"))
+			return
+		}{% endif %}
+{%- elif binding.is.body %}
+		if rawValue, present := bodyFields[{{ field.name.raw | tojson }}]; present {
+			var parsed{{ field.name.pascal }} {{ go_type(field.value) }}
+			if err := json.Unmarshal(rawValue, &parsed{{ field.name.pascal }}); err != nil {
+				badGinRequest(c, fmt.Errorf("invalid body field {{ field.name.raw }}: %w", err))
+				return
+			}
+{{ enum_check(field.value, 'parsed' ~ field.name.pascal) }}
+{%- if field.optional or field.nullable %}
+			{{ target }} = &parsed{{ field.name.pascal }}
+{%- else %}
+			{{ target }} = parsed{{ field.name.pascal }}
+{%- endif %}
+		}{% if not field.optional %} else {
+			badGinRequest(c, fmt.Errorf("missing required body field {{ field.name.raw }}"))
+			return
+		}{% endif %}
+{%- endif %}
+{%- endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro whole_kind(http) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and binding.is.body -%}body
+{%- elif binding.port.field is none and binding.is.query_object -%}query
+{%- elif binding.port.field is none and binding.is.form -%}form
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+// Code generated by Dryv. DO NOT EDIT.
+
+package {{ pack.inputs.package_name }}
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+{%- for operation in operations %}
+{%- if operation.input and operation.input.kind != 'schema' %}
+type {{ operation.name.pascal }}Input struct {
+{%- for field in operation.input.fields %}
+	{{ field.name.pascal }} {{ field_type(field) }}
+{%- endfor %}
+}
+
+{%- endif %}
+{%- endfor %}
+type {{ file.symbols.service }} interface {
+{%- for operation in operations %}
+	{{ operation.name.pascal }}(ctx context.Context{% if operation.input %}, input {{ input_type(operation) }}{% endif %}) {% if operation.output %}({{ go_type(operation.output.value) }}, error){% else %}error{% endif %}
+{%- endfor %}
+}
+
+func {{ file.symbols.register }}(router gin.IRoutes, service {{ file.symbols.service }}) {
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+{%- set route = http.path.effective | replace('{', ':') | replace('}', '') %}
+	router.Handle({{ http.method | tojson }}, {{ route | tojson }}, func(c *gin.Context) {
+{%- if http.input_groups.multipart %}
+		c.JSON(http.StatusNotImplemented, gin.H{"message": "multipart bindings require an explicit Go semantic mapping"})
+		return
+{%- else %}
+{%- if operation.input %}
+		var input {{ input_type(operation) }}
+{%- set whole = whole_kind(http) | trim %}
+{%- if whole == 'body' %}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			badGinRequest(c, err)
+			return
+		}
+{%- elif whole == 'query' %}
+{%- for field in operation.input.fields %}
+{{ parse_query(field, field.name.raw, 'input.' ~ field.name.pascal) }}
+{%- endfor %}
+{%- elif whole == 'form' %}
+{%- for field in operation.input.fields %}
+{{ parse_form(field, field.name.raw, 'input.' ~ field.name.pascal) }}
+{%- endfor %}
+{%- else %}
+{%- if http.input_groups.body %}
+		var bodyFields map[string]json.RawMessage
+		if err := c.ShouldBindJSON(&bodyFields); err != nil {
+			badGinRequest(c, err)
+			return
+		}
+{%- endif %}
+{%- for field in operation.input.fields %}
+{{ assign_bound(operation, field, 'input.' ~ field.name.pascal) }}
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+
+{%- set status = namespace(code=200) %}
+{%- for output in http.outputs %}{%- set status.code=output.status -%}{%- endfor %}
+{%- if operation.output %}
+		output, err := service.{{ operation.name.pascal }}(c.Request.Context(){% if operation.input %}, input{% endif %})
+		if err != nil {
+			writeGinError(c, err)
+			return
+		}
+		c.JSON({{ status.code }}, output)
+{%- else %}
+		if err := service.{{ operation.name.pascal }}(c.Request.Context(){% if operation.input %}, input{% endif %}); err != nil {
+			writeGinError(c, err)
+			return
+		}
+		c.Status({{ status.code }})
+{%- endif %}
+{%- endif %}
+	})
+{%- endfor %}
+}
