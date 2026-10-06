@@ -1,0 +1,76 @@
+# DESIGN EXAMPLE — proposed, not current executable syntax.
+version: dryv.pack/v1alpha1
+key: unit.backend.nestjs
+layout: unit
+source: templates
+
+info:
+  title: NestJS
+  version: 0.1.0
+  description: Runnable NestJS unit shell that assembles bound NestJS server feature modules.
+
+catalog:
+  purpose: backend
+  summary: Runnable NestJS application unit.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, http, application]
+
+# Proposed runtime implementation-target metadata.
+target:
+  languages: [typescript]
+  frameworks: [nestjs]
+
+inputs:
+  package_name:
+    type: string
+    default: dryv-backend
+    description: npm package name for the generated unit.
+
+# The unit does not know which concrete server implementation pack is used.
+# It only knows what capability representation it needs.
+needs:
+  operation.server:
+    required: true
+
+    # Proposed per-need compatibility rules.
+    match:
+      languages: compatible
+      frameworks: compatible
+
+    # Server feature modules must be part of the same compilation unit.
+    locality: same-unit
+
+    # Proposed representation contract.
+    accepts:
+      contracts:
+        - nestjs-feature-module
+
+# The root module is global/root output rather than a semantic Operation.
+# Proposed aggregate import asks the Planner for every unique public
+# representation provided through operation.server.
+templates:
+  app-module:
+    imports:
+      - $ref: "#/needs/operation.server"
+        mode: all
+
+  bootstrap: {}
+
+choose:
+  js.package_manager:
+    options: [pnpm, npm, bun, yarn]
+
+dependencies:
+  runtime:
+    "@nestjs/common": ^11
+    "@nestjs/core": ^11
+    "@nestjs/platform-express": ^11
+    reflect-metadata: ^0.2
+    rxjs: ^7
+  dev:
+    "@types/node": ^24
+    typescript: ^5.9
+
+# Notice: this unit intentionally exposes no placements.
+# It owns its root NestJS application structure.
