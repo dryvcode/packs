@@ -150,5 +150,14 @@
   ],
   "templates/json-schema/schema.json.j2": [
     "packs/package/validation/json-schema/templates/schemas/{schema}/$(name).schema.json.j2"
+  ],
+  "templates/scala/wire-value.scala.j2": [
+    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/DryvWire.scala.j2"
+  ],
+  "templates/scala/circe-enum.scala.j2": [
+    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{enum}/$(name).scala.j2"
+  ],
+  "templates/scala/circe-model.scala.j2": [
+    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{model}/$(name).scala.j2"
   ]
 }
