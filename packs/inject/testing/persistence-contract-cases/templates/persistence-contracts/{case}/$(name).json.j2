@@ -1,0 +1,96 @@
+{%- macro semantic_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}schema
+{%- elif value.is.enum -%}enum
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}temporal
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}composite
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}generic
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{
+  "kind": "dryv-persistence-contract-case",
+  "semantic_schema_id": {{ schema.id | tojson }},
+  "schema_name": {{ schema.name.qualified | tojson }},
+  "storage": {
+    "name": {% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name | tojson }}{% else %}null{% endif %},
+    "namespace": {% if schema.facets.storage and schema.facets.storage.namespace %}{{ schema.facets.storage.namespace | tojson }}{% else %}null{% endif %},
+    "kind": {% if schema.facets.storage %}{{ schema.facets.storage.kind | tojson }}{% else %}null{% endif %}
+  },
+  "primary_key": [
+{%- for field in schema.fields %}{% if field.storage is not none and field.storage.primary_key %}
+    {{ field.name.raw | tojson }}{% if not loop.last %},{% endif %}
+{%- endif %}{% endfor %}
+  ],
+  "fields": [
+{%- for field in schema.fields %}{% if field.related is none %}
+    {
+      "name": {{ field.name.raw | tojson }},
+      "semantic_type": {{ semantic_type(field.value) | trim | tojson }},
+      "optional": {{ field.optional | lower }},
+      "nullable": {{ field.nullable | lower }},
+      "array": {% if field.array is not none %}true{% else %}false{% endif %},
+      "primary_key": {% if field.storage is not none and field.storage.primary_key %}true{% else %}false{% endif %},
+      "mutation": {% if field.mutation %}{{ field.mutation | tojson }}{% else %}null{% endif %},
+      "default": {% if field.default is not none %}{
+        "kind": {{ field.default.kind | tojson }},
+        "value": {% if field.default.kind == 'value' %}{{ field.default.value_json }}{% else %}null{% endif %},
+        "expression": {% if field.default.expression %}{{ field.default.expression.id | tojson }}{% else %}null{% endif %}
+      }{% else %}null{% endif %},
+      "relation": {% if field.relation %}{
+        "cardinality": {{ field.relation.cardinality | tojson }},
+        "target_schema": {{ field.relation.target.schema.name.qualified | tojson }},
+        "target_field": {{ field.relation.target.field.raw | tojson }},
+        "on_delete": {% if field.relation.on_delete %}{{ field.relation.on_delete | tojson }}{% else %}null{% endif %},
+        "on_update": {% if field.relation.on_update %}{{ field.relation.on_update | tojson }}{% else %}null{% endif %}
+      }{% else %}null{% endif %}
+    }{% if not loop.last %},{% endif %}
+{%- endif %}{% endfor %}
+  ],
+  "inverse_relations": [
+{%- set inverse = namespace(first=true) -%}
+{%- for field in schema.fields %}{% if field.related is not none %}
+    {% if not inverse.first %},{% endif %}{
+      "field": {{ field.name.raw | tojson }},
+      "cardinality": {% if field.related.cardinality %}{{ field.related.cardinality | tojson }}{% else %}null{% endif %},
+      "via_schema": {{ field.related.via.schema.name.qualified | tojson }},
+      "via_field": {{ field.related.via.field.raw | tojson }},
+      "inverse_schema": {% if field.related.inverse %}{{ field.related.inverse.schema.name.qualified | tojson }}{% else %}null{% endif %},
+      "inverse_field": {% if field.related.inverse %}{{ field.related.inverse.field.raw | tojson }}{% else %}null{% endif %}
+    }{% set inverse.first=false %}
+{%- endif %}{% endfor %}
+  ],
+  "indexes": [
+{%- if schema.facets.storage %}
+{%- for index in schema.facets.storage.indexes %}
+    {
+      "name": {% if index.name %}{{ index.name | tojson }}{% else %}null{% endif %},
+      "fields": [{% for field in index.fields %}{{ field.raw | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}],
+      "unique": {{ index.unique | lower }}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+  ],
+  "invariants": [
+{%- for invariant in schema.invariants %}
+    {
+      "name": {{ invariant.name.raw | tojson }},
+      "form": {{ invariant.form.kind | tojson }},
+      "message": {% if invariant.message %}{{ invariant.message_json }}{% else %}null{% endif %}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "physical_foreign_key_target_identity_complete": false
+}
