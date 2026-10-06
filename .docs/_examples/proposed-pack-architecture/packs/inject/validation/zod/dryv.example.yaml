@@ -46,10 +46,10 @@ packs:
         $options:
 
           modules:
-            path: [src, modules, "$(group.name.kebab)", dto]
+            path: [modules, "$(group.name.kebab)", dto]
 
           generated:
-            path: [src, _generated, dto]
+            path: [_generated, dto]
 
           contracts:
             path: [contracts]
