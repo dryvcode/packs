@@ -179,7 +179,7 @@ Different command/dependency strategies are alternatives for the ordinary action
 
 ## Review fixtures
 
-- `packs/unit/backend/nestjs/dryv.example.yaml` — composed example.
+- `packs/project/backend/nestjs/dryv.example.yaml` — composed example.
 - `packs/inject/backend/nestjs/dryv.example.yaml` — server-only example.
 - `packs/inject/validation/*/dryv.example.yaml` — validation alternatives.
 - `packs/inject/persistence/typeorm/dryv.example.yaml` — inputs and output alternatives.
