@@ -13,4 +13,5 @@ object DryvWire:
     value match
       case null => ""
       case wire: DryvWireValue => wire.wireString
+      case json: Json => json.asString.getOrElse(json.noSpaces)
       case other => other.toString
