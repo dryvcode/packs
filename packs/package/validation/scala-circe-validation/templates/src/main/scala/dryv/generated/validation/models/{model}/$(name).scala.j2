@@ -2,7 +2,7 @@ package {{ pack.inputs.root_package }}.models
 
 import java.util.UUID
 
-import io.circe.{Decoder, Encoder, Json, JsonObject}
+import io.circe.{Decoder, DecodingFailure, Encoder, Json, JsonObject}
 import io.circe.syntax.*
 
 {%- macro symbol_for(link) -%}
@@ -47,10 +47,16 @@ final case class {{ file.symbol }}(
 object {{ file.symbol }}:
   given Encoder.AsObject[{{ file.symbol }}] =
     Encoder.AsObject.instance(value =>
-      JsonObject(
+      JsonObject.fromIterable(
+        List(
 {%- for field in schema.fields %}
-        {{ field.name.raw | tojson }} -> value.{{ scala_ident(field.name.camel) }}.asJson{% if not loop.last %},{% endif %}
+{%- if field.optional %}
+          value.{{ scala_ident(field.name.camel) }}.map(item => {{ field.name.raw | tojson }} -> item.asJson){% if not loop.last %},{% endif %}
+{%- else %}
+          Some({{ field.name.raw | tojson }} -> value.{{ scala_ident(field.name.camel) }}.asJson){% if not loop.last %},{% endif %}
+{%- endif %}
 {%- endfor %}
+        ).flatten
       )
     )
 
@@ -58,7 +64,15 @@ object {{ file.symbol }}:
     Decoder.instance(cursor =>
       for
 {%- for field in schema.fields %}
+{%- if field.nullable and not field.optional %}
+        {{ scala_ident(field.name.camel) }} <-
+          if cursor.downField({{ field.name.raw | tojson }}).succeeded then
+            cursor.downField({{ field.name.raw | tojson }}).as[{{ field_type(field) }}]
+          else
+            Left(DecodingFailure("Missing required field {{ field.name.raw }}", cursor.history))
+{%- else %}
         {{ scala_ident(field.name.camel) }} <- cursor.downField({{ field.name.raw | tojson }}).as[{{ field_type(field) }}]
+{%- endif %}
 {%- endfor %}
       yield {{ file.symbol }}(
 {%- for field in schema.fields %}
