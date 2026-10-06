@@ -40,11 +40,10 @@ packs:
       $ref: "#/destinations/backend"
       root: [src]
 
+    # True pack default = omit destination.root and outputs entirely.
     outputs:
       schema:
         $options:
-          default: pack-default
-          pack-default: {}
 
           modules:
             path: [modules, "$(group.name.kebab)", dto]
