@@ -47,7 +47,8 @@
       "packs/package/clients/go-client-sdk/dryv.pack.yaml",
       "packs/package/backend/go-net-http-backend/dryv.pack.yaml",
       "packs/package/validation/go-validator-dtos/dryv.pack.yaml",
-      "packs/package/persistence/gorm-entities/dryv.pack.yaml"
+      "packs/package/persistence/gorm-entities/dryv.pack.yaml",
+      "packs/package/backend/gin-backend/dryv.pack.yaml"
     ]
   }
 }
