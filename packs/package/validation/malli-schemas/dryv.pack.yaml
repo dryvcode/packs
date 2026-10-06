@@ -1,0 +1,56 @@
+version: dryv.pack/v1alpha1
+key: validation.malli-schemas
+layout: package
+package:
+  name: dryv-generated-validation
+
+source: templates
+
+info:
+  title: Malli Schemas
+  version: 0.1.0
+  description: Generates reusable Malli 0.20.2 schemas from Dryv schemas and enum properties.
+
+catalog:
+  purpose: validation
+  summary: Idiomatic Clojure Malli schemas with nested validation and canonical enums.
+  languages: [clojure]
+  frameworks: [malli]
+  tags: [validation, schema, clojure]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)EnumSchema
+
+  schema:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+      symbol: $(group.name.pascal)$(subject.name.pascal)Schema
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/schema"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/schema"
+  schema.types:
+    $ref: "#/templates/schema"
+  property.enum.types:
+    $ref: "#/templates/enum"
