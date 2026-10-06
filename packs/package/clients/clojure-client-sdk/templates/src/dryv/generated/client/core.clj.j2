@@ -1,5 +1,7 @@
 (ns dryv.generated.client.core
-  (:require [jsonista.core :as json])
+  (:require
+   [clojure.string :as str]
+   [jsonista.core :as json])
   (:import
    [java.net URI URLEncoder]
    [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers HttpResponse$BodyHandlers]
@@ -30,7 +32,7 @@
   (if (seq pairs)
     (str path
          (if (.contains ^String path "?") "&" "?")
-         (clojure.string/join
+         (str/join
           "&"
           (map (fn [[name value]]
                  (str (encode-component name) "=" (encode-component value)))
@@ -51,7 +53,7 @@
   (let [builder (doto (HttpRequest/newBuilder (URI/create (str base-url path)))
                   (.timeout (Duration/ofSeconds (long (or timeout-seconds 60)))))
         cookie-header (when (seq cookies)
-                        (clojure.string/join
+                        (str/join
                          "; "
                          (map (fn [[name value]]
                                 (str name "=" (encode-component value)))
@@ -68,7 +70,7 @@
           (do
             (.header builder "Content-Type" "application/x-www-form-urlencoded")
             (HttpRequest$BodyPublishers/ofString
-             (clojure.string/join
+             (str/join
               "&"
               (map (fn [[name value]]
                      (str (encode-component name) "=" (encode-component value)))
