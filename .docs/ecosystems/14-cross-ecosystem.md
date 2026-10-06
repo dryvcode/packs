@@ -1,12 +1,12 @@
 # Cross-ecosystem candidates
 
-Status: active cross-ecosystem roadmap. The `documentation` purpose is now proven by `inject/documentation/markdown-reference`; other new purposes still require a real pack design.
+Status: active cross-ecosystem roadmap. Documentation and testing are both proven purposes with multiple portable packs.
 
 These candidates cut across languages. A new repository purpose must only be introduced when a real pack justifies it.
 
 ## Contracts and API descriptions
 
-- [ ] OpenAPI document pack — blocked on canonical effective HTTP path resolution (application root + group chain + operation-local path) and explicit schema-artifact composition; do not approximate it
+- [x] OpenAPI 3.1 — `package/documentation/openapi`; uses Engine-provided canonical effective HTTP paths and same-pack JSON Schema artifacts
 - [x] JSON Schema 2020-12 — `package/validation/json-schema`
 - [ ] AsyncAPI research
 - [ ] GraphQL schema pack research
@@ -17,7 +17,7 @@ Questions:
 - [x] JSON Schema target is generated validation output; Runtime IR remains semantic authority
 - [x] generated contract artifacts must never replace Canonical Runtime IR inside Dryv
 - [x] generated artifacts use the normal Dryv plan/file trace; Runtime IR remains authority
-- [ ] decide whether the pack is `inject` or `package`
+- [x] contract/document packs may be `package` when they form a portable standalone artifact set
 
 ## Documentation
 
@@ -33,17 +33,17 @@ Questions:
 
 ## Testing
 
-- [ ] generated API contract tests
-- [ ] HTTP smoke tests
+- [x] generated API status contract checks — Postman, Bruno and k6 packs
+- [x] HTTP smoke tests — `package/testing/http-smoke-tests` and `package/testing/k6-smoke-tests`
 - [x] authored schema example fixtures — `inject/testing/schema-examples`
 - [ ] generated client integration tests
 - [ ] generated backend route tests
 - [ ] persistence mapping tests
 - [ ] Playwright UI-flow research when view semantics support it
-- [ ] Postman collection generation research
-- [ ] Bruno collection generation research
+- [x] Postman Collection v2.1 — `package/testing/postman-collection`
+- [x] Bruno/OpenCollection YAML — `package/testing/bruno-collection`
 
-`testing` is now a proven purpose through `inject/testing/schema-examples`. Future testing packs must remain explicit about whether they materialize authored cases or synthesize/execute behavior.
+`testing` is proven by authored schema examples plus generated HTTP collections/smoke suites. Testing packs must state whether values are authored or synthesized; synthesized placeholders are output scaffolding only.
 
 ## Configuration
 
@@ -151,7 +151,7 @@ Guardrail: do not compete with ORM migration authorities without an explicit own
 - [ ] reusable pattern for validation packs
 - [ ] reusable pattern for backend routing packs
 - [ ] reusable pattern for UI form packs
-- [ ] reusable pattern for full project packs
+- [x] reusable backend project composition pattern proven by `project/backend/nestjs-app`
 - [ ] capability-slot vocabulary audit after several cross-language implementations
 - [ ] avoid adding slots merely because one framework wants them
 
