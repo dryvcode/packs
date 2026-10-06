@@ -1,4 +1,5 @@
-# DESIGN EXAMPLE — proposed final project Usage with @/ imports and symbol overrides.
+# DESIGN EXAMPLE — materialized project Usage with @/ imports and symbol overrides.
+# Runner alternatives have already been resolved to pnpm.
 version: dryv/v1alpha1
 
 sources:
@@ -11,65 +12,97 @@ sources:
       ref: develop
       root: packs
 
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [pnpm, dlx, prettier@3.9.9, --write, $(files)]
+
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: [-D]
+        - pinned: "$(name)@$(version)"
+          any: "$(name)"
+    commands:
+      - run: [pnpm, add]
+
+  build:
+    stage: final
+    commands:
+      - run: [pnpm, run, build]
+
 destinations:
-  code:
-    backend:
-      path: apps/backend
-      choose:
-        js.package_manager: pnpm
+  backend:
+    path: apps/backend
 
-      imports:
-        root: src
-        prefix: "@/"
+    imports:
+      root: src
+      prefix: "@/"
 
-      outputs:
-        server:
-          controller:
-            path: [src, controllers]
-          service:
-            path: [src, services]
-          module:
-            path: [src, modules]
-
-        validation:
-          schema:
-            path: [src, contracts]
-            symbol: "$(subject.name.pascal)Validator"
-
-        persistence:
-          entity:
-            path: [src, models]
-            symbol: "$(subject.name.pascal)Model"
+    actions:
+      - $ref: "#/actions/format"
+      - $ref: "#/actions/install"
+      - $ref: "#/actions/build"
 
 authoring:
-  source: { $ref: "#/sources/authoring/ir" }
+  source:
+    $ref: "#/sources/authoring/ir"
 
 packs:
   app:
-    source: { $ref: "#/sources/packs/official" }
-    path: unit/backend/nestjs
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: unit/backend/nestjs
+    destination:
+      $ref: "#/destinations/backend"
     inputs:
       package_name: "@example/backend"
     bind:
-      operation.server: { $ref: "#/packs/server" }
+      operation.server:
+        $ref: "#/packs/server"
 
   server:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/backend/nestjs
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/backend/nestjs
+    destination:
+      $ref: "#/destinations/backend"
     bind:
-      schema.validation: { $ref: "#/packs/validation" }
-      schema.persistence: { $ref: "#/packs/persistence" }
+      schema.validation:
+        $ref: "#/packs/validation"
+      schema.persistence:
+        $ref: "#/packs/persistence"
+    outputs:
+      controller:
+        path: [src, controllers]
+      service:
+        path: [src, services]
+      module:
+        path: [src, modules]
 
   validation:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/validation/zod
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/validation/zod
+    destination:
+      $ref: "#/destinations/backend"
+    outputs:
+      schema:
+        path: [src, contracts]
+        symbol: "$(subject.name.pascal)Validator"
 
   persistence:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/persistence/typeorm
-    destination: { $ref: "#/destinations/code/backend" }
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/persistence/typeorm
+    destination:
+      $ref: "#/destinations/backend"
     inputs:
       naming_strategy: camel
+    outputs:
+      entity:
+        path: [src, models]
+        symbol: "$(subject.name.pascal)Model"
