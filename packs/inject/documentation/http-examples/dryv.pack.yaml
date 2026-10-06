@@ -1,0 +1,50 @@
+version: dryv.pack/v1alpha1
+key: documentation.http-examples
+source: templates
+
+info:
+  title: HTTP Examples
+  version: 0.1.0
+  description: Generates human-readable HTTP and cURL examples for every Dryv HTTP operation.
+
+catalog:
+  purpose: documentation
+  summary: Copy-paste HTTP examples derived from canonical Dryv HTTP bindings.
+  languages: [markdown, http, shell]
+  tags: [documentation, http, curl, examples, api]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  base_url:
+    type: string
+    default: http://localhost:3000
+    description: Base URL shown in generated examples.
+
+selections:
+  operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: each
+
+  all-operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  example:
+    $ref: "#/selections/operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
+  index:
+    $ref: "#/selections/all-operations"
+    output:
+      name: index
+    imports:
+      - $ref: "#/templates/example"
