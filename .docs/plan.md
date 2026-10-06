@@ -55,7 +55,7 @@ inject | package | project
        inject | unit
 ```
 
-The repository migration is scheduled in [planning/pack-layout-refactor.md](planning/pack-layout-refactor.md).
+The repository migration is scheduled in [planning/pack-layout-refactor.md](planning/pack-layout-refactor.md), with naming, thin-unit composition and binding compatibility in [planning/pack-identity-and-composition.md](planning/pack-identity-and-composition.md).
 
 Until the Dryv `dryv.pack/v1alpha1` contract accepts `inject | unit`, existing pack paths remain valid implementation state. Do not expand the old `project` layout model or use editability as a reason to choose a layout.
 
