@@ -116,6 +116,8 @@ The activation root owns this pack activation's placement inside that unit.
 
 The template/output path owns template-specific structure.
 
+For a `dryv.example.yaml` that exposes several layout profiles, use the largest root shared by every profile, such as `[src]`. Once setup selects one profile, materialized Usage may fold a deeper common prefix into the activation root, such as `[src, modules]` or `[src, _generated]`.
+
 ## Why activation root exists
 
 Without it:
