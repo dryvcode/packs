@@ -1,0 +1,150 @@
+package {{ pack.inputs.root_package }}
+
+import java.net.URI
+import java.net.URLEncoder
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.nio.charset.StandardCharsets
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.FutureConverters.*
+
+import io.circe.{Decoder, Json}
+import io.circe.parser
+
+import {{ pack.inputs.root_package }}.models.DryvWire
+
+final case class ApiError(
+  status: Int,
+  override val getMessage: String,
+  payload: Option[Json] = None,
+) extends RuntimeException(getMessage)
+
+final class DryvClient(
+  baseUrl: String,
+  http: HttpClient = HttpClient.newHttpClient(),
+):
+  private val normalizedBaseUrl = baseUrl.stripSuffix("/")
+
+  def send[T: Decoder](
+    method: String,
+    path: String,
+    headers: Map[String, String] = Map.empty,
+    cookies: Map[String, String] = Map.empty,
+    jsonBody: Option[Json] = None,
+    form: Option[List[(String, String)]] = None,
+  )(using ExecutionContext): Future[T] =
+    exchange(method, path, headers, cookies, jsonBody, form).map { response =>
+      val body = response.body()
+      if body.trim.isEmpty then
+        throw new IllegalStateException("Expected a response body but received an empty response.")
+      parser.decode[T](body).fold(
+        error => throw new IllegalStateException("Invalid JSON response: " + error),
+        identity,
+      )
+    }
+
+  def sendUnit(
+    method: String,
+    path: String,
+    headers: Map[String, String] = Map.empty,
+    cookies: Map[String, String] = Map.empty,
+    jsonBody: Option[Json] = None,
+    form: Option[List[(String, String)]] = None,
+  )(using ExecutionContext): Future[Unit] =
+    exchange(method, path, headers, cookies, jsonBody, form).map(_ => ())
+
+  private def exchange(
+    method: String,
+    path: String,
+    headers: Map[String, String],
+    cookies: Map[String, String],
+    jsonBody: Option[Json],
+    form: Option[List[(String, String)]],
+  )(using ExecutionContext): Future[HttpResponse[String]] =
+    val builder = HttpRequest.newBuilder(URI.create(normalizedBaseUrl + path))
+
+    headers.foreach((name, value) => builder.header(name, value))
+
+    if cookies.nonEmpty then
+      val value = cookies.iterator
+        .map((name, raw) => name + "=" + encode(raw))
+        .mkString("; ")
+      builder.header("Cookie", value)
+
+    val publisher =
+      jsonBody match
+        case Some(json) =>
+          builder.header("Content-Type", "application/json")
+          HttpRequest.BodyPublishers.ofString(json.noSpaces)
+        case None =>
+          form match
+            case Some(values) =>
+              builder.header("Content-Type", "application/x-www-form-urlencoded")
+              HttpRequest.BodyPublishers.ofString(
+                values.map((name, value) => encode(name) + "=" + encode(value)).mkString("&")
+              )
+            case None =>
+              HttpRequest.BodyPublishers.noBody()
+
+    val request = builder.method(method, publisher).build()
+
+    http.sendAsync(request, HttpResponse.BodyHandlers.ofString()).asScala.map { response =>
+      if response.statusCode() >= 200 && response.statusCode() < 300 then response
+      else
+        val raw = response.body().trim
+        val payload = parser.parse(raw).toOption
+        val message =
+          payload
+            .flatMap(_.hcursor.get[String]("message").toOption)
+            .filter(_.nonEmpty)
+            .getOrElse(raw)
+        throw ApiError(response.statusCode(), message, payload)
+    }
+
+object DryvClient:
+  def appendParam(
+    target: ListBuffer[(String, String)],
+    name: String,
+    value: Any,
+  ): Unit =
+    value match
+      case null => ()
+      case None => ()
+      case Some(inner) => appendParam(target, name, inner)
+      case values: Iterable[?] => values.foreach(item => appendParam(target, name, item))
+      case other => target += name -> DryvWire.scalar(other)
+
+  def appendJsonParam(
+    target: ListBuffer[(String, String)],
+    name: String,
+    value: Json,
+  ): Unit =
+    value.asArray match
+      case Some(values) => values.foreach(item => appendJsonParam(target, name, item))
+      case None =>
+        if !value.isNull then
+          val rendered =
+            value.asString
+              .orElse(value.asBoolean.map(_.toString))
+              .orElse(value.asNumber.map(_.toString))
+              .getOrElse(value.noSpaces)
+          target += name -> rendered
+
+  def appendQuery(path: String, values: Iterable[(String, String)]): String =
+    val encoded = values.iterator
+      .map((name, value) => encode(name) + "=" + encode(value))
+      .mkString("&")
+
+    if encoded.isEmpty then path
+    else path + (if path.contains("?") then "&" else "?") + encoded
+
+  def optionalScalar(value: Any): Option[String] =
+    value match
+      case null => None
+      case None => None
+      case Some(inner) => optionalScalar(inner)
+      case other => Some(DryvWire.scalar(other))
+
+  def encode(value: String): String =
+    URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
