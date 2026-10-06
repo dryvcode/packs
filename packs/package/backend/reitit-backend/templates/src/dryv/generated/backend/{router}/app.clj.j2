@@ -1,0 +1,32 @@
+{%- macro export_namespace(item) -%}
+{{- item.path.relative | replace('src/', '') | replace('/', '.') | replace('.clj', '') -}}
+{%- endmacro -%}
+(ns dryv.generated.backend.app
+  (:require
+   [muuntaja.core :as m]
+   [reitit.ring :as ring]
+   [reitit.ring.middleware.muuntaja :as muuntaja]
+   [reitit.ring.middleware.parameters :as parameters]
+   [ring.middleware.cookies :refer [wrap-cookies]]
+{%- for item in file.exports %}
+   [{{ export_namespace(item) }} :as route{{ loop.index }}]
+{%- endfor %}
+   ))
+
+(defn app
+  "Builds one Ring handler. services is keyed by each generated route symbol,
+   for example :users_user_management_routes."
+  [services]
+  (-> (ring/ring-handler
+       (ring/router
+        (vec
+         (concat
+{%- for item in file.exports %}
+          (route{{ loop.index }}/{{ item.symbol }} (get services :{{ item.symbol }}))
+{%- endfor %}
+          ))
+        {:data {:muuntaja m/instance
+                :middleware [parameters/parameters-middleware
+                             muuntaja/format-middleware]}})
+       (ring/create-default-handler))
+      wrap-cookies))
