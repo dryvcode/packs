@@ -1,0 +1,265 @@
+package {{ pack.inputs.root_package }}.routes
+
+import cats.effect.IO
+
+import io.circe.{Decoder, Json, JsonObject}
+import io.circe.syntax.*
+
+import org.http4s.{HttpRoutes, Request, Response}
+
+import {{ pack.inputs.root_package }}.DryvHttp
+import {{ pack.inputs.root_package }}.models.*
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro scala_ident(name) -%}
+{%- if name in ['abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','forSome','given','if','implicit','import','lazy','match','new','null','object','opaque','open','override','package','private','protected','return','sealed','super','then','this','throw','trait','transparent','true','try','type','using','val','var','while','with','yield','end','extension','inline','infix','derives'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}Json
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Json' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Json' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}java.util.UUID
+{%- elif value.is.record -%}Map[String, Json]
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}Json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro raw_field_type(field) -%}
+{%- if field.array is not none -%}List[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable -%}Option[{{ raw_field_type(field) }}]{%- else -%}{{ raw_field_type(field) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ base_type(operation.input.value) }}{%- else -%}{{ operation.name.pascal }}Input{%- endif -%}
+{%- endmacro -%}
+
+{%- macro method_name(name) -%}{{ scala_ident(name) }}{%- endmacro -%}
+
+{%- macro kind(value) -%}
+{%- if value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.enum -%}enum
+{%- elif value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}json
+{%- else -%}string
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_for_field(operation, field) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}{{ loop.index0 }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro text_source(binding) -%}
+{%- if binding.is.path -%}pathParams.get({{ (binding.name or binding.port.name.raw) | tojson }}).map(List(_))
+{%- elif binding.is.query -%}DryvHttp.query(request, {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}DryvHttp.header(request, {{ (binding.name or binding.port.name.raw) | tojson }}).map(List(_))
+{%- elif binding.is.cookie -%}DryvHttp.cookie(request, {{ (binding.name or binding.port.name.raw) | tojson }}).map(List(_))
+{%- elif binding.is.form -%}form.get({{ (binding.name or binding.port.name.raw) | tojson }})
+{%- else -%}None
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_entry(operation, field) -%}
+{%- set state = namespace(found=false) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}
+{%- set state.found=true -%}
+{%- if binding.is.body -%}
+body match
+  case Some(value) => Right(Some({{ field.name.raw | tojson }} -> value))
+  case None => {% if field.optional %}Right(None){% else %}Left("Missing required body field {{ field.name.raw }}"){% endif %}
+{%- elif binding.is.multipart -%}
+Left("Multipart field {{ field.name.raw }} requires explicit semantic support")
+{%- else -%}
+DryvHttp.fieldJson(
+  {{ field.name.raw | tojson }},
+  {{ text_source(binding) }},
+  {{ kind(field.value) | tojson }},
+  {% if field.array is not none %}true{% else %}false{% endif %},
+  {% if field.optional %}false{% else %}true{% endif %},
+)
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if not state.found -%}
+{% if field.optional %}Right(None){% else %}Left("No HTTP binding for required field {{ field.name.raw }}"){% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro whole_kind(operation) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is none and binding.is.body -%}body
+{%- elif binding.port.field is none and binding.is.query_object -%}query
+{%- elif binding.port.field is none and binding.is.form -%}form
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro success_status(operation) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in operation.facets.http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+{%- for operation in operations %}
+{%- if operation.input and operation.input.kind != 'schema' %}
+final case class {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+  {{ scala_ident(field.name.camel) }}: {{ field_type(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+object {{ operation.name.pascal }}Input:
+  given Decoder[{{ operation.name.pascal }}Input] =
+    Decoder.instance(cursor =>
+      for
+{%- for field in operation.input.fields %}
+        {{ scala_ident(field.name.camel) }} <- cursor.downField({{ field.name.raw | tojson }}).as[{{ field_type(field) }}]
+{%- endfor %}
+      yield {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+        {{ scala_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+      )
+    )
+
+{%- endif %}
+{%- endfor %}
+trait {{ file.symbols.service }}:
+{%- for operation in operations %}
+  def {{ method_name(operation.name.camel) }}(
+{%- if operation.input %}
+    input: {{ input_type(operation) }}
+{%- endif %}
+  ): IO[{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}Unit{% endif %}]
+{%- endfor %}
+
+object {{ file.symbols.routes }}:
+  def routes(service: {{ file.symbols.service }}): HttpRoutes[IO] =
+    HttpRoutes.of[IO] {
+{%- for operation in operations %}
+      case request
+          if request.method.name == {{ operation.facets.http.method | tojson }}
+            && DryvHttp.matchPath({{ operation.facets.http.path.local | tojson }}, request.pathInfo.renderString).nonEmpty =>
+        val pathParams =
+          DryvHttp.matchPath({{ operation.facets.http.path.local | tojson }}, request.pathInfo.renderString)
+            .getOrElse(Map.empty)
+        handle{{ operation.name.pascal }}(request, pathParams, service)
+{%- endfor %}
+    }
+
+{%- for operation in operations %}
+  private def handle{{ operation.name.pascal }}(
+    request: Request[IO],
+    pathParams: Map[String, String],
+    service: {{ file.symbols.service }},
+  ): IO[Response[IO]] =
+{%- if operation.facets.http.input_groups.multipart %}
+    DryvHttp.notImplemented("Multipart bindings require an explicit Scala semantic mapping.")
+{%- else %}
+{%- if operation.facets.http.input_groups.body %}
+    val bodyIO = DryvHttp.bodyJson(request).map(_.map(Some(_)))
+{%- else %}
+    val bodyIO: IO[Either[String, Option[Json]]] = IO.pure(Right(None))
+{%- endif %}
+{%- if operation.facets.http.input_groups.form %}
+    val formIO = DryvHttp.form(request)
+{%- else %}
+    val formIO: IO[Either[String, Map[String, List[String]]]] = IO.pure(Right(Map.empty))
+{%- endif %}
+
+    for
+      bodyResult <- bodyIO
+      formResult <- formIO
+      response <- (bodyResult, formResult) match
+        case (Left(message), _) => DryvHttp.badRequest(message)
+        case (_, Left(message)) => DryvHttp.badRequest(message)
+        case (Right(body), Right(form)) =>
+{%- if operation.input %}
+          val inputJson =
+{%- set whole = whole_kind(operation) | trim %}
+{%- if whole == 'body' %}
+            body.toRight("Request body is required")
+{%- elif whole == 'query' %}
+            DryvHttp.jsonObject(
+              List(
+{%- for field in operation.input.fields %}
+                DryvHttp.fieldJson(
+                  {{ field.name.raw | tojson }},
+                  DryvHttp.query(request, {{ field.name.raw | tojson }}),
+                  {{ kind(field.value) | tojson }},
+                  {% if field.array is not none %}true{% else %}false{% endif %},
+                  {% if field.optional %}false{% else %}true{% endif %},
+                ){% if not loop.last %},{% endif %}
+{%- endfor %}
+              )
+            )
+{%- elif whole == 'form' %}
+            DryvHttp.jsonObject(
+              List(
+{%- for field in operation.input.fields %}
+                DryvHttp.fieldJson(
+                  {{ field.name.raw | tojson }},
+                  form.get({{ field.name.raw | tojson }}),
+                  {{ kind(field.value) | tojson }},
+                  {% if field.array is not none %}true{% else %}false{% endif %},
+                  {% if field.optional %}false{% else %}true{% endif %},
+                ){% if not loop.last %},{% endif %}
+{%- endfor %}
+              )
+            )
+{%- else %}
+            DryvHttp.jsonObject(
+              List(
+{%- for field in operation.input.fields %}
+                {{ field_entry(operation, field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+              )
+            )
+{%- endif %}
+
+          inputJson.flatMap(DryvHttp.decode[{{ input_type(operation) }}]) match
+            case Left(message) => DryvHttp.badRequest(message)
+            case Right(input) =>
+{%- if operation.output %}
+              service.{{ method_name(operation.name.camel) }}(input).flatMap(output =>
+                DryvHttp.jsonResponse({{ success_status(operation) }}, output.asJson)
+              )
+{%- else %}
+              service.{{ method_name(operation.name.camel) }}(input).flatMap(_ =>
+                DryvHttp.emptyResponse({{ success_status(operation) }})
+              )
+{%- endif %}
+{%- else %}
+{%- if operation.output %}
+          service.{{ method_name(operation.name.camel) }}().flatMap(output =>
+            DryvHttp.jsonResponse({{ success_status(operation) }}, output.asJson)
+          )
+{%- else %}
+          service.{{ method_name(operation.name.camel) }}().flatMap(_ =>
+            DryvHttp.emptyResponse({{ success_status(operation) }})
+          )
+{%- endif %}
+{%- endif %}
+    yield response
+{%- endif %}
+
+{%- endfor %}
