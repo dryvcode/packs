@@ -1,4 +1,4 @@
-# DESIGN EXAMPLE — proposed, not current executable syntax.
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
 version: dryv.pack/v1alpha1
 key: inject.backend.nestjs
 layout: inject
@@ -8,34 +8,17 @@ info:
   title: NestJS
   version: 0.1.0
   description: Generates NestJS feature controllers, service boundaries and feature modules.
-
-catalog:
   purpose: backend
   summary: NestJS feature-level HTTP implementation.
   languages: [typescript]
   frameworks: [nestjs]
   tags: [backend, http, controller, module]
 
-target:
-  languages: [typescript]
-  frameworks: [nestjs]
-
 needs:
-  schema.validation:
-    required: true
-    match:
-      languages: compatible
-    locality: same-unit
-    accepts:
-      contracts: [zod-schema, class-validator-dto, joi-schema]
-
-  schema.persistence:
-    required: false
-    match:
-      languages: compatible
-    locality: same-unit
-    accepts:
-      contracts: [typeorm-entity]
+  required:
+    - schema.validation
+  recommended:
+    - schema.persistence
 
 selections:
   http-features:
@@ -84,8 +67,6 @@ templates:
 provides:
   operation.server:
     $ref: "#/templates/module"
-    contract: nestjs-feature-module
-    symbol: default
 
 dependencies:
   runtime:
