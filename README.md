@@ -31,7 +31,7 @@ sources:
       root: packs
 destinations:
   code:
-    backend: { path: src/modules }
+    backend: { path: apps/backend }
 authoring:
   source: { $ref: "#/sources/authoring/ir" }
 packs:
@@ -69,6 +69,6 @@ Code that Dryv generates from these packs is yours, under your project's own lic
 
 ## Contributing
 
-Active repository work is tracked in [.docs/plan.md](.docs/plan.md) and [.docs/TODO.md](.docs/TODO.md). The scheduled layout migration is in [.docs/planning/pack-layout-refactor.md](.docs/planning/pack-layout-refactor.md); simple pack identity, thin-unit composition and binding compatibility are tracked in [.docs/planning/pack-identity-and-composition.md](.docs/planning/pack-identity-and-composition.md), while pack usage examples and configurable output placement are tracked in [.docs/planning/pack-examples-and-placements.md](.docs/planning/pack-examples-and-placements.md). Superseded documents are kept only under `.docs/_archives/`.
+Active repository work is tracked in [.docs/plan.md](.docs/plan.md) and [.docs/TODO.md](.docs/TODO.md). The scheduled layout migration is in [.docs/planning/pack-layout-refactor.md](.docs/planning/pack-layout-refactor.md); simple pack identity, thin-unit composition and binding compatibility are tracked in [.docs/planning/pack-identity-and-composition.md](.docs/planning/pack-identity-and-composition.md), while compact pack examples, destination output overrides and import addressing are tracked in [.docs/planning/pack-examples-and-placements.md](.docs/planning/pack-examples-and-placements.md). Superseded documents are kept only under `.docs/_archives/`.
 
 Template naming and derived-context conventions: [.docs/template-context.md](.docs/template-context.md).
