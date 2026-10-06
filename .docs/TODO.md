@@ -28,7 +28,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Scheduled next: pack layout refactor
 
-This is the next repository-wide structural refactor. The current repository still uses `inject | package | project`, but the approved direction is `inject | unit`. Execution plan: [planning/pack-layout-refactor.md](planning/pack-layout-refactor.md).
+This is the next repository-wide structural refactor. The current repository still uses `inject | package | project`, but the approved direction is `inject | unit`. Execution plans: [pack layout refactor](planning/pack-layout-refactor.md) and [pack identity/composition](planning/pack-identity-and-composition.md).
 
 - [ ] Update Dryv `dryv.pack/v1alpha1` layout contract from `inject | package | project` to `inject | unit`.
 - [ ] Make package/import identity optional metadata on root-owning units rather than a layout.
@@ -40,6 +40,16 @@ This is the next repository-wide structural refactor. The current repository sti
 - [ ] Update catalogue IDs, release tags, fixtures, scripts and documentation in the same migration.
 - [ ] Reject old `package` / `project` layout spellings after migration; do not add compatibility aliases while remaining on `v1alpha1`.
 - [ ] Do not add new `project` packs solely because generated files are editable.
+- [ ] Simplify terminal pack names so they do not repeat layout/purpose words.
+- [ ] Allow the same short technology name across `inject` and `unit`; make canonical pack identity/layout-aware keys unambiguous.
+- [ ] Split unit shells from reusable inject implementation, starting with NestJS controller/module duplication.
+- [ ] Add a neutral server-operation capability suitable for unit assembly instead of hardcoded sibling-pack paths.
+- [ ] Add aggregate consumption of bound provider artifacts for root registration files.
+- [ ] Promote required language/framework compatibility facts out of discovery-only catalogue metadata into a runtime pack contract.
+- [ ] Let each `need` declare only the compatibility dimensions it requires and fail incompatible bindings before render.
+- [ ] Research capability representation compatibility so consumers do not branch on provider pack IDs.
+- [ ] Validate same-unit versus cross-unit binding/import reachability.
+- [ ] Add optional `dryv.yaml.example` to unit packs and validate the example graph; examples must never auto-activate hidden packs.
 
 See the canonical research in the Dryv repository:
 
