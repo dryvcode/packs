@@ -28,7 +28,7 @@ Detailed research and candidate tasks live in [ecosystems/](ecosystems/).
 
 ## Scheduled next: pack layout refactor
 
-This is the next repository-wide structural refactor. The current repository still uses `inject | package | project`, but the approved direction is `inject | unit`. Execution plans: [pack layout refactor](planning/pack-layout-refactor.md) and [pack identity/composition](planning/pack-identity-and-composition.md).
+This is the next repository-wide structural refactor. The current repository still uses `inject | package | project`, but the approved direction is `inject | unit`. Execution plans: [pack layout refactor](planning/pack-layout-refactor.md), [pack identity/composition](planning/pack-identity-and-composition.md), and [pack examples/placements](planning/pack-examples-and-placements.md).
 
 - [ ] Update Dryv `dryv.pack/v1alpha1` layout contract from `inject | package | project` to `inject | unit`.
 - [ ] Make package/import identity optional metadata on root-owning units rather than a layout.
@@ -49,7 +49,16 @@ This is the next repository-wide structural refactor. The current repository sti
 - [ ] Let each `need` declare only the compatibility dimensions it requires and fail incompatible bindings before render.
 - [ ] Research capability representation compatibility so consumers do not branch on provider pack IDs.
 - [ ] Validate same-unit versus cross-unit binding/import reachability.
-- [ ] Add optional `dryv.yaml.example` to unit packs and validate the example graph; examples must never auto-activate hidden packs.
+- [ ] Allow any pack to carry a root `dryv.example.yaml` and validate it automatically when present.
+- [ ] Let `dryv packs add` use a validated example as the default proposal/autofill source while still writing explicit Usage.
+- [ ] Let unit examples demonstrate complete recommended compositions without hidden activation.
+- [ ] Add named configurable output placements for inject packs so Usage can override project-relative structure safely.
+- [ ] Keep destination roots and pack-relative placements separate.
+- [ ] Allow declared placement path patterns to use only Engine-owned planning tokens.
+- [ ] Support filename overrides only where the emitted resource is unambiguous.
+- [ ] Resolve imports/dependencies from final planned paths after placement overrides.
+- [ ] Prove placement with class-validator, TypeORM and NestJS across both feature-module and `_generated` layouts.
+- [ ] Trace every placement default/override into the generation plan.
 
 See the canonical research in the Dryv repository:
 
