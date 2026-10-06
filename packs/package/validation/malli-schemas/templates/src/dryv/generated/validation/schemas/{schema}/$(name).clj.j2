@@ -95,7 +95,7 @@
 {%- endmacro -%}
 
 {%- macro invariant_expr(invariant) -%}
-({% if invariant.form.is_all %}and{% else %}or{% endif %}{% for comparison in invariant.form.comparisons %} ({{ comparison_operator(comparison.operator) }} {{ operand(comparison.left) }} {{ operand(comparison.right) }}){% endfor %})
+({% if invariant.form.is.all %}and{% else %}or{% endif %}{% for comparison in invariant.form.comparisons %} ({{ comparison_operator(comparison.operator) }} {{ operand(comparison.left) }} {{ operand(comparison.right) }}){% endfor %})
 {%- endmacro -%}
 
 (ns dryv.generated.validation.schemas.{{ group.name.snake }}.{{ schema.name.snake }}
@@ -116,7 +116,7 @@
 {%- endfor %}
     ]
 {%- for invariant in schema.invariants %}
-{%- if not invariant.form.is_opaque %}
+{%- if not invariant.form.is.opaque %}
    [:fn
     {:error/message {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %}}
     (fn [value] {{ invariant_expr(invariant) }})]
