@@ -1,0 +1,40 @@
+version: dryv.pack/v1alpha1
+key: testing.schema-contract-cases
+source: templates
+
+info:
+  title: Schema Contract Cases
+  version: 0.1.0
+  description: Generates machine-readable schema contract descriptors for cross-language validation and model tests.
+
+catalog:
+  purpose: testing
+  summary: Portable JSON schema cases describing fields, constraints, defaults, enums and invariants.
+  languages: [json]
+  tags: [testing, schemas, validation, contracts, cross-language]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+  all-schemas:
+    subject: schema
+    scope: all
+
+templates:
+  case:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
+  index:
+    $ref: "#/selections/all-schemas"
+    output:
+      name: index
+    imports:
+      - $ref: "#/templates/case"
