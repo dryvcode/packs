@@ -11,6 +11,10 @@ This plan defines two related authoring aids for packs:
 
 Neither feature changes Runtime IR semantics.
 
+The corresponding Engine/contract implementation roadmap lives in the Dryv repository at:
+
+`.docs/planning/roadmap/pack-placement-and-validation/README.md`
+
 ## 1. Correct example filename
 
 The canonical filename is:
