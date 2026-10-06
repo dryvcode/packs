@@ -1,0 +1,68 @@
+(ns dryv.generated.backend.http
+  (:require [clojure.string :as str]))
+
+(defn map-value
+  [m name]
+  (let [keyword-name (keyword name)]
+    (cond
+      (contains? m keyword-name) (get m keyword-name)
+      (contains? m name) (get m name)
+      :else nil)))
+
+(defn present?
+  [m name]
+  (let [keyword-name (keyword name)]
+    (or (contains? m keyword-name)
+        (contains? m name))))
+
+(defn values
+  [value]
+  (cond
+    (nil? value) []
+    (sequential? value) (vec value)
+    :else [value]))
+
+(defn parse-bool
+  [value]
+  (case (str/lower-case (str value))
+    "true" true
+    "false" false
+    (throw (IllegalArgumentException.
+            (str "invalid boolean value: " value)))))
+
+(defn parse-int
+  [value]
+  (try
+    (Long/parseLong (str value))
+    (catch NumberFormatException _
+      (throw (IllegalArgumentException.
+              (str "invalid integer value: " value))))))
+
+(defn parse-number
+  [value]
+  (try
+    (Double/parseDouble (str value))
+    (catch NumberFormatException _
+      (throw (IllegalArgumentException.
+              (str "invalid numeric value: " value))))))
+
+(defn cookie-value
+  [request name]
+  (get-in request [:cookies name :value]))
+
+(defn response
+  ([status]
+   {:status status})
+  ([status body]
+   {:status status
+    :body body}))
+
+(defn bad-request
+  [message]
+  {:status 400
+   :body {:message message}})
+
+(defn not-implemented
+  [message]
+  {:status 501
+   :body {:message message}})
