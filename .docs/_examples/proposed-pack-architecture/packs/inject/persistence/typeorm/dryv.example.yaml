@@ -49,10 +49,10 @@ packs:
         $options:
 
           modules:
-            path: ["$(group.name.kebab)", entities]
+            path: [modules, "$(group.name.kebab)", entities]
 
           generated:
-            path: [entities]
+            path: [_generated, entities]
 
           models:
             path: [models]
