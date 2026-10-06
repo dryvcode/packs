@@ -79,7 +79,7 @@ templates:
       path:
         - "$(group.name.kebab)"
         - entities
-      symbol: "$(subject.name.pascal)Entity
+      symbol: "$(subject.name.pascal)Entity"
 ```
 
 Pack defaults remain portable and semantic/local.
