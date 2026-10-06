@@ -27,7 +27,7 @@ Questions:
 - [x] Mermaid relationship diagrams
 - [ ] architecture/reference site fragments
 - [ ] client SDK usage docs
-- [ ] generated examples from operation input/output semantics
+- [x] generated HTTP examples from operation input/output semantics — `inject/documentation/http-examples`
 
 `documentation` is now an approved/proven purpose because a real portable pack exists. New documentation packs must still consume Runtime IR/context rather than maintain a second semantic model.
 
@@ -36,6 +36,9 @@ Questions:
 - [x] generated API status contract checks — Postman, Bruno and k6 packs
 - [x] HTTP smoke tests — `package/testing/http-smoke-tests` and `package/testing/k6-smoke-tests`
 - [x] authored schema example fixtures — `inject/testing/schema-examples`
+- [x] machine-readable HTTP contract cases — `inject/testing/http-contract-cases`
+- [x] machine-readable schema contract cases — `inject/testing/schema-contract-cases`
+- [x] machine-readable persistence contract cases — `inject/testing/persistence-contract-cases`
 - [ ] generated client integration tests
 - [ ] generated backend route tests
 - [ ] persistence mapping tests
@@ -43,7 +46,7 @@ Questions:
 - [x] Postman Collection v2.1 — `package/testing/postman-collection`
 - [x] Bruno/OpenCollection YAML — `package/testing/bruno-collection`
 
-`testing` is proven by authored schema examples plus generated HTTP collections/smoke suites. Testing packs must state whether values are authored or synthesized; synthesized placeholders are output scaffolding only.
+`testing` is proven by authored schema examples, machine-readable cross-language contract cases and generated HTTP collections/smoke suites. Testing packs must state whether values are authored or synthesized; synthesized placeholders are output scaffolding only.
 
 ## Configuration
 
@@ -134,6 +137,8 @@ Guardrail: only generate behavior represented explicitly by Runtime IR or approv
 - [ ] XML serialization research where ecosystems require it
 
 ## Database/migration output
+
+- [x] Persistence reference documentation — `inject/documentation/persistence-reference`; documents storage/key/index/relation semantics without claiming DDL ownership
 
 - [ ] SQL DDL generation research
 - [ ] migration scaffold research
