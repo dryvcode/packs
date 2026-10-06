@@ -80,8 +80,7 @@ _No indexes are declared in Runtime IR._
 - **Ownership:** scalar field on this schema
 - **Cardinality:** `{{ field.relation.cardinality }}`
 - **Target semantic field:** `{{ field.relation.target.schema.name.qualified }}.{{ field.relation.target.field.raw }}`
-- **Required:** `{{ field.relation.required }}`
-- **Unique:** `{{ field.relation.unique }}`
+- **Owning field presence:** {% if field.optional %}optional{% else %}required{% endif %}{% if field.nullable %}, nullable{% endif %}
 - **On delete:** {% if field.relation.on_delete %}`{{ field.relation.on_delete }}`{% else %}—{% endif %}
 - **On update:** {% if field.relation.on_update %}`{{ field.relation.on_update }}`{% else %}—{% endif %}
 

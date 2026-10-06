@@ -298,7 +298,7 @@ Example:
 destinations:
   code:
     backend:
-      path: apps/backend/src
+      path: apps/backend
 ```
 
 ### Placement
@@ -352,15 +352,15 @@ A template opts into a public placement:
 templates:
   dto:
     $ref: "#/selections/schemas"
-    placement: dto
     output:
+      placement: dto
       name: $(subject.name.kebab)
       symbol: $(subject.name.pascal)Dto
 
   controller:
     $ref: "#/selections/controllers"
-    placement: controller
     output:
+      placement: controller
       name: $(feature.name.kebab)
       symbols:
         controller: $(feature.name.pascal)Controller
@@ -368,46 +368,82 @@ templates:
 
 Exact schema is not yet locked.
 
-## 10. Usage overrides only declared placements
+## 10. Placement overrides belong to the destination
 
-Conceptual usage:
+The pack activation chooses **which generated unit** receives its output:
 
 ```yaml
 packs:
   validation:
     path: inject/validation/class-validator
     destination: { $ref: "#/destinations/code/backend" }
-
-    place:
-      dto:
-        path: _generated/dto
 ```
 
-or:
+The destination owns the structure inside that unit:
 
 ```yaml
-packs:
-  validation:
-    place:
-      dto:
-        path: modules/$(group.name.kebab)/dto
-        filename: $(name).dto.ts
+destinations:
+  code:
+    backend:
+      path: apps/backend
+
+      place:
+        validation:
+          dto:
+            path: [src, _generated, dto]
+            filename: "$(name).dto.ts"
 ```
 
-or:
+The first key under `place` is the **pack activation name**. The second key is a public placement declared by that pack.
+
+A fuller unit can therefore express its whole generated structure in one place:
 
 ```yaml
-packs:
-  http:
-    place:
-      controller:
-        path: modules/$(feature.name.kebab)
-        filename: controller.ts
+destinations:
+  code:
+    backend:
+      path: apps/backend
+
+      place:
+        server:
+          controller:
+            path: [src, controllers]
+            filename: "$(feature.name.kebab).controller.ts"
+
+        validation:
+          schema:
+            path: [src, contracts]
+            filename: "$(name).schema.ts"
+
+        persistence:
+          entity:
+            path: [src, models]
+            filename: "$(name).entity.ts"
 ```
 
-The user may only override a placement key explicitly exposed by the pack.
+This relationship is intentional:
 
-Usage must not reach into arbitrary template internals or source-resource paths.
+```text
+pack output
+    declares placement: controller
+
+pack activation
+    selects destination: backend
+
+destination backend
+    may override server.controller
+
+Planner
+    combines all three
+```
+
+Validation must reject:
+
+- a destination `place` entry for an activation that does not target that destination;
+- a placement key the target pack does not expose;
+- a placement override for a pack output that does not use that placement.
+
+This keeps project structure centralized without making destination definitions semantic authority.
 
 ## 11. Why named placements are better than generic path inputs
 
@@ -551,78 +587,92 @@ This gives both:
 - zero-config usability;
 - explicit project-specific layout control.
 
-## 16. dryv.example.yaml should demonstrate placement
+## 16. dryv.example.yaml should demonstrate destination structure
 
-When a pack has meaningful placement choices, its example should show at least one realistic structure.
+When a pack has meaningful placement choices, its example should show them through the destination it targets.
 
 For example:
 
 ```yaml
-packs:
-  validation:
-    path: inject/validation/class-validator
-    destination: { $ref: "#/destinations/code/backend" }
-    place:
-      dto:
-        path: modules/$(group.name.kebab)/dto
+version: dryv.example/v1alpha1
+
+usage:
+  destinations:
+    code:
+      backend:
+        path: apps/backend
+        place:
+          validation:
+            dto:
+              path: [src, modules, "$(group.name.kebab)", dto]
+
+  packs:
+    validation:
+      pack: self
+      destination: { $ref: "#/destinations/code/backend" }
 ```
 
-A unit example can control the placements of the inject packs it recommends:
+A unit example can coordinate all recommended inject packs in one destination structure:
 
 ```text
-unit/backend/nestjs/dryv.example.yaml
+backend destination
 
-app
-  unit/backend/nestjs
-
-server
-  inject/backend/nestjs
-  controller placement -> modules/<feature>
-
-validation
-  inject/validation/zod
-  schema placement -> modules/<group>/dto
-
-persistence
-  inject/persistence/typeorm
-  entity placement -> modules/<group>/entities
+server.controller    -> modules/<feature>/
+validation.schema    -> modules/<group>/dto/
+persistence.entity   -> modules/<group>/entities/
 ```
 
-This makes the unit's recommended project structure visible without hard-coding that structure into every inject pack.
+This makes the complete project layout visible in one place while each inject pack still owns its placement defaults.
 
-## 17. Existing named destinations
+## 17. Destination model
 
-Current Usage already contains:
+The preferred direction is now:
 
 ```text
-PackActivation.destination
-PackActivation.destinations
+destinations.code.<name>
+    = one generated-unit root
+    + unit-wide choices/actions
+    + placement overrides for activations targeting that unit
 ```
 
-The current Planner uses the primary `destination`; named activation destinations are not yet part of artifact placement resolution.
-
-Do not introduce a competing concept without auditing this existing field.
-
-The preferred direction is:
-
-- keep project roots under `destinations.code`;
-- use named activation destinations where an activation genuinely emits into multiple project roots;
-- use named placements for relative artifact structure within those roots.
-
-A future placement may optionally select one of the activation's declared destination names.
-
-Conceptually:
+Example:
 
 ```yaml
-place:
-  generated-tests:
-    destination: tests
-    path: generated
+destinations:
+  code:
+    backend:
+      path: apps/backend
+      choose:
+        js.package_manager: bun
+      place:
+        server: ...
+        validation: ...
+        persistence: ...
 ```
 
-where `tests` is an explicitly bound named destination for that activation.
+Each pack activation references that root:
 
-This should be implemented only after the existing `PackActivation.destinations` intent is finalized.
+```yaml
+packs:
+  server:
+    destination: { $ref: "#/destinations/code/backend" }
+
+  validation:
+    destination: { $ref: "#/destinations/code/backend" }
+```
+
+This is clearer than putting placement under each activation because:
+
+- the whole unit structure is visible together;
+- coordinated layout profiles can change several packs at once;
+- destination remains the natural boundary for shared choices, dependencies and actions;
+- pack activations remain focused on source, bindings and pack-specific inputs.
+
+The existing `PackActivation.destinations` field must now be re-evaluated. Most cases previously imagined as extra destinations are probably placements inside the same unit.
+
+If one activation genuinely needs to emit into two independent generated units, the design should prove why two explicit activations would not be clearer.
+
+Do not preserve `PackActivation.destinations` merely for compatibility while still evolving `v1alpha1`.
 
 ## 18. Import resolution must follow final planned paths
 
@@ -953,3 +1003,149 @@ The proof passes only if:
 - no pack-specific path convention is used for cross-pack lookup;
 - collisions and invalid paths fail before render;
 - generated output compiles with the native toolchain.
+
+## 26. Example choices can wrap normal Usage values
+
+A pack example should support more than one hard-coded recommendation.
+
+The proposed model is a generic `$example` wrapper that may replace **one value that would otherwise be a normal Usage value**.
+
+Conceptually:
+
+```yaml
+<normal-field>:
+  $example:
+    title: Human-readable question
+    default: option-a
+    options:
+      option-a:
+        title: First choice
+        description: Why someone may choose it.
+        value: <a normal value for this field>
+
+      option-b:
+        title: Second choice
+        value: <another normal value for this field>
+```
+
+After setup, every `$example` wrapper disappears. The selected `value` is inserted and the resulting document must validate as ordinary Usage.
+
+### Scalar choice
+
+```yaml
+choose:
+  js.package_manager:
+    $example:
+      title: Package manager
+      default: bun
+      options:
+        bun:  { value: bun }
+        pnpm: { value: pnpm }
+        npm:  { value: npm }
+```
+
+### Pack/provider choice
+
+A whole activation may be selected:
+
+```yaml
+packs:
+  validation:
+    $example:
+      title: Validation implementation
+      default: zod
+      options:
+        zod:
+          value:
+            pack: inject/validation/zod
+            destination: { $ref: "#/destinations/code/backend" }
+
+        class-validator:
+          value:
+            pack: inject/validation/class-validator
+            destination: { $ref: "#/destinations/code/backend" }
+```
+
+The consumer still binds to the stable activation name `validation`.
+
+### Pack input choice
+
+```yaml
+inputs:
+  naming_strategy:
+    $example:
+      default: snake
+      options:
+        snake: { value: snake }
+        camel: { value: camel }
+```
+
+### Coordinated placement profile
+
+The entire destination `place` map can be one choice:
+
+```yaml
+place:
+  $example:
+    title: Backend source structure
+    default: feature
+    options:
+      feature:
+        value:
+          server: ...
+          validation: ...
+          persistence: ...
+
+      generated:
+        value:
+          server: ...
+          validation: ...
+          persistence: ...
+```
+
+This is important: a structure choice must be able to update several packs together without inventing path patches or asking the same question repeatedly.
+
+### Why one generic wrapper is preferable
+
+Avoid separate example-only mechanisms such as:
+
+```text
+input_options
+placement_options
+provider_options
+destination_options
+choice_options
+```
+
+A generic wrapper means:
+
+> if Dryv already knows the schema of a normal Usage value, the example system can offer several candidate values for that same slot.
+
+The Engine/Client can validate each option against the underlying normal field contract.
+
+### Contract versus example
+
+The pack contract still defines what is **legal**.
+
+The example defines what is **recommended or useful to choose during setup**.
+
+For example:
+
+```text
+pack contract
+    says all compatible schema.validation providers
+
+dryv.example.yaml
+    may recommend Zod and class-validator as curated choices
+
+CLI
+    may additionally show other compatible providers discovered from the catalogue
+```
+
+Examples must not become compatibility whitelists.
+
+### Possible future optional choice
+
+If examples need to model omission of an optional normal field, add an explicit example-only `omit: true` option rather than using a magic null value.
+
+Do not add this until a real proof requires it.
