@@ -137,7 +137,7 @@ export class {{ file.symbols.controller }} {
 {%- for operation in operations %}
 {%- set http = operation.facets.http %}
 
-  @{{ http.method | lower | capitalize }}("{{ http.path.local | replace('{', ':') | replace('}', '') }}")
+  @{{ http.method | lower | capitalize }}("{{ http.path.effective | replace('{', ':') | replace('}', '') }}")
 {%- for binding in http.outputs %}
   @HttpCode({{ binding.status }})
 {%- endfor %}
