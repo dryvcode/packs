@@ -1,0 +1,172 @@
+{%- macro is_json_field(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}x{%- endif -%}
+{%- endmacro -%}
+
+(ns dryv.generated.persistence.entities.{{ group.name.snake }}.{{ schema.name.snake }}
+  (:require
+   [jsonista.core :as json]
+   [next.jdbc.result-set :as rs]
+   [next.jdbc.sql :as sql]))
+
+(def ^:private mapper
+  (json/object-mapper {:decode-key-fn keyword}))
+
+(def table-name
+  "{% if schema.facets.storage and schema.facets.storage.namespace %}{{ schema.facets.storage.namespace }}.{% endif %}{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}")
+
+(def {{ file.symbol }}
+  (keyword table-name))
+
+(def columns
+  {
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+   (keyword {{ field.name.raw | tojson }}) :{{ field.name.snake }}
+{%- endif %}
+{%- endfor %}
+   })
+
+(def reverse-columns
+  (into {} (map (fn [[wire column]] [column wire]) columns)))
+
+(def primary-key
+  [
+{%- for field in schema.fields %}
+{%- if field.related is none and field.storage is not none and field.storage.primary_key %}
+   :{{ field.name.snake }}
+{%- endif %}
+{%- endfor %}
+   ])
+
+(def mutable-columns
+  #{
+{%- for field in schema.fields %}
+{%- if field.related is none and field.mutation != 'create-only' and field.mutation != 'system' %}
+   :{{ field.name.snake }}
+{%- endif %}
+{%- endfor %}
+    })
+
+(def json-fields
+  #{
+{%- for field in schema.fields %}
+{%- if field.related is none and is_json_field(field) %}
+   (keyword {{ field.name.raw | tojson }})
+{%- endif %}
+{%- endfor %}
+    })
+
+(def indexes
+  [
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+   {:name {% if index.name %}{{ index.name | tojson }}{% else %}{{ ('idx_' ~ schema.name.snake ~ '_' ~ loop.index) | tojson }}{% endif %}
+    :unique? {% if index.unique %}true{% else %}false{% endif %}
+    :columns [{% for field_name in index.fields %}:{{ field_name.snake }}{% if not loop.last %} {% endif %}{% endfor %}]}
+{%- endfor %}
+{%- endif %}
+   ])
+
+(def relations
+  [
+{%- for field in schema.fields %}
+{%- if field.relation is not none %}
+   {:field (keyword {{ field.name.raw | tojson }})
+    :column :{{ field.name.snake }}
+    :cardinality {{ field.relation.cardinality | tojson }}
+    :target-schema {{ field.relation.target.schema.name.raw | tojson }}
+    :target-field {{ field.relation.target.field.raw | tojson }}
+    :on-delete {% if field.relation.on_delete is not none %}{{ field.relation.on_delete | tojson }}{% else %}nil{% endif %}
+    :on-update {% if field.relation.on_update is not none %}{{ field.relation.on_update | tojson }}{% else %}nil{% endif %}}
+{%- endif %}
+{%- endfor %}
+   ])
+
+(def ^:private sql-options
+  {:builder-fn rs/as-unqualified-maps})
+
+(defn- find-wire
+  [value wire-key]
+  (cond
+    (contains? value wire-key)
+    [true (get value wire-key)]
+
+    (contains? value (name wire-key))
+    [true (get value (name wire-key))]
+
+    :else
+    [false nil]))
+
+(defn- encode-value
+  [wire-key value]
+  (if (and (contains? json-fields wire-key) (some? value))
+    (json/write-value-as-string value mapper)
+    value))
+
+(defn- decode-value
+  [wire-key value]
+  (if (and (contains? json-fields wire-key) (string? value))
+    (try
+      (json/read-value value mapper)
+      (catch Exception _
+        value))
+    value))
+
+(defn to-row
+  "Converts authored/wire map keys into database column keys without adding absent fields."
+  [value]
+  (reduce-kv
+   (fn [row wire-key column]
+     (let [[present value] (find-wire value wire-key)]
+       (if present
+         (assoc row column (encode-value wire-key value))
+         row)))
+   {}
+   columns))
+
+(defn from-row
+  "Converts an unqualified next.jdbc row back to authored/wire keyword keys."
+  [row]
+  (reduce-kv
+   (fn [value column raw]
+     (if (contains? row column)
+       (assoc value raw (decode-value raw (get row column)))
+       value))
+   {}
+   reverse-columns))
+
+(defn insert!
+  [connectable value]
+  (some-> (sql/insert! connectable {{ file.symbol }} (to-row value) sql-options)
+          from-row))
+
+(defn find-by
+  [connectable criteria]
+  (mapv from-row
+        (sql/find-by-keys connectable {{ file.symbol }} (to-row criteria) sql-options)))
+
+(defn update!
+  [connectable criteria changes]
+  (sql/update!
+   connectable
+   {{ file.symbol }}
+   (select-keys (to-row changes) mutable-columns)
+   (to-row criteria)
+   sql-options))
+
+(defn delete!
+  [connectable criteria]
+  (sql/delete! connectable {{ file.symbol }} (to-row criteria) sql-options))
+
+(defn find-by-primary-key
+  "Looks up one row using a map containing every authored primary-key field."
+  [connectable key-value]
+  (let [row-key (select-keys (to-row key-value) primary-key)]
+    (when (= (count row-key) (count primary-key))
+      (some-> (first (sql/find-by-keys
+                      connectable
+                      {{ file.symbol }}
+                      row-key
+                      (assoc sql-options :limit 1)))
+              from-row))))
