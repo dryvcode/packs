@@ -1,58 +1,72 @@
-# Invalid examples the Engine should reject
+# Invalid examples the Engine/tooling should reject
 
 These are design fixtures for expected validation behavior.
 
-## Wrong language provider
-
-A NestJS unit binds a Python server provider.
-
-Expected:
-
-```text
-usage.bind.language_mismatch
-```
-
-## Wrong framework/representation
-
-A NestJS unit needs a `nestjs-feature-module` but receives an incompatible server representation.
-
-Expected:
-
-```text
-usage.bind.framework_mismatch
-or
-usage.bind.representation_mismatch
-```
-
-## Output override names unknown activation
+## Nested code destination namespace
 
 ```yaml
 destinations:
   code:
     backend:
       path: apps/backend
-      outputs:
-        missing-pack:
-          entity:
-            path: [src, models]
 ```
+
+The current model is flat:
+
+```yaml
+destinations:
+  backend:
+    path: apps/backend
+```
+
+## False destination ref
+
+```yaml
+destination:
+  $ref: "#/destinations/code/backend"
+```
+
+Expected target is a real node such as:
+
+```text
+#/destinations/backend
+```
+
+## Wrong language provider
+
+A NestJS consumer binds an incompatible-language provider.
+
+Expected: compatibility validation failure before render.
+
+## Missing required provider
+
+A pack declares:
+
+```yaml
+needs:
+  - schema.validation
+```
+
+but its activation does not bind that capability.
 
 Expected:
 
 ```text
-usage.output.unknown_activation
+usage.bind.missing
 ```
 
 ## Output override names unknown template
 
 ```yaml
-outputs:
+packs:
   persistence:
-    hidden-bootstrap:
-      path: [src, custom]
+    ...
+    outputs:
+      hidden-bootstrap:
+        path: [src, custom]
 ```
 
-Expected:
+If `hidden-bootstrap` is not a real template key in that pack:
 
 ```text
 usage.output.unknown_template
@@ -61,10 +75,12 @@ usage.output.unknown_template
 ## Output path traversal
 
 ```yaml
-outputs:
+packs:
   persistence:
-    entity:
-      path: [.., secrets]
+    ...
+    outputs:
+      entity:
+        path: [.., secrets]
 ```
 
 Expected:
@@ -75,7 +91,7 @@ usage.output.path_invalid
 
 ## Collision after overrides
 
-Two final outputs resolve to the same workspace file.
+Two final activation/template outputs resolve to the same workspace file.
 
 Expected:
 
@@ -83,64 +99,62 @@ Expected:
 planner.output.collision
 ```
 
-## Fixed output overridden
-
-A template explicitly disables output overrides, but Usage attempts to change it.
-
-Expected:
-
-```text
-usage.output.override_forbidden
-```
-
-## Import root does not contain producer
+## Invalid action ref
 
 ```yaml
-imports:
-  root: src
-  prefix: "@/"
+destinations:
+  backend:
+    path: apps/backend
+    actions:
+      - $ref: "#/actions/missing"
 ```
 
-but an imported producer resolves under:
+Expected: fail because the ref does not resolve to a real action.
 
-```text
-generated-outside-src/model.ts
+## Runner alternative survives materialization
+
+Normal `dryv.yaml` contains:
+
+```yaml
+commands:
+  - run: [(pnpm|yarn), dlx, prettier, --write, $(files)]
+  - run: [bun, x, prettier, --write, $(files)]
 ```
 
-Expected:
+after setup has already selected Bun.
 
-```text
-usage.imports.unreachable
-```
+Expected: runner hardening should reject/avoid unresolved example-only alternatives in materialized Usage.
 
-## Cross-unit package lacks import identity
+## Unsupported runner
 
-A consumer needs a provider from another unit, but the provider has no usable package identity/import root.
+An example destination selects `dart`, but the selected action exposes only Bun/pnpm/npm/Yarn command variants.
 
-Expected:
+Expected: materialization failure before Usage is written.
 
-```text
-usage.bind.import_unreachable
-```
+## Conflicting runner dependency rules
 
-## Invalid scalar example choice
+Two matching grouped runner rules produce incompatible dependency formats for the same selected runner.
 
-The pack input allows:
+Expected: deterministic materialization failure; no hidden precedence.
+
+## Import root does not contain final producer
+
+Destination import root is `src`, but the final producer resolves outside it.
+
+Expected import reachability failure.
+
+## Invalid scalar input choice
+
+A pack input allows:
 
 ```text
 snake | camel
 ```
 
-but the example exposes:
-
-```yaml
-naming_strategy: [snake, kebab]
-```
+but an example exposes `kebab`.
 
 Expected:
 
 ```text
 example.option.invalid_value
 ```
-
-Every example option is validated against the normal field contract it represents.
