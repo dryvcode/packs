@@ -15,7 +15,7 @@ This ecosystem should be treated carefully because framework conventions, depend
 
 ## Client SDKs
 
-- [x] `package/clients/cpp-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/cpp-client-sdk` — implementation present; verification deferred
 - [x] cpr 1.14 client baseline selected
 - [ ] cpr-backed transport research
 - [ ] cpp-httplib client research
@@ -39,7 +39,7 @@ Models:
 
 ## Backends
 
-- [x] `package/backend/crow-backend` — Crow 1.3.4 implementation present; verification deferred
+- [x] `unit/backend/crow-backend` — Crow 1.3.4 implementation present; verification deferred
 - [ ] Drogon backend
 - [ ] oat++ backend
 - [ ] Pistache research
@@ -54,7 +54,7 @@ Primary model: `fastapi-backend`.
 ## Persistence
 
 - [ ] SOCI models/integration research
-- [x] `package/persistence/sqlite-orm-models` — sqlite_orm 1.9.1 implementation present; verification deferred
+- [x] `unit/persistence/sqlite-orm-models` — sqlite_orm 1.9.1 implementation present; verification deferred
 - [ ] ODB research
 - [ ] Drogon ORM research
 - [x] primary/generated keys
@@ -68,7 +68,7 @@ Primary model: `typeorm-entities`.
 
 ## Validation/schema
 
-- [x] `package/validation/cpp-validation` — generated model validation helpers present; verification deferred
+- [x] `unit/validation/cpp-validation` — generated model validation helpers present; verification deferred
 - [ ] Boost validation-related ecosystem research
 - [x] runtime validation with structured `ValidationResult`
 - [x] ranges/lengths/patterns/formats
