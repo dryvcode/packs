@@ -4,9 +4,9 @@ Status: candidate backlog only. Existing coverage is marked complete.
 
 ## Existing coverage
 
-- [x] `package/clients/dart-client-sdk`
-- [x] `package/clients/flutter-api-bridge`
-- [x] `project/frontend/flutter-app`
+- [x] `unit/clients/dart-client-sdk`
+- [x] `unit/clients/flutter-api-bridge`
+- [x] `unit/frontend/flutter-app`
 
 ## Client candidates
 
