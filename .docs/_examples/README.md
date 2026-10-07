@@ -1,32 +1,29 @@
 # Proposed Dryv pack architecture examples
 
-These files are **design examples**, not current executable packs.
+These files are supporting design/review fixtures.
 
-They illustrate the proposed architecture being planned for Dryv `v1alpha1`:
+They are not the active execution plan and are not a substitute for the real packs.
 
-- `inject | unit` pack layouts;
-- simple pack names;
-- source-neutral `dryv.example.yaml`;
-- named output placements;
-- per-need compatibility checks;
-- capability representation contracts;
-- same-unit locality;
-- aggregate capability consumption;
-- explicit project `dryv.yaml` after example materialization.
+Current execution is tracked under:
 
-The active design documents are:
+```text
+.docs/tasks/pack-modernization/
+```
 
-- `.docs/planning/pack-layout-refactor.md`
-- `.docs/planning/pack-identity-and-composition.md`
-- `.docs/planning/pack-examples-and-placements.md`
+The examples illustrate the target concepts used by the current tasks:
 
-The corresponding Engine roadmap lives in the Dryv repository:
+- `inject | unit` layouts;
+- simple layout-aware pack identity;
+- keyed `needs`;
+- explicit capability bindings;
+- activation destination roots;
+- activation-owned output overrides;
+- Usage-shaped `dryv.example.yaml`;
+- ordered sibling `$options`;
+- explicit materialized `dryv.yaml`;
+- aggregate composition such as a NestJS unit consuming `operation.server`.
 
-`.docs/planning/roadmap/pack-placement-and-validation/README.md`
-
-## Example set
-
-The primary example is a NestJS backend composed from four packs:
+The primary review graph is:
 
 ```text
 unit/backend/nestjs
@@ -43,6 +40,6 @@ inject/validation/zod
 inject/persistence/typeorm
 ```
 
-See:
+See `.docs/_examples/proposed-pack-architecture/`.
 
-`.docs/_examples/proposed-pack-architecture/`
+The real NestJS framework-quality target is defined by Tasks 03–07, not by blindly preserving these fixtures.
