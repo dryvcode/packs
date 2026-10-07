@@ -6,8 +6,8 @@ These candidates cut across languages. A new repository purpose must only be int
 
 ## Contracts and API descriptions
 
-- [x] OpenAPI 3.1 — `package/documentation/openapi`; uses Engine-provided canonical effective HTTP paths and same-pack JSON Schema artifacts
-- [x] JSON Schema 2020-12 — `package/validation/json-schema`
+- [x] OpenAPI 3.1 — `unit/documentation/openapi`; uses Engine-provided canonical effective HTTP paths and same-pack JSON Schema artifacts
+- [x] JSON Schema 2020-12 — `unit/validation/json-schema`
 - [ ] AsyncAPI research
 - [ ] GraphQL schema pack research
 - [ ] protobuf/gRPC contract pack research
@@ -34,7 +34,7 @@ Questions:
 ## Testing
 
 - [x] generated API status contract checks — Postman, Bruno and k6 packs
-- [x] HTTP smoke tests — `package/testing/http-smoke-tests` and `package/testing/k6-smoke-tests`
+- [x] HTTP smoke tests — `unit/testing/http-smoke-tests` and `unit/testing/k6-smoke-tests`
 - [x] authored schema example fixtures — `inject/testing/schema-examples`
 - [x] machine-readable HTTP contract cases — `inject/testing/http-contract-cases`
 - [x] machine-readable schema contract cases — `inject/testing/schema-contract-cases`
@@ -43,8 +43,8 @@ Questions:
 - [ ] generated backend route tests
 - [ ] persistence mapping tests
 - [ ] Playwright UI-flow research when view semantics support it
-- [x] Postman Collection v2.1 — `package/testing/postman-collection`
-- [x] Bruno/OpenCollection YAML — `package/testing/bruno-collection`
+- [x] Postman Collection v2.1 — `unit/testing/postman-collection`
+- [x] Bruno/OpenCollection YAML — `unit/testing/bruno-collection`
 
 `testing` is proven by authored schema examples, machine-readable cross-language contract cases and generated HTTP collections/smoke suites. Testing packs must state whether values are authored or synthesized; synthesized placeholders are output scaffolding only.
 
@@ -156,7 +156,7 @@ Guardrail: do not compete with ORM migration authorities without an explicit own
 - [ ] reusable pattern for validation packs
 - [ ] reusable pattern for backend routing packs
 - [ ] reusable pattern for UI form packs
-- [x] reusable backend project composition pattern proven by `project/backend/nestjs-app`
+- [x] reusable backend project composition pattern proven by `unit/backend/nestjs-app`
 - [ ] capability-slot vocabulary audit after several cross-language implementations
 - [ ] avoid adding slots merely because one framework wants them
 
