@@ -23,14 +23,14 @@ This is currently Dryv's strongest ecosystem. Expansion here should not crowd ou
 
 ### Clients
 
-- [x] `package/clients/ts-api-client`
-- [x] `package/clients/next-api-bridge`
+- [x] `unit/clients/ts-api-client`
+- [x] `unit/clients/next-api-bridge`
 
 ### Frontend
 
 - [x] `inject/frontend/react-crud-forms`
-- [x] `project/frontend/nextjs-app`
-- [x] `project/frontend/react-native-app`
+- [x] `unit/frontend/nextjs-app`
+- [x] `unit/frontend/react-native-app`
 
 ## Backend candidates
 
