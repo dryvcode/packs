@@ -4,19 +4,49 @@
   <a href="https://dryv.alidantech.org"><img src=".docs/badge/built-with-dryv.svg" alt="built with dryv"></a>
 </p>
 
-Official packs for [Dryv](https://dryv.alidantech.org): reusable templates that turn canonical Dryv meaning into generated code, packages, documentation, fixtures and project artifacts for real ecosystems.
+Official packs for [Dryv](https://dryv.alidantech.org): portable generation packs that turn Canonical Runtime IR into framework-native source code, configuration, documentation, tests and complete generated units.
 
 > **Status:** being set up. No packs are published yet.
 
-Packs live at `packs/<layout>/<purpose>/<name>`, for example `packs/inject/persistence/typeorm-entities`, `packs/inject/documentation/markdown-reference` and `packs/inject/testing/schema-examples` ([folder structure](.docs/folder-structure.md)). The manifest declares behavior; the folder path is for browsing and source selection.
+## Repository model
+
+Packs live at:
+
+```text
+packs/<layout>/<purpose>/<name>
+```
+
+with two layouts:
+
+```text
+inject
+  contributes implementation artifacts into a unit
+
+unit
+  establishes and owns a generated unit root
+```
+
+The repository is currently normalizing older verbose terminal names to the smallest stable technology/variant names. See [pack modernization](.docs/tasks/pack-modernization/README.md).
+
+## Pack philosophy
+
+Dryv's Runtime IR stays framework-neutral.
+
+Packs are expected to be framework-native.
+
+That means NestJS, Flutter, Spring, Next.js and other ecosystems may intentionally generate very different file/folder structures, tests and assembly patterns.
+
+Dryv consistency means consistent contracts, not identical generated architecture.
 
 ## Official, local or private
 
-Your project chooses its packs explicitly. Official packs from this repo, local packs in your project and private git packs can all target the same frameworks, and Dryv never prefers one over another.
+Projects choose packs explicitly.
+
+Official packs from this repository, local packs and private Git packs use the same contracts. Dryv does not implicitly activate a provider.
 
 ## Using a pack
 
-Declare the collection once in `dryv.yaml`, then activate the pack by path:
+A project declares a pack source and activates a pack explicitly:
 
 ```yaml
 version: dryv/v1alpha1
@@ -24,51 +54,65 @@ version: dryv/v1alpha1
 sources:
   authoring:
     ir: { type: ir, path: dryv.ir.yaml }
+
   packs:
     official:
       repository: https://github.com/dryvcode/packs
       ref: develop
       root: packs
+
 destinations:
-  code:
-    backend: { path: apps/backend }
+  docs:
+    path: generated/docs
+
 authoring:
-  source: { $ref: "#/sources/authoring/ir" }
+  source:
+    $ref: "#/sources/authoring/ir"
+
 packs:
-  entities:
-    source: { $ref: "#/sources/packs/official" }
-    path: inject/persistence/typeorm-entities
-    destination: { $ref: "#/destinations/code/backend" }
+  reference:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/documentation/markdown-reference
+
+    destination:
+      $ref: "#/destinations/docs"
 ```
 
 ## Repository maintenance
 
 The repository avoids parallel sources of truth:
 
-- pack catalogue metadata lives only in each pack's `dryv.pack.yaml`; `catalog.json` is generated and not committed;
-- every pack test uses the same `fixtures/dryv.ir.yaml`;
-- reusable test inputs live under `fixtures/`;
-- exact reusable template/support assets and repeated manifest policy have canonical sources under `shared/`, with synchronized copies/marked regions inside packs so released packs stay standalone;
-- repository pack discovery, pack IDs and release refs come from `scripts/lib/repository.ts`.
+- catalogue metadata is derived from each `dryv.pack.yaml`;
+- every pack test uses the shared `fixtures/dryv.ir.yaml`;
+- reusable fixture inputs live under `fixtures/`;
+- exact portable reusable assets/fragments have canonical sources under `shared/`;
+- discovery, IDs and release refs are centralized in repository tooling.
 
-Useful consistency checks:
+Useful checks:
 
 ```bash
 bun run shared:check
 bun run catalog:check
+bun run test:packs
 ```
 
-See [pack testing](.docs/testing.md) and [folder structure](.docs/folder-structure.md).
+See [pack testing](.docs/testing.md), [folder structure](.docs/folder-structure.md), and [the active repository plan](.docs/plan.md).
+
+## Current work
+
+Current execution is intentionally narrow:
+
+1. finish repository pack identity/name normalization;
+2. then make `inject/backend/nestjs` and `unit/backend/nestjs` the first reference-quality framework pair;
+3. prove their output using the native NestJS/TypeScript toolchain;
+4. only then begin another framework-quality pass.
+
+Track this work in [.docs/tasks/pack-modernization/](.docs/tasks/pack-modernization/README.md).
 
 ## License
 
-- The repository, pack definitions, tooling and tests: [Apache License 2.0](LICENSE).
+- Repository, pack definitions, tooling and tests: [Apache License 2.0](LICENSE).
 - Code-emitting template material under `packs/*/*/*/templates/`: [0BSD](LICENSE-0BSD).
 
-Code that Dryv generates from these packs is yours, under your project's own license.
-
-## Contributing
-
-Active repository work is tracked in [.docs/plan.md](.docs/plan.md) and [.docs/TODO.md](.docs/TODO.md). The scheduled layout migration is in [.docs/planning/pack-layout-refactor.md](.docs/planning/pack-layout-refactor.md); simple pack identity, thin-unit composition and binding compatibility are tracked in [.docs/planning/pack-identity-and-composition.md](.docs/planning/pack-identity-and-composition.md), while compact pack examples, destination output overrides and import addressing are tracked in [.docs/planning/pack-examples-and-placements.md](.docs/planning/pack-examples-and-placements.md). Superseded documents are kept only under `.docs/_archives/`.
-
-Template naming and derived-context conventions: [.docs/template-context.md](.docs/template-context.md).
+Generated code belongs to the consuming project under that project's chosen license.
