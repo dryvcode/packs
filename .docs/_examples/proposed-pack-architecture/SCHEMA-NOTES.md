@@ -5,7 +5,7 @@ Status: **aligned with the latest Dryv design decisions**
 ## Pack manifest
 
 ```yaml
-layout: inject | package | project
+layout: inject | unit
 
 info:
   title: TypeORM
