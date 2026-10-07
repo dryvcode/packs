@@ -12,11 +12,11 @@ Status: Axum backend, reqwest client SDK, SeaORM entities and validator DTOs are
 
 ## Backends
 
-- [x] `package/backend/axum-backend` — implementation present; verification deferred
+- [x] `unit/backend/axum-backend` — implementation present; verification deferred
 - [ ] Actix Web backend
 - [ ] Rocket backend
 - [ ] Poem backend
-- [ ] compare package layout against inject layout for existing Rust workspaces
+- [ ] compare unit ownership against inject contribution for existing Rust workspaces
 - [ ] generate service traits separate from routing
 - [ ] map path/query/body bindings to extractors
 - [ ] map outputs/statuses into responses
@@ -29,7 +29,7 @@ Best initial structural model: `fastapi-backend`.
 ## Persistence
 
 - [ ] Diesel models/schema integration
-- [x] `package/persistence/seaorm-entities` — implementation present; verification deferred
+- [x] `unit/persistence/seaorm-entities` — implementation present; verification deferred
 - [ ] SQLx models
 - [ ] evaluate rbatis as a later ecosystem candidate
 - [ ] map storage names and namespaces
@@ -46,7 +46,7 @@ Primary model: `typeorm-entities`.
 
 ## Validation and schema types
 
-- [x] `package/validation/validator-dtos` — serde schema models + validator derive; verification deferred
+- [x] `unit/validation/validator-dtos` — serde schema models + validator derive; verification deferred
 - [x] validator crate integration
 - [ ] garde integration
 - [x] nested model validation
@@ -64,7 +64,7 @@ Models:
 
 ## Client SDKs
 
-- [x] `package/clients/rust-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/rust-client-sdk` — implementation present; verification deferred
 - [x] reqwest transport
 - [x] serde models
 - [x] typed enums with canonical wire values
