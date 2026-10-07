@@ -1,26 +1,26 @@
-# 02 — Repository move and identity verification
+# 02 — Repository rename/move and identity verification
 
 Status: **blocked by Task 01**
 
 ## Goal
 
-Move and rename every real pack exactly once after repository tooling understands the target identity model.
+Apply the approved identity table from Task 01 once, then make every repository reference consistent.
 
-## Mechanical layout migration
+The repository already uses only:
 
 ```text
-packs/inject/**  -> packs/inject/**
-packs/package/** -> packs/unit/**
-packs/project/** -> packs/unit/**
+packs/inject/**
+packs/unit/**
 ```
 
-Do not keep aliases or duplicate compatibility folders.
+This task finishes pack placement only where Task 01 proves a pack is under the wrong layout, and otherwise focuses on terminal names, keys and references.
 
-## Update with every moved pack
+## For every changed pack
 
-Update all references to the canonical pack ID:
+Update together:
 
-- `dryv.pack.yaml` layout;
+- directory path;
+- `dryv.pack.yaml` `layout` if the role changes;
 - `dryv.pack.yaml` key;
 - Usage fixtures;
 - `dryv.example.yaml`;
@@ -31,45 +31,51 @@ Update all references to the canonical pack ID:
 - source/path references;
 - catalogue expectations;
 - release-tag expectations;
-- docs.
+- active docs.
+
+No compatibility aliases or duplicate old folders.
 
 ## Package identity
 
-Moving a former `package` pack to `unit` does not mean deleting real package identity.
+Layout and ecosystem package identity are separate.
 
-Keep package metadata when the generated unit genuinely has ecosystem package identity, such as:
+Keep package metadata when the generated unit genuinely has a native package identity.
 
-- npm package;
-- Dart package;
-- Python package;
-- Rust crate;
-- Maven/Gradle artifact;
-- other package identities required by native tooling/imports.
-
-Remove artificial package identity only when it existed solely because the old layout required it.
-
-Do not mix that cleanup with unrelated template redesign.
+Do not retain or remove package metadata merely because a pack is under `unit`.
 
 ## Ownership
 
 Managed/scaffold ownership remains resource-level behavior.
 
-The layout move must not silently change which generated files are managed or scaffold-owned.
+A rename/move must not silently change generated ownership.
+
+## Do not redesign frameworks here
+
+This task is intentionally mechanical.
+
+Do not use it to restructure:
+
+- NestJS modules/controllers/services;
+- Flutter layers;
+- Spring packages;
+- Next.js routes;
+- any other generated architecture.
+
+The first framework-quality redesign begins only in Task 03.
 
 ## Required repository assertions
 
-After the migration:
+After completion:
 
 ```text
-packs/package/ does not exist
-packs/project/ does not exist
-all real pack manifests use layout: inject | unit
-all canonical keys are layout-aware
-all fixture/source references use new IDs
-all release refs use new IDs
+only packs/inject and packs/unit exist
+all real manifests use layout: inject | unit
+terminal names follow the approved naming table
+manifest keys are layout-aware
+all fixture/source/shared references use target IDs
+all release refs use target IDs
+no active docs teach superseded IDs
 ```
-
-Search active files for obsolete IDs and fix them.
 
 Historical archive files may retain old names.
 
@@ -82,24 +88,26 @@ bun run shared:check
 bun run catalog:check
 ```
 
-Then, when Dryv Engine is compatible:
+Then:
 
 ```bash
 bun run test:packs
 ```
 
-Fix path/identity failures caused by the migration.
+when the current Dryv Engine is compatible with the migrated contracts.
 
-Do not fix framework-quality issues yet unless they are required to make the structural migration valid.
+Fix identity/path failures caused by this task.
+
+Do not absorb unrelated framework-output failures into this migration.
 
 ## Completion report
 
 Record:
 
-- number of inject packs kept/moved;
-- number of package packs moved to unit;
-- number of project packs moved to unit;
-- renamed pack IDs;
+- packs renamed;
+- packs moved between layouts, if any;
+- keys changed;
 - package identities retained/removed;
-- fixture/shared mapping changes;
-- verification results.
+- fixture/shared mappings changed;
+- stale references removed;
+- repository verification results.
