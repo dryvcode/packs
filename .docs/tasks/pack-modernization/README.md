@@ -10,7 +10,7 @@ The work is intentionally split into two stages:
 
 ```text
 Stage A
-  repository structure + identity only
+  repository identity + naming normalization only
 
 Stage B
   NestJS framework-quality proof
@@ -134,8 +134,8 @@ Tasks must be completed in order unless a documented blocker requires returning 
 
 ### Stage A may change
 
-- pack directories;
-- `layout`;
+- pack directories when a role/name audit requires it;
+- `layout` only when a pack is proven to be under the wrong ownership role;
 - canonical pack keys/IDs;
 - source/path references;
 - catalogue/release identity;
