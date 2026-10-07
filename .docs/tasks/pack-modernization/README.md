@@ -20,17 +20,13 @@ Do not broaden Stage A into framework redesigns, and do not begin other framewor
 
 ## Locked direction
 
-Repository layouts converge from:
-
-```text
-inject | package | project
-```
-
-to:
+The physical repository tree has already converged to:
 
 ```text
 inject | unit
 ```
+
+but the migration is incomplete at the contract/identity layer: some real manifests and repository helpers still encode the former `package | project` layouts. Stage A finishes that reconciliation before any framework-quality redesign.
 
 Meanings:
 
