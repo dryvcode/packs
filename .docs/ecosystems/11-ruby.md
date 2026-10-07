@@ -13,7 +13,7 @@ Status: Sinatra backend, Active Record persistence, dry-validation contracts and
 ## Backends
 
 - [ ] Rails API controllers/routes
-- [x] `package/backend/sinatra-backend` — implementation present; verification deferred
+- [x] `unit/backend/sinatra-backend` — implementation present; verification deferred
 - [ ] Hanami backend
 - [ ] Roda research
 - [x] generated HTTP layer separated from domain/services
@@ -28,7 +28,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/active-record-models` — implementation present; verification deferred
+- [x] `unit/persistence/active-record-models` — implementation present; verification deferred
 - [ ] Sequel models
 - [ ] ROM research
 - [x] primary/generated keys
@@ -45,7 +45,7 @@ Primary model: `typeorm-entities`.
 ## Validation/schema
 
 - [ ] ActiveModel validations
-- [x] `package/validation/dry-validation-contracts` — implementation present; verification deferred
+- [x] `unit/validation/dry-validation-contracts` — implementation present; verification deferred
 - [ ] dry-schema research
 - [x] nested/collection validation
 - [x] enum validation
@@ -57,7 +57,7 @@ Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [x] `package/clients/ruby-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/ruby-client-sdk` — implementation present; verification deferred
 - [x] Net::HTTP baseline
 - [ ] Faraday-backed implementation research
 - [x] typed-ish generated wire models
