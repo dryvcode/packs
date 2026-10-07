@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: clients.swift-client-sdk
-layout: package
+layout: unit
 package:
   name: DryvClient
 

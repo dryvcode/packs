@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.symfony-backend
-layout: package
+layout: unit
 package:
   name: dryv/generated-backend
 

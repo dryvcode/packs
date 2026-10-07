@@ -37,7 +37,7 @@ Example:
 ```json
 {
   "packs": {
-    "package/clients/flutter-api-bridge": {
+    "unit/clients/flutter-api-bridge": {
       "pubspec_overrides.yaml": "dart/pubspec_overrides.yaml"
     }
   }

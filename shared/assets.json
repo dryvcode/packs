@@ -3,9 +3,9 @@
     "packs/inject/persistence/mongoose-models/templates/enums/{enum}/$(name).enum.ts.j2",
     "packs/inject/persistence/typeorm-entities/templates/common/entities/enums/{enum}/$(name).enum.ts.j2",
     "packs/inject/validation/class-validator-dtos/templates/common/dto/enums/{enum}/$(name).enum.ts.j2",
-    "packs/package/clients/next-api-bridge/templates/types/enums/{enum}/$(name).ts.j2",
-    "packs/package/clients/ts-api-client/templates/src/enums/{enum}/$(name).ts.j2",
-    "packs/project/frontend/nextjs-app/templates/lib/types/{enum}/$(name).enum.ts.j2"
+    "packs/unit/clients/next-api-bridge/templates/types/enums/{enum}/$(name).ts.j2",
+    "packs/unit/clients/ts-api-client/templates/src/enums/{enum}/$(name).ts.j2",
+    "packs/unit/frontend/nextjs-app/templates/lib/types/{enum}/$(name).enum.ts.j2"
   ],
   "templates/typescript/export-index.ts.j2": [
     "packs/inject/persistence/mongoose-models/templates/{index}/index.ts.j2",
@@ -15,201 +15,212 @@
   "templates/typescript/export-index.ts.hbs": [
     "packs/inject/backend/nestjs-backend/templates/{feature-index}/index.ts.hbs",
     "packs/inject/backend/nestjs-backend/templates/{root-index}/index.ts.hbs",
-    "packs/project/backend/nestjs-app/templates/src/{feature-index}/index.ts.hbs",
-    "packs/project/backend/nestjs-app/templates/src/{root-index}/index.ts.hbs"
+    "packs/unit/backend/nestjs-app/templates/src/{feature-index}/index.ts.hbs",
+    "packs/unit/backend/nestjs-app/templates/src/{root-index}/index.ts.hbs"
   ],
   "templates/rust/serde-enum.rs.j2": [
-    "packs/package/backend/axum-backend/templates/src/models/{enum}/$(name).rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/models/{enum}/$(name).rs.j2",
-    "packs/package/validation/validator-dtos/templates/src/types/{enum}/$(name).rs.j2",
-    "packs/package/backend/actix-web-backend/templates/src/models/{enum}/$(name).rs.j2"
+    "packs/unit/backend/axum-backend/templates/src/models/{enum}/$(name).rs.j2",
+    "packs/unit/clients/rust-client-sdk/templates/src/models/{enum}/$(name).rs.j2",
+    "packs/unit/validation/validator-dtos/templates/src/types/{enum}/$(name).rs.j2",
+    "packs/unit/backend/actix-web-backend/templates/src/models/{enum}/$(name).rs.j2"
   ],
   "templates/rust/serde-model.rs.j2": [
-    "packs/package/backend/axum-backend/templates/src/models/{model}/$(name).rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/models/{model}/$(name).rs.j2",
-    "packs/package/backend/actix-web-backend/templates/src/models/{model}/$(name).rs.j2"
+    "packs/unit/backend/axum-backend/templates/src/models/{model}/$(name).rs.j2",
+    "packs/unit/clients/rust-client-sdk/templates/src/models/{model}/$(name).rs.j2",
+    "packs/unit/backend/actix-web-backend/templates/src/models/{model}/$(name).rs.j2"
   ],
   "templates/rust/export-mod.rs.j2": [
-    "packs/package/backend/axum-backend/templates/src/models/{models-index}/mod.rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/models/{models-index}/mod.rs.j2",
-    "packs/package/clients/rust-client-sdk/templates/src/operations/{operations-index}/mod.rs.j2",
-    "packs/package/validation/validator-dtos/templates/src/types/{index}/mod.rs.j2",
-    "packs/package/backend/actix-web-backend/templates/src/models/{models-index}/mod.rs.j2",
-    "packs/package/backend/actix-web-backend/templates/src/routes/{routes-index}/mod.rs.j2"
+    "packs/unit/backend/axum-backend/templates/src/models/{models-index}/mod.rs.j2",
+    "packs/unit/clients/rust-client-sdk/templates/src/models/{models-index}/mod.rs.j2",
+    "packs/unit/clients/rust-client-sdk/templates/src/operations/{operations-index}/mod.rs.j2",
+    "packs/unit/validation/validator-dtos/templates/src/types/{index}/mod.rs.j2",
+    "packs/unit/backend/actix-web-backend/templates/src/models/{models-index}/mod.rs.j2",
+    "packs/unit/backend/actix-web-backend/templates/src/routes/{routes-index}/mod.rs.j2"
   ],
   "templates/java/jackson-enum.java.j2": [
-    "packs/package/clients/java-client-sdk/templates/src/main/java/models/{enum}/$(name).java.j2",
-    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{enum}/$(name).java.j2",
-    "packs/package/backend/spring-boot-backend/templates/src/main/java/models/{enum}/$(name).java.j2"
+    "packs/unit/clients/java-client-sdk/templates/src/main/java/models/{enum}/$(name).java.j2",
+    "packs/unit/backend/jakarta-rest-backend/templates/src/main/java/models/{enum}/$(name).java.j2",
+    "packs/unit/backend/spring-boot-backend/templates/src/main/java/models/{enum}/$(name).java.j2"
   ],
   "templates/java/jackson-model.java.j2": [
-    "packs/package/clients/java-client-sdk/templates/src/main/java/models/{model}/$(name).java.j2",
-    "packs/package/backend/jakarta-rest-backend/templates/src/main/java/models/{model}/$(name).java.j2",
-    "packs/package/backend/spring-boot-backend/templates/src/main/java/models/{model}/$(name).java.j2"
+    "packs/unit/clients/java-client-sdk/templates/src/main/java/models/{model}/$(name).java.j2",
+    "packs/unit/backend/jakarta-rest-backend/templates/src/main/java/models/{model}/$(name).java.j2",
+    "packs/unit/backend/spring-boot-backend/templates/src/main/java/models/{model}/$(name).java.j2"
   ],
   "templates/go/go.mod.j2": [
-    "packs/package/clients/go-client-sdk/templates/go.mod.j2",
-    "packs/package/backend/go-net-http-backend/templates/go.mod.j2"
+    "packs/unit/clients/go-client-sdk/templates/go.mod.j2",
+    "packs/unit/backend/go-net-http-backend/templates/go.mod.j2"
   ],
   "templates/go/enum.go.j2": [
-    "packs/package/clients/go-client-sdk/templates/{enum}/$(name)_enum.go.j2",
-    "packs/package/backend/go-net-http-backend/templates/{enum}/$(name)_enum.go.j2",
-    "packs/package/validation/go-validator-dtos/templates/{enum}/$(name)_enum.go.j2",
-    "packs/package/backend/gin-backend/templates/{enum}/$(name)_enum.go.j2"
+    "packs/unit/clients/go-client-sdk/templates/{enum}/$(name)_enum.go.j2",
+    "packs/unit/backend/go-net-http-backend/templates/{enum}/$(name)_enum.go.j2",
+    "packs/unit/validation/go-validator-dtos/templates/{enum}/$(name)_enum.go.j2",
+    "packs/unit/backend/gin-backend/templates/{enum}/$(name)_enum.go.j2"
   ],
   "templates/go/model.go.j2": [
-    "packs/package/clients/go-client-sdk/templates/{model}/$(name)_model.go.j2",
-    "packs/package/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2",
-    "packs/package/backend/gin-backend/templates/{model}/$(name)_model.go.j2"
+    "packs/unit/clients/go-client-sdk/templates/{model}/$(name)_model.go.j2",
+    "packs/unit/backend/go-net-http-backend/templates/{model}/$(name)_model.go.j2",
+    "packs/unit/backend/gin-backend/templates/{model}/$(name)_model.go.j2"
   ],
   "templates/csharp/system-text-json-enum.cs.j2": [
-    "packs/package/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2",
-    "packs/package/backend/aspnet-core-backend/templates/Models/{enum}/$(name).cs.j2",
-    "packs/package/validation/fluentvalidation-dtos/templates/Models/{enum}/$(name).cs.j2"
+    "packs/unit/clients/csharp-client-sdk/templates/Models/{enum}/$(name).cs.j2",
+    "packs/unit/backend/aspnet-core-backend/templates/Models/{enum}/$(name).cs.j2",
+    "packs/unit/validation/fluentvalidation-dtos/templates/Models/{enum}/$(name).cs.j2"
   ],
   "templates/csharp/system-text-json-model.cs.j2": [
-    "packs/package/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2",
-    "packs/package/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2",
-    "packs/package/validation/fluentvalidation-dtos/templates/Models/{dto}/$(name).cs.j2"
+    "packs/unit/clients/csharp-client-sdk/templates/Models/{model}/$(name).cs.j2",
+    "packs/unit/backend/aspnet-core-backend/templates/Models/{model}/$(name).cs.j2",
+    "packs/unit/validation/fluentvalidation-dtos/templates/Models/{dto}/$(name).cs.j2"
   ],
   "templates/python/pydantic-enum.py.j2": [
-    "packs/package/backend/fastapi-backend/templates/models/{enum}/$(name).py.j2",
-    "packs/package/validation/pydantic-models/templates/src/dryv_validation/models/{enum}/$(name).py.j2",
-    "packs/package/clients/python-client-sdk/templates/src/dryv_client/models/{enum}/$(name).py.j2"
+    "packs/unit/backend/fastapi-backend/templates/models/{enum}/$(name).py.j2",
+    "packs/unit/validation/pydantic-models/templates/src/dryv_validation/models/{enum}/$(name).py.j2",
+    "packs/unit/clients/python-client-sdk/templates/src/dryv_client/models/{enum}/$(name).py.j2"
   ],
   "templates/python/pydantic-model.py.j2": [
-    "packs/package/backend/fastapi-backend/templates/models/{model}/$(name).py.j2",
-    "packs/package/validation/pydantic-models/templates/src/dryv_validation/models/{model}/$(name).py.j2",
-    "packs/package/clients/python-client-sdk/templates/src/dryv_client/models/{model}/$(name).py.j2"
+    "packs/unit/backend/fastapi-backend/templates/models/{model}/$(name).py.j2",
+    "packs/unit/validation/pydantic-models/templates/src/dryv_validation/models/{model}/$(name).py.j2",
+    "packs/unit/clients/python-client-sdk/templates/src/dryv_client/models/{model}/$(name).py.j2"
   ],
   "templates/python/pydantic-generic.py.j2": [
-    "packs/package/backend/fastapi-backend/templates/models/{generic}/$(name).py.j2",
-    "packs/package/validation/pydantic-models/templates/src/dryv_validation/models/{generic}/$(name).py.j2",
-    "packs/package/clients/python-client-sdk/templates/src/dryv_client/models/{generic}/$(name).py.j2"
+    "packs/unit/backend/fastapi-backend/templates/models/{generic}/$(name).py.j2",
+    "packs/unit/validation/pydantic-models/templates/src/dryv_validation/models/{generic}/$(name).py.j2",
+    "packs/unit/clients/python-client-sdk/templates/src/dryv_client/models/{generic}/$(name).py.j2"
   ],
   "templates/python/pydantic-index.py.j2": [
-    "packs/package/backend/fastapi-backend/templates/models/{models-index}/__init__.py.j2",
-    "packs/package/validation/pydantic-models/templates/src/dryv_validation/models/{models-index}/__init__.py.j2",
-    "packs/package/clients/python-client-sdk/templates/src/dryv_client/models/{models-index}/__init__.py.j2"
+    "packs/unit/backend/fastapi-backend/templates/models/{models-index}/__init__.py.j2",
+    "packs/unit/validation/pydantic-models/templates/src/dryv_validation/models/{models-index}/__init__.py.j2",
+    "packs/unit/clients/python-client-sdk/templates/src/dryv_client/models/{models-index}/__init__.py.j2"
   ],
   "templates/php/wire-enum.php.j2": [
-    "packs/package/clients/php-client-sdk/templates/src/Models/{enum}/$(name).php.j2",
-    "packs/package/backend/symfony-backend/templates/src/Models/{enum}/$(name).php.j2",
-    "packs/package/validation/symfony-validator-dtos/templates/src/Models/{enum}/$(name).php.j2"
+    "packs/unit/clients/php-client-sdk/templates/src/Models/{enum}/$(name).php.j2",
+    "packs/unit/backend/symfony-backend/templates/src/Models/{enum}/$(name).php.j2",
+    "packs/unit/validation/symfony-validator-dtos/templates/src/Models/{enum}/$(name).php.j2"
   ],
   "templates/php/wire-model.php.j2": [
-    "packs/package/clients/php-client-sdk/templates/src/Models/{model}/$(name).php.j2",
-    "packs/package/backend/symfony-backend/templates/src/Models/{model}/$(name).php.j2",
-    "packs/package/validation/symfony-validator-dtos/templates/src/Models/{dto}/$(name).php.j2"
+    "packs/unit/clients/php-client-sdk/templates/src/Models/{model}/$(name).php.j2",
+    "packs/unit/backend/symfony-backend/templates/src/Models/{model}/$(name).php.j2",
+    "packs/unit/validation/symfony-validator-dtos/templates/src/Models/{dto}/$(name).php.j2"
   ],
   "templates/swift/json-value.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2",
-    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/DryvJSONValue.swift.j2",
-    "packs/package/persistence/fluent-models/templates/Sources/DryvPersistence/DryvJSONValue.swift.j2"
+    "packs/unit/clients/swift-client-sdk/templates/Sources/DryvClient/DryvJSONValue.swift.j2",
+    "packs/unit/validation/swift-codable-validation/templates/Sources/DryvValidation/DryvJSONValue.swift.j2",
+    "packs/unit/backend/vapor-backend/templates/Sources/DryvBackend/DryvJSONValue.swift.j2",
+    "packs/unit/persistence/fluent-models/templates/Sources/DryvPersistence/DryvJSONValue.swift.j2"
   ],
   "templates/swift/wire-enum.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{enum}/$(name).swift.j2",
-    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/Models/{enum}/$(name).swift.j2"
+    "packs/unit/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{enum}/$(name).swift.j2",
+    "packs/unit/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{enum}/$(name).swift.j2",
+    "packs/unit/backend/vapor-backend/templates/Sources/DryvBackend/Models/{enum}/$(name).swift.j2"
   ],
   "templates/swift/wire-model.swift.j2": [
-    "packs/package/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{model}/$(name).swift.j2",
-    "packs/package/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{model}/$(name).swift.j2",
-    "packs/package/backend/vapor-backend/templates/Sources/DryvBackend/Models/{model}/$(name).swift.j2"
+    "packs/unit/clients/swift-client-sdk/templates/Sources/DryvClient/Models/{model}/$(name).swift.j2",
+    "packs/unit/validation/swift-codable-validation/templates/Sources/DryvValidation/Models/{model}/$(name).swift.j2",
+    "packs/unit/backend/vapor-backend/templates/Sources/DryvBackend/Models/{model}/$(name).swift.j2"
   ],
   "templates/kotlin/kotlinx-enum.kt.j2": [
-    "packs/package/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
-    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
-    "packs/package/validation/kotlinx-validation/templates/src/main/kotlin/models/{enum}/$(name).kt.j2"
+    "packs/unit/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
+    "packs/unit/backend/ktor-backend/templates/src/main/kotlin/models/{enum}/$(name).kt.j2",
+    "packs/unit/validation/kotlinx-validation/templates/src/main/kotlin/models/{enum}/$(name).kt.j2"
   ],
   "templates/kotlin/kotlinx-model.kt.j2": [
-    "packs/package/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
-    "packs/package/backend/ktor-backend/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
-    "packs/package/validation/kotlinx-validation/templates/src/main/kotlin/models/{dto}/$(name).kt.j2"
+    "packs/unit/clients/kotlin-client-sdk/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
+    "packs/unit/backend/ktor-backend/templates/src/main/kotlin/models/{model}/$(name).kt.j2",
+    "packs/unit/validation/kotlinx-validation/templates/src/main/kotlin/models/{dto}/$(name).kt.j2"
   ],
   "templates/ruby/wire-enum.rb.j2": [
-    "packs/package/clients/ruby-client-sdk/templates/lib/models/{enum}/$(name).rb.j2",
-    "packs/package/backend/sinatra-backend/templates/lib/models/{enum}/$(name).rb.j2",
-    "packs/package/validation/dry-validation-contracts/templates/lib/models/{enum}/$(name).rb.j2"
+    "packs/unit/clients/ruby-client-sdk/templates/lib/models/{enum}/$(name).rb.j2",
+    "packs/unit/backend/sinatra-backend/templates/lib/models/{enum}/$(name).rb.j2",
+    "packs/unit/validation/dry-validation-contracts/templates/lib/models/{enum}/$(name).rb.j2"
   ],
   "templates/ruby/wire-model.rb.j2": [
-    "packs/package/clients/ruby-client-sdk/templates/lib/models/{model}/$(name).rb.j2",
-    "packs/package/backend/sinatra-backend/templates/lib/models/{model}/$(name).rb.j2",
-    "packs/package/validation/dry-validation-contracts/templates/lib/models/{dto}/$(name).rb.j2"
+    "packs/unit/clients/ruby-client-sdk/templates/lib/models/{model}/$(name).rb.j2",
+    "packs/unit/backend/sinatra-backend/templates/lib/models/{model}/$(name).rb.j2",
+    "packs/unit/validation/dry-validation-contracts/templates/lib/models/{dto}/$(name).rb.j2"
   ],
   "templates/elixir/wire-enum.ex.j2": [
-    "packs/package/clients/elixir-client-sdk/templates/lib/models/{enum}/$(name).ex.j2",
-    "packs/package/validation/ecto-changesets/templates/lib/models/{enum}/$(name).ex.j2",
-    "packs/package/backend/phoenix-backend/templates/lib/models/{enum}/$(name).ex.j2"
+    "packs/unit/clients/elixir-client-sdk/templates/lib/models/{enum}/$(name).ex.j2",
+    "packs/unit/validation/ecto-changesets/templates/lib/models/{enum}/$(name).ex.j2",
+    "packs/unit/backend/phoenix-backend/templates/lib/models/{enum}/$(name).ex.j2"
   ],
   "templates/elixir/wire-model.ex.j2": [
-    "packs/package/clients/elixir-client-sdk/templates/lib/models/{model}/$(name).ex.j2",
-    "packs/package/validation/ecto-changesets/templates/lib/models/{model}/$(name).ex.j2",
-    "packs/package/backend/phoenix-backend/templates/lib/models/{model}/$(name).ex.j2"
+    "packs/unit/clients/elixir-client-sdk/templates/lib/models/{model}/$(name).ex.j2",
+    "packs/unit/validation/ecto-changesets/templates/lib/models/{model}/$(name).ex.j2",
+    "packs/unit/backend/phoenix-backend/templates/lib/models/{model}/$(name).ex.j2"
   ],
   "templates/cpp/wire-enum.hpp.j2": [
-    "packs/package/clients/cpp-client-sdk/templates/include/dryv_client/models/{enum}/$(name).hpp.j2",
-    "packs/package/validation/cpp-validation/templates/include/dryv_validation/models/{enum}/$(name).hpp.j2",
-    "packs/package/backend/crow-backend/templates/include/dryv_backend/models/{enum}/$(name).hpp.j2"
+    "packs/unit/clients/cpp-client-sdk/templates/include/dryv_client/models/{enum}/$(name).hpp.j2",
+    "packs/unit/validation/cpp-validation/templates/include/dryv_validation/models/{enum}/$(name).hpp.j2",
+    "packs/unit/backend/crow-backend/templates/include/dryv_backend/models/{enum}/$(name).hpp.j2"
   ],
   "templates/cpp/wire-model.hpp.j2": [
-    "packs/package/clients/cpp-client-sdk/templates/include/dryv_client/models/{model}/$(name).hpp.j2",
-    "packs/package/validation/cpp-validation/templates/include/dryv_validation/models/{model}/$(name).hpp.j2",
-    "packs/package/backend/crow-backend/templates/include/dryv_backend/models/{model}/$(name).hpp.j2"
+    "packs/unit/clients/cpp-client-sdk/templates/include/dryv_client/models/{model}/$(name).hpp.j2",
+    "packs/unit/validation/cpp-validation/templates/include/dryv_validation/models/{model}/$(name).hpp.j2",
+    "packs/unit/backend/crow-backend/templates/include/dryv_backend/models/{model}/$(name).hpp.j2"
   ],
   "templates/json-schema/schema.json.j2": [
-    "packs/package/validation/json-schema/templates/schemas/{schema}/$(name).schema.json.j2",
-    "packs/package/documentation/openapi/templates/schemas/{schema}/$(name).schema.json.j2"
+    "packs/unit/validation/json-schema/templates/schemas/{schema}/$(name).schema.json.j2",
+    "packs/unit/documentation/openapi/templates/schemas/{schema}/$(name).schema.json.j2"
   ],
   "templates/scala/wire-value.scala.j2": [
-    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/DryvWire.scala.j2",
-    "packs/package/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/DryvWire.scala.j2",
-    "packs/package/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/DryvWire.scala.j2"
+    "packs/unit/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/DryvWire.scala.j2",
+    "packs/unit/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/DryvWire.scala.j2",
+    "packs/unit/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/DryvWire.scala.j2"
   ],
   "templates/scala/circe-enum.scala.j2": [
-    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{enum}/$(name).scala.j2",
-    "packs/package/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/{enum}/$(name).scala.j2",
-    "packs/package/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/{enum}/$(name).scala.j2"
+    "packs/unit/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{enum}/$(name).scala.j2",
+    "packs/unit/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/{enum}/$(name).scala.j2",
+    "packs/unit/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/{enum}/$(name).scala.j2"
   ],
   "templates/scala/circe-model.scala.j2": [
-    "packs/package/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{model}/$(name).scala.j2",
-    "packs/package/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/{model}/$(name).scala.j2",
-    "packs/package/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/{model}/$(name).scala.j2"
+    "packs/unit/clients/scala-client-sdk/templates/src/main/scala/dryv/generated/client/models/{model}/$(name).scala.j2",
+    "packs/unit/validation/scala-circe-validation/templates/src/main/scala/dryv/generated/validation/models/{model}/$(name).scala.j2",
+    "packs/unit/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/{model}/$(name).scala.j2"
   ],
   "templates/typescript/nestjs-schema-validation.pipe.ts": [
     "packs/inject/backend/nestjs-backend/templates/common/server/validation/schema-validation.pipe.ts",
-    "packs/project/backend/nestjs-app/templates/src/common/server/validation/schema-validation.pipe.ts"
+    "packs/unit/backend/nestjs-app/templates/src/common/server/validation/schema-validation.pipe.ts"
   ],
   "templates/typescript/nestjs-controller.ts.j2": [
     "packs/inject/backend/nestjs-backend/templates/{controller}/$(name).controller.ts.j2",
-    "packs/project/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
+    "packs/unit/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
   ],
   "templates/haskell/aeson-enum.hs.j2": [
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
-    "packs/package/validation/haskell-validation/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
-    "packs/package/backend/scotty-backend/templates/src/Dryv/Models/{enum}/$(name).hs.j2"
+    "packs/unit/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
+    "packs/unit/validation/haskell-validation/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
+    "packs/unit/backend/scotty-backend/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
+    "packs/unit/validation/aeson-validation/templates/src/Dryv/Generated/Validation/Models/{enum}/$(name).hs.j2"
   ],
   "templates/haskell/aeson-model.hs.j2": [
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/Models/{model}/$(name).hs.j2",
-    "packs/package/validation/haskell-validation/templates/src/Dryv/Models/{model}/$(name).hs.j2",
-    "packs/package/backend/scotty-backend/templates/src/Dryv/Models/{model}/$(name).hs.j2"
+    "packs/unit/clients/haskell-client-sdk/templates/src/Dryv/Models/{model}/$(name).hs.j2",
+    "packs/unit/validation/haskell-validation/templates/src/Dryv/Models/{model}/$(name).hs.j2",
+    "packs/unit/backend/scotty-backend/templates/src/Dryv/Models/{model}/$(name).hs.j2"
   ],
   "templates/haskell/export-index.hs.j2": [
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/{models-index}/Models.hs.j2",
-    "packs/package/clients/haskell-client-sdk/templates/src/Dryv/{operations-index}/Operations.hs.j2",
-    "packs/package/validation/haskell-validation/templates/src/Dryv/{models-index}/Models.hs.j2",
-    "packs/package/backend/scotty-backend/templates/src/Dryv/{models-index}/Models.hs.j2",
-    "packs/package/backend/scotty-backend/templates/src/Dryv/{routes-index}/Routes.hs.j2"
+    "packs/unit/clients/haskell-client-sdk/templates/src/Dryv/{models-index}/Models.hs.j2",
+    "packs/unit/clients/haskell-client-sdk/templates/src/Dryv/{operations-index}/Operations.hs.j2",
+    "packs/unit/validation/haskell-validation/templates/src/Dryv/{models-index}/Models.hs.j2",
+    "packs/unit/backend/scotty-backend/templates/src/Dryv/{models-index}/Models.hs.j2",
+    "packs/unit/backend/scotty-backend/templates/src/Dryv/{routes-index}/Routes.hs.j2"
   ],
   "templates/ocaml/yojson-enum.ml.j2": [
-    "packs/package/clients/ocaml-client-sdk/templates/lib/models/{enum}/$(name).ml.j2",
-    "packs/package/validation/yojson-validation/templates/lib/models/{enum}/$(name).ml.j2",
-    "packs/package/backend/cohttp-backend/templates/lib/models/{enum}/$(name).ml.j2"
+    "packs/unit/clients/ocaml-client-sdk/templates/lib/models/{enum}/$(name).ml.j2",
+    "packs/unit/validation/yojson-validation/templates/lib/models/{enum}/$(name).ml.j2",
+    "packs/unit/backend/cohttp-backend/templates/lib/models/{enum}/$(name).ml.j2"
   ],
   "templates/ocaml/yojson-model.ml.j2": [
-    "packs/package/clients/ocaml-client-sdk/templates/lib/models/{model}/$(name).ml.j2",
-    "packs/package/validation/yojson-validation/templates/lib/models/{model}/$(name).ml.j2",
-    "packs/package/backend/cohttp-backend/templates/lib/models/{model}/$(name).ml.j2"
+    "packs/unit/clients/ocaml-client-sdk/templates/lib/models/{model}/$(name).ml.j2",
+    "packs/unit/validation/yojson-validation/templates/lib/models/{model}/$(name).ml.j2",
+    "packs/unit/backend/cohttp-backend/templates/lib/models/{model}/$(name).ml.j2"
+  ],
+  "templates/scala/build.properties.j2": [
+    "packs/unit/backend/http4s-backend/templates/project/build.properties.j2",
+    "packs/unit/clients/scala-client-sdk/templates/project/build.properties.j2",
+    "packs/unit/persistence/slick-tables/templates/project/build.properties.j2",
+    "packs/unit/validation/scala-circe-validation/templates/project/build.properties.j2"
+  ],
+  "templates/scala/build.sbt.j2": [
+    "packs/unit/clients/scala-client-sdk/templates/build.sbt.j2",
+    "packs/unit/validation/scala-circe-validation/templates/build.sbt.j2"
   ]
 }

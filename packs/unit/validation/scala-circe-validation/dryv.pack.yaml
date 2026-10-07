@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: validation.scala-circe-validation
-layout: package
+layout: unit
 package:
   name: dryv-scala-validation
 

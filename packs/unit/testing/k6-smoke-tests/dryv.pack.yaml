@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: testing.k6-smoke-tests
-layout: package
+layout: unit
 package:
   name: dryv-k6-smoke
 

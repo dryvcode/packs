@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: testing.bruno-collection
-layout: package
+layout: unit
 package:
   name: dryv-bruno
 

@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: testing.http-smoke-tests
-layout: package
+layout: unit
 package:
   name: dryv-http-smoke
 

@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.reitit-backend
-layout: package
+layout: unit
 package:
   name: dryv-generated-backend
 

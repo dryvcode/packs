@@ -3,11 +3,11 @@ import { isAbsolute, join, resolve } from "node:path";
 
 export const REPO = resolve(import.meta.dir, "../..");
 export const PACKS = join(REPO, "packs");
-export const FIXTURES = join(REPO, "fixtures");
 export const SHARED = join(REPO, "shared");
+export const FIXTURES = join(SHARED, "fixtures");
 export const REPOSITORY_URL = "https://github.com/dryvcode/packs";
 
-export type PackLayout = "inject" | "package" | "project";
+export type PackLayout = "inject" | "unit";
 
 export function packIds(): string[] {
   const found: string[] = [];
@@ -32,7 +32,7 @@ export function parsePackId(id: string): { layout: PackLayout; purpose: string; 
   const parts = id.split("/");
   if (
     parts.length !== 3 ||
-    !["inject", "package", "project"].includes(parts[0]) ||
+    !["inject", "unit"].includes(parts[0]) ||
     !parts[1] ||
     !parts[2]
   ) {

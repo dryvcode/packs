@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.cohttp-backend
-layout: package
+layout: unit
 package:
   name: dryv-cohttp-backend
 

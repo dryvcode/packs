@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: clients.haskell-client-sdk
-layout: package
+layout: unit
 package:
   name: dryv-haskell-client
 

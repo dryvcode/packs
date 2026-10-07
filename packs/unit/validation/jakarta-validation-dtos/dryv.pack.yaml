@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: validation.jakarta-validation-dtos
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs/artifact_id" }
 

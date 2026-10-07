@@ -48,7 +48,7 @@ These are not implementation priorities. They exist so the ecosystem map does no
 - [ ] Cohttp client/server research
 - [ ] Yojson models
 - [ ] validation strategy
-- [ ] Dune package/project layout
+- [ ] Dune unit layout
 - [ ] typed client SDK research
 
 ## Zig
@@ -56,7 +56,7 @@ These are not implementation priorities. They exist so the ecosystem map does no
 - [ ] HTTP client SDK feasibility
 - [ ] server framework landscape audit
 - [ ] JSON model mapping
-- [ ] package/project structure
+- [ ] unit structure
 - [ ] C interop client generation research
 
 ## Lua

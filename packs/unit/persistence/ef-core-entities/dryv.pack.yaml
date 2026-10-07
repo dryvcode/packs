@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: persistence.ef-core-entities
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs.project_name" }
 

@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.sinatra-backend
-layout: package
+layout: unit
 package:
   name: dryv-sinatra-backend
 

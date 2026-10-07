@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: clients.flutter-api-bridge
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }
   import_root: lib

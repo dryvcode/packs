@@ -9,17 +9,17 @@
       "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
       "packs/inject/validation/joi-schemas/dryv.pack.yaml",
       "packs/inject/validation/zod-schemas/dryv.pack.yaml",
-      "packs/package/clients/ts-api-client/dryv.pack.yaml",
-      "packs/project/frontend/nextjs-app/dryv.pack.yaml",
-      "packs/project/frontend/react-native-app/dryv.pack.yaml",
-      "packs/project/backend/nestjs-app/dryv.pack.yaml"
+      "packs/unit/clients/ts-api-client/dryv.pack.yaml",
+      "packs/unit/frontend/nextjs-app/dryv.pack.yaml",
+      "packs/unit/frontend/react-native-app/dryv.pack.yaml",
+      "packs/unit/backend/nestjs-app/dryv.pack.yaml"
     ]
   },
   "manifests/dart-tool.yaml": {
     "marker": "dart-tool",
     "targets": [
-      "packs/package/clients/flutter-api-bridge/dryv.pack.yaml",
-      "packs/project/frontend/flutter-app/dryv.pack.yaml"
+      "packs/unit/clients/flutter-api-bridge/dryv.pack.yaml",
+      "packs/unit/frontend/flutter-app/dryv.pack.yaml"
     ]
   },
   "manifests/js-prettier-actions.yaml": {
@@ -31,24 +31,24 @@
       "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
       "packs/inject/validation/joi-schemas/dryv.pack.yaml",
       "packs/inject/validation/zod-schemas/dryv.pack.yaml",
-      "packs/project/backend/nestjs-app/dryv.pack.yaml"
+      "packs/unit/backend/nestjs-app/dryv.pack.yaml"
     ]
   },
   "manifests/js-prettier-tsx-actions.yaml": {
     "marker": "js-prettier-tsx-actions",
     "targets": [
       "packs/inject/frontend/react-crud-forms/dryv.pack.yaml",
-      "packs/project/frontend/nextjs-app/dryv.pack.yaml"
+      "packs/unit/frontend/nextjs-app/dryv.pack.yaml"
     ]
   },
   "manifests/go-actions.yaml": {
     "marker": "go-actions",
     "targets": [
-      "packs/package/clients/go-client-sdk/dryv.pack.yaml",
-      "packs/package/backend/go-net-http-backend/dryv.pack.yaml",
-      "packs/package/validation/go-validator-dtos/dryv.pack.yaml",
-      "packs/package/persistence/gorm-entities/dryv.pack.yaml",
-      "packs/package/backend/gin-backend/dryv.pack.yaml"
+      "packs/unit/clients/go-client-sdk/dryv.pack.yaml",
+      "packs/unit/backend/go-net-http-backend/dryv.pack.yaml",
+      "packs/unit/validation/go-validator-dtos/dryv.pack.yaml",
+      "packs/unit/persistence/gorm-entities/dryv.pack.yaml",
+      "packs/unit/backend/gin-backend/dryv.pack.yaml"
     ]
   }
 }

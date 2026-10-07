@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: validation.json-schema
-layout: package
+layout: unit
 package:
   name: dryv-json-schema
 

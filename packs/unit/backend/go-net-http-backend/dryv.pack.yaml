@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.go-net-http-backend
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs.package_name" }
 

@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: backend.fastapi-backend
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }
 

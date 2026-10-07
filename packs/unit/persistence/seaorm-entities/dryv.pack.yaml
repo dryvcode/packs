@@ -1,6 +1,6 @@
 version: dryv.pack/v1alpha1
 key: persistence.seaorm-entities
-layout: package
+layout: unit
 package:
   name: { $ref: "#/inputs.crate_name" }
 

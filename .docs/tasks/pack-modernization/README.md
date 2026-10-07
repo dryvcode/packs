@@ -26,7 +26,7 @@ The physical repository tree has already converged to:
 inject | unit
 ```
 
-but the migration is incomplete at the contract/identity layer: some real manifests and repository helpers still encode the former `package | project` layouts. Stage A finishes that reconciliation before any framework-quality redesign.
+but the migration is incomplete at the contract/identity layer: some real manifests and repository helpers still encode the former root-owning layout names. Stage A finishes that reconciliation before any framework-quality redesign.
 
 Meanings:
 
@@ -80,10 +80,10 @@ inject/persistence/typeorm-entities
 inject/validation/zod-schemas
 → inject/validation/zod
 
-package/clients/dart-client-sdk
+unit/clients/dart-client-sdk
 → unit/clients/dart
 
-project/backend/nestjs-app
+unit/backend/nestjs-app
 → unit/backend/nestjs
 ```
 

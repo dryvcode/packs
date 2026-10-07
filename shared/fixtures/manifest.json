@@ -1,9 +1,9 @@
 {
   "packs": {
-    "package/clients/flutter-api-bridge": {
+    "unit/clients/flutter-api-bridge": {
       "pubspec_overrides.yaml": "dart/pubspec_overrides.yaml"
     },
-    "project/frontend/flutter-app": {
+    "unit/frontend/flutter-app": {
       "pubspec_overrides.yaml": "dart/pubspec_overrides.yaml"
     }
   }

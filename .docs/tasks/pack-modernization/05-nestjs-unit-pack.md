@@ -21,7 +21,7 @@ It should own framework-native root artifacts verified in Task 03, such as:
 - bootstrap/main entrypoint;
 - root application module;
 - Nest/TypeScript configuration;
-- package/project manifest when appropriate;
+- unit manifest when appropriate;
 - root test/e2e setup where appropriate.
 
 It must not duplicate feature controllers/services/modules already produced by `inject/backend/nestjs`.
