@@ -12,7 +12,7 @@ Status: Swift URLSession client, standalone Codable validation, Vapor backend an
 
 ## Client SDKs
 
-- [x] `package/clients/swift-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/swift-client-sdk` — implementation present; verification deferred
 - [x] URLSession baseline transport
 - [x] Codable models and canonical enum wrappers
 - [x] typed async operations
@@ -30,7 +30,7 @@ Models:
 
 ## Models and validation
 
-- [x] `package/validation/swift-codable-validation`
+- [x] `unit/validation/swift-codable-validation`
 - [x] standalone Codable model package
 - [x] generated validation helpers from Dryv constraints
 - [x] canonical scalar enum-wrapper strategy
@@ -44,7 +44,7 @@ Models:
 
 ## Backend
 
-- [x] `package/backend/vapor-backend` — implementation present; verification deferred
+- [x] `unit/backend/vapor-backend` — implementation present; verification deferred
 - [ ] Hummingbird backend research
 - [x] generated routes separated from service protocols
 - [x] request/response Codable models
@@ -56,7 +56,7 @@ Primary model: `fastapi-backend`.
 
 ## Persistence
 
-- [x] `package/persistence/fluent-models` — implementation present; verification deferred
+- [x] `unit/persistence/fluent-models` — implementation present; verification deferred
 - [ ] GRDB research
 - [x] single/composite primary identifiers
 - [x] system integer and UUID identifier strategies
