@@ -16,7 +16,7 @@ Packs live at:
 packs/<layout>/<purpose>/<name>
 ```
 
-with two layouts:
+with the target two-layout model:
 
 ```text
 inject
@@ -25,6 +25,8 @@ inject
 unit
   establishes and owns a generated unit root
 ```
+
+The physical repository already uses `inject/` and `unit/`, while some manifests and identity tooling are still being reconciled from the former layout model. Track that migration in the active modernization tasks.
 
 The repository is currently normalizing older verbose terminal names to the smallest stable technology/variant names. See [pack modernization](.docs/tasks/pack-modernization/README.md).
 
