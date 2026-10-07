@@ -27,7 +27,7 @@ Status: FastAPI backend, standalone Pydantic models, SQLAlchemy persistence and 
 Models:
 
 - `fastapi-backend`
-- `nestjs-backend`
+- `nestjs`
 
 ## Persistence
 

@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.ktor-backend
+key: unit.backend.ktor-backend
 layout: unit
 package:
   name: dryv-ktor-backend

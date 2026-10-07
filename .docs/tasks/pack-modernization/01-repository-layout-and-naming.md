@@ -15,7 +15,7 @@ packs/unit/**
 
 Known transition state to reconcile in this task:
 
-- some `unit/**` manifests still declare `layout: package` or `layout: project`;
+- some `unit/**` manifests still declare `layout: unit` or `layout: unit`;
 - manifest keys still use the older non-layout-aware identity style;
 - repository helpers may still validate `inject | package | project`;
 - active source/fixture/shared references must be audited against the physical IDs.
@@ -97,7 +97,7 @@ when removing them does not lose meaning.
 Representative candidates currently visible in the repository:
 
 ```text
-inject/backend/nestjs-backend
+inject/backend/nestjs
 → inject/backend/nestjs
 
 inject/persistence/typeorm-entities
@@ -115,7 +115,7 @@ inject/validation/joi-schemas
 inject/validation/class-validator-dtos
 → inject/validation/class-validator
 
-unit/backend/nestjs-app
+unit/backend/nestjs
 → unit/backend/nestjs
 
 unit/backend/fastapi-backend

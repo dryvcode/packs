@@ -1,19 +1,18 @@
 version: dryv.pack/v1alpha1
-key: backend.nestjs-app
-layout: unit
+key: inject.backend.nestjs
+layout: inject
 source: templates
 
 info:
-  title: NestJS Application
-  version: 0.1.0
-  description: Generates an editable NestJS application shell plus generated HTTP controllers composed with bound validation and persistence packs.
-
+  title: NestJS Backend Adapter
+  version: 0.2.0
+  description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
 catalog:
   purpose: backend
-  summary: NestJS project shell with generated controllers and explicit validation/persistence bindings.
+  summary: NestJS feature controllers, services and modules for HTTP operations.
   languages: [typescript]
   frameworks: [nestjs]
-  tags: [backend, http, project, nestjs]
+  tags: [backend, rest, http, nestjs]
 
 plugins:
   - name: handlebars
@@ -21,26 +20,20 @@ plugins:
   - name: jinja
     extensions: [.j2]
 
-inputs:
-  package_name:
-    type: string
-    default: dryv-nest-app
-    description: npm package name written to package.json.
-
 needs:
   schema.validation: { required: true }
   schema.persistence: { required: false }
 
 selections:
-  controllers:
+  features:
     subject: operation
     filter:
       all: { facet: http }
     scope: collects.feature
 
 templates:
-  controller:
-    $ref: "#/selections/controllers"
+  feature:
+    $ref: '#/selections/features'
     output:
       name: $(feature.name.kebab)
       path:
@@ -50,9 +43,10 @@ templates:
         controller: $(group.name.pascal)$(feature.name.pascal)Controller
         service: $(group.name.pascal)$(feature.name.pascal)Service
         module: $(group.name.pascal)$(feature.name.pascal)Module
+      symbol: $(group.name.pascal)$(feature.name.pascal)Module
     imports:
-      - $ref: "#/needs/schema.validation"
-      - $ref: "#/needs/schema.persistence"
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
 
   feature-index:
     output:
@@ -61,11 +55,15 @@ templates:
         - $(feature.name.kebab)
     barrel: each
     exports:
-      - $ref: "#/templates/controller"
+      - $ref: '#/templates/feature'
 
   root-index:
     exports:
-      - $ref: "#/templates/feature-index"
+      - $ref: '#/templates/feature-index'
+
+provides:
+  operation.server:
+    $ref: '#/templates/feature'
 
 # shared:js-package-manager:start
 choose:
@@ -74,16 +72,13 @@ choose:
 
 dependencies:
   runtime:
-    "@nestjs/common": ^11
-    "@nestjs/core": ^11
-    "@nestjs/platform-express": ^11
-    "@nestjs/typeorm": ^11
+    '@nestjs/common': ^11
+    '@nestjs/core': ^11
+    '@nestjs/typeorm': ^11
     reflect-metadata: ^0.2
     rxjs: ^7
   dev:
-    "@types/node": ^24
     prettier: "*"
-    typescript: ^5.9
 
 # shared:js-prettier-actions:start
 actions:

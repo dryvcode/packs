@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.dry-validation-contracts
+key: unit.validation.dry-validation-contracts
 layout: unit
 package:
   name: dryv-ruby-validation

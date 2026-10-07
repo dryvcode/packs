@@ -25,7 +25,7 @@ Status: Symfony backend, Doctrine ORM persistence, Symfony Validator DTOs and Gu
 
 Models:
 
-- `nestjs-backend`
+- `nestjs`
 - `fastapi-backend`
 
 ## Persistence

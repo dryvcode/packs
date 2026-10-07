@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.cpp-client-sdk
+key: unit.clients.cpp-client-sdk
 layout: unit
 package:
   name: dryv_cpp_client

@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.fluent-models
+key: unit.persistence.fluent-models
 layout: unit
 package:
   name: DryvPersistence

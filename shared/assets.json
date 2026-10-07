@@ -13,10 +13,8 @@
     "packs/inject/validation/zod-schemas/templates/{index}/index.ts.j2"
   ],
   "templates/typescript/export-index.ts.hbs": [
-    "packs/inject/backend/nestjs-backend/templates/{feature-index}/index.ts.hbs",
-    "packs/inject/backend/nestjs-backend/templates/{root-index}/index.ts.hbs",
-    "packs/unit/backend/nestjs-app/templates/src/{feature-index}/index.ts.hbs",
-    "packs/unit/backend/nestjs-app/templates/src/{root-index}/index.ts.hbs"
+    "packs/inject/backend/nestjs/templates/{feature-index}/index.ts.hbs",
+    "packs/inject/backend/nestjs/templates/{root-index}/index.ts.hbs"
   ],
   "templates/rust/serde-enum.rs.j2": [
     "packs/unit/backend/axum-backend/templates/src/models/{enum}/$(name).rs.j2",
@@ -178,12 +176,7 @@
     "packs/unit/backend/http4s-backend/templates/src/main/scala/dryv/generated/backend/models/{model}/$(name).scala.j2"
   ],
   "templates/typescript/nestjs-schema-validation.pipe.ts": [
-    "packs/inject/backend/nestjs-backend/templates/common/server/validation/schema-validation.pipe.ts",
-    "packs/unit/backend/nestjs-app/templates/src/common/server/validation/schema-validation.pipe.ts"
-  ],
-  "templates/typescript/nestjs-controller.ts.j2": [
-    "packs/inject/backend/nestjs-backend/templates/{controller}/$(name).controller.ts.j2",
-    "packs/unit/backend/nestjs-app/templates/src/{controller}/$(name).controller.ts.j2"
+    "packs/inject/backend/nestjs/templates/common/server/validation/schema-validation.pipe.ts"
   ],
   "templates/haskell/aeson-enum.hs.j2": [
     "packs/unit/clients/haskell-client-sdk/templates/src/Dryv/Models/{enum}/$(name).hs.j2",
@@ -222,5 +215,8 @@
   "templates/scala/build.sbt.j2": [
     "packs/unit/clients/scala-client-sdk/templates/build.sbt.j2",
     "packs/unit/validation/scala-circe-validation/templates/build.sbt.j2"
+  ],
+  "templates/typescript/nestjs-feature-module.ts.j2": [
+    "packs/inject/backend/nestjs/templates/{feature}/$(name).module.ts.j2"
   ]
 }

@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.aspnet-core-backend
+key: unit.backend.aspnet-core-backend
 layout: unit
 package:
   name: { $ref: "#/inputs.project_name" }

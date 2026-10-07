@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.cpp-validation
+key: unit.validation.cpp-validation
 layout: unit
 package:
   name: dryv_cpp_validation

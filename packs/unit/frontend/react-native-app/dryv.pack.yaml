@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: frontend.react-native-app
+key: unit.frontend.react-native-app
 layout: unit
 source: templates
 

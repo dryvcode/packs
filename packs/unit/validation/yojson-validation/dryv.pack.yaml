@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.yojson-validation
+key: unit.validation.yojson-validation
 layout: unit
 package:
   name: dryv-yojson-validation

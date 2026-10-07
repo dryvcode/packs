@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.mongoose-models
+key: inject.persistence.mongoose-models
 source: templates
 
 info:

@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: testing.schema-examples
+key: inject.testing.schema-examples
 source: templates
 
 info:

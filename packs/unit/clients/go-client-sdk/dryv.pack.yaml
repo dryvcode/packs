@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.go-client-sdk
+key: unit.clients.go-client-sdk
 layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }

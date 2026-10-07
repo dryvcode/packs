@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.csharp-client-sdk
+key: unit.clients.csharp-client-sdk
 layout: unit
 package:
   name: { $ref: "#/inputs.project_name" }

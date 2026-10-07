@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.clojure-client-sdk
+key: unit.clients.clojure-client-sdk
 layout: unit
 package:
   name: dryv-generated-client

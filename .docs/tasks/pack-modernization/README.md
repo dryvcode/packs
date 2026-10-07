@@ -71,7 +71,7 @@ when removing the suffix does not lose meaning.
 Examples:
 
 ```text
-inject/backend/nestjs-backend
+inject/backend/nestjs
 → inject/backend/nestjs
 
 inject/persistence/typeorm-entities
@@ -83,7 +83,7 @@ inject/validation/zod-schemas
 unit/clients/dart-client-sdk
 → unit/clients/dart
 
-unit/backend/nestjs-app
+unit/backend/nestjs
 → unit/backend/nestjs
 ```
 

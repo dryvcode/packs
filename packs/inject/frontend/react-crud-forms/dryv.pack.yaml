@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: frontend.react-crud-forms
+key: inject.frontend.react-crud-forms
 source: templates
 
 info:

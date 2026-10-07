@@ -158,7 +158,8 @@ async function main(): Promise<number> {
       continue;
     }
 
-    const generated = run([...CLI, "generate", "--yes", "--api", API_URL], project);
+    const trusted = run([...CLI, "trust", "--yes"], project);
+    const generated = trusted === 0 ? run([...CLI, "generate", "--yes", "--api", API_URL], project) : trusted;
     const checked = generated === 0 ? run(["bash", checks], project) : generated;
 
     if (checked === 0) {

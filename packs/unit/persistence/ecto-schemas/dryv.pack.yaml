@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.ecto-schemas
+key: unit.persistence.ecto-schemas
 layout: unit
 package:
   name: dryv_ecto_schemas

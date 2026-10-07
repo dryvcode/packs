@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: testing.http-contract-cases
+key: inject.testing.http-contract-cases
 source: templates
 
 info:

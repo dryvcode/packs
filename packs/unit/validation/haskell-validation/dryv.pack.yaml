@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.haskell-validation
+key: unit.validation.haskell-validation
 layout: unit
 package:
   name: dryv-haskell-validation

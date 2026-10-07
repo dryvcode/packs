@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: frontend.nextjs-app
+key: unit.frontend.nextjs-app
 layout: unit
 source: templates
 

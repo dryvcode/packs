@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.class-validator-dtos
+key: inject.validation.class-validator-dtos
 source: templates
 
 info:

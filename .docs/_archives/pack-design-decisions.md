@@ -90,7 +90,7 @@ Examples:
 ```text
 packs/
 ├── backend/
-│   ├── nestjs-backend/
+│   ├── nestjs/
 │   └── fastapi-backend/
 ├── frontend/
 │   ├── nextjs-app/
@@ -352,7 +352,7 @@ producer A:
   persistence/typeorm-entities
 
 producer B:
-  backend/nestjs-backend
+  backend/nestjs
 ```
 
 Dryv must not resolve this using:

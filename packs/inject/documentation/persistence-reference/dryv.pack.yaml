@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: documentation.persistence-reference
+key: inject.documentation.persistence-reference
 source: templates
 
 info:

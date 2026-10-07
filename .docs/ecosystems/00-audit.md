@@ -12,7 +12,7 @@ The repository currently contains **92 active pack manifests** under `packs/`.
 
 Backend:
 
-- [x] `inject/backend/nestjs-backend`
+- [x] `inject/backend/nestjs`
 
 Frontend:
 
@@ -57,7 +57,7 @@ Backend:
 - [x] `unit/backend/http4s-backend`
 - [x] `unit/backend/jakarta-rest-backend`
 - [x] `unit/backend/ktor-backend`
-- [x] `unit/backend/nestjs-app`
+- [x] `unit/backend/nestjs`
 - [x] `unit/backend/phoenix-backend`
 - [x] `unit/backend/reitit-backend`
 - [x] `unit/backend/scotty-backend`
@@ -171,14 +171,14 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - document persistence → `mongoose-models`
 - validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
 - schema validation → `zod-schemas`, `joi-schemas`
-- HTTP backends → `fastapi-backend`, `nestjs-backend`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`, `http4s-backend`, `reitit-backend`
+- HTTP backends → `fastapi-backend`, `nestjs`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`, `http4s-backend`, `reitit-backend`
 - HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`, `scala-client-sdk`, `clojure-client-sdk`
 - existing-project UI → `react-crud-forms`
 - complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
 - framework bridge client → `next-api-bridge`, `flutter-api-bridge`
 - documentation/reference → `markdown-reference`, `http-examples`, `persistence-reference`, `openapi`
 - testing/fixtures and contract suites → `schema-examples`, `http-contract-cases`, `schema-contract-cases`, `persistence-contract-cases`, `postman-collection`, `bruno-collection`, `http-smoke-tests`, `k6-smoke-tests`
-- backend project composition → `nestjs-app`
+- backend project composition → `nestjs`
 
 ## Current thin areas
 

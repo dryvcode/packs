@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.ocaml-client-sdk
+key: unit.clients.ocaml-client-sdk
 layout: unit
 package:
   name: dryv-ocaml-client

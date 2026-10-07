@@ -1,0 +1,54 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  app:
+    path: app
+    imports:
+      root: src
+      prefix: "@/"
+  server:
+    path: app
+  dtos:
+    path: app
+  entities:
+    path: app
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  app:
+    source: { $ref: "#/sources/packs/local", path: unit/backend/nestjs }
+    destination:
+      $ref: "#/destinations/app"
+    inputs:
+      package_name: dryv-nestjs-fixture
+    bind:
+      operation.server:
+        $ref: "#/packs/server"
+  server:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/server"
+      root: [src]
+    bind:
+      schema.validation:
+        $ref: "#/packs/dtos"
+      schema.persistence:
+        $ref: "#/packs/entities"
+  dtos:
+    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator-dtos }
+    destination:
+      $ref: "#/destinations/dtos"
+      root: [src, dto]
+  entities:
+    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm-entities }
+    destination:
+      $ref: "#/destinations/entities"
+      root: [src, entities]

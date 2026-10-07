@@ -1,0 +1,14 @@
+{
+  "name": "{{ pack.inputs.package_name }}",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:prod": "node dist/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "vitest run test"
+  }
+}

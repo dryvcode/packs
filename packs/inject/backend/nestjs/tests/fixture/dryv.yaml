@@ -1,0 +1,52 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  dtos:
+    path: out/dtos
+  entities:
+    path: out/entities
+  zod:
+    path: out/zod
+  server:
+    path: out/server
+  server_zod:
+    path: out/server-zod
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  dtos:
+    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator-dtos }
+    destination:
+      $ref: "#/destinations/dtos"
+  entities:
+    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm-entities }
+    destination:
+      $ref: "#/destinations/entities"
+  zod:
+    source: { $ref: "#/sources/packs/local", path: inject/validation/zod-schemas }
+    destination:
+      $ref: "#/destinations/zod"
+  server:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/server"
+    bind:
+      schema.validation:
+        $ref: "#/packs/dtos"
+      schema.persistence:
+        $ref: "#/packs/entities"
+  server-zod:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/server_zod"
+    bind:
+      schema.validation:
+        $ref: "#/packs/zod"

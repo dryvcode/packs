@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.ecto-changesets
+key: unit.validation.ecto-changesets
 layout: unit
 package:
   name: dryv_ecto_validation

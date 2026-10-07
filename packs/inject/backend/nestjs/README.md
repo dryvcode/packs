@@ -13,7 +13,7 @@ packs:
   dtos: { source: …/class-validator-dtos }
   entities: { source: …/typeorm-entities }
   server:
-    source: …/nestjs-backend
+    source: …/nestjs
     bind:
       schema.validation: { $ref: '#/packs/dtos' }       # or zod-schemas / joi-schemas
       schema.persistence: { $ref: '#/packs/entities' }  # optional
@@ -27,7 +27,7 @@ packs:
 
 When persistence is bound, the feature module registers the entities its operations use with `TypeOrmModule.forFeature([...])`. The pipe duck-types zod and Joi, so the output compiles with whichever library the project uses.
 
-**Test:** `bun scripts/test-pack.ts inject/backend/nestjs-backend` renders the flagship IR twice (over class-validator + TypeORM, and over zod), typechecks both against the real framework, then boots them and sends valid and invalid requests.
+**Test:** `bun scripts/test-pack.ts inject/backend/nestjs` renders the flagship IR twice (over class-validator + TypeORM, and over zod), typechecks both against the real framework, then boots them and sends valid and invalid requests.
 
 ## Use it
 

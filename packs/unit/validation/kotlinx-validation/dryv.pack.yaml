@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.kotlinx-validation
+key: unit.validation.kotlinx-validation
 layout: unit
 package:
   name: dryv-kotlin-validation

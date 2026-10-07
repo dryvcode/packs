@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.symfony-validator-dtos
+key: unit.validation.symfony-validator-dtos
 layout: unit
 package:
   name: dryv/generated-validation

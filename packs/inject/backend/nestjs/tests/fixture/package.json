@@ -1,5 +1,5 @@
 {
-  "name": "nestjs-backend-fixture",
+  "name": "nestjs-fixture",
   "private": true,
   "type": "module",
   "dependencies": {

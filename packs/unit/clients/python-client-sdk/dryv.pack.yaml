@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.python-client-sdk
+key: unit.clients.python-client-sdk
 layout: unit
 package:
   name: dryv-client

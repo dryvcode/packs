@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.typeorm-entities
+key: inject.persistence.typeorm-entities
 source: templates
 
 info:

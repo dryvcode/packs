@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.active-record-models
+key: unit.persistence.active-record-models
 layout: unit
 package:
   name: dryv-active-record-models

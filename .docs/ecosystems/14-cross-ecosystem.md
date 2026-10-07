@@ -156,7 +156,7 @@ Guardrail: do not compete with ORM migration authorities without an explicit own
 - [ ] reusable pattern for validation packs
 - [ ] reusable pattern for backend routing packs
 - [ ] reusable pattern for UI form packs
-- [x] reusable backend project composition pattern proven by `unit/backend/nestjs-app`
+- [x] reusable backend project composition pattern proven by `unit/backend/nestjs`
 - [ ] capability-slot vocabulary audit after several cross-language implementations
 - [ ] avoid adding slots merely because one framework wants them
 

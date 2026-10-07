@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.sqlalchemy-models
+key: unit.persistence.sqlalchemy-models
 layout: unit
 package:
   name: dryv-entities

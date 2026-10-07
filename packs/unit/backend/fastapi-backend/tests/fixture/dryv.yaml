@@ -18,6 +18,6 @@ packs:
   api:
     source:
       $ref: "#/sources/packs/local"
-    path: package/backend/fastapi-backend
+    path: unit/backend/fastapi-backend
     destination:
       $ref: "#/destinations/code/generated"

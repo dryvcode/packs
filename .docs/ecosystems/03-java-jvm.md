@@ -49,7 +49,7 @@ Primary model: `class-validator-dtos`.
 
 Models:
 
-- `nestjs-backend`
+- `nestjs`
 - `fastapi-backend`
 
 ## Persistence

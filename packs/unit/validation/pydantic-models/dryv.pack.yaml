@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.pydantic-models
+key: unit.validation.pydantic-models
 layout: unit
 package:
   name: dryv-validation

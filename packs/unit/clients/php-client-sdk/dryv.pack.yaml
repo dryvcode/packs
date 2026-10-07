@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.php-client-sdk
+key: unit.clients.php-client-sdk
 layout: unit
 package:
   name: dryv/generated-client

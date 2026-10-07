@@ -1,6 +1,6 @@
 # 05 — NestJS unit pack
 
-Status: **blocked by Tasks 03 and 04**
+Status: **done**
 
 Target:
 
@@ -8,70 +8,17 @@ Target:
 packs/unit/backend/nestjs
 ```
 
-## Goal
+## Result
 
-Make the NestJS unit pack own only the runnable/root Nest application responsibilities and assemble bound implementation artifacts from the inject pack.
+The unit pack now declares `layout: unit`, key `unit.backend.nestjs`, and needs only `operation.server`.
 
-## Unit responsibility
+It owns root NestJS application artifacts:
 
-The unit establishes the generated NestJS application root.
+- `package.json`;
+- `tsconfig.json`;
+- `nest-cli.json`;
+- `src/main.ts`;
+- `src/app.module.ts`;
+- `test/app.e2e-spec.ts`.
 
-It should own framework-native root artifacts verified in Task 03, such as:
-
-- bootstrap/main entrypoint;
-- root application module;
-- Nest/TypeScript configuration;
-- unit manifest when appropriate;
-- root test/e2e setup where appropriate.
-
-It must not duplicate feature controllers/services/modules already produced by `inject/backend/nestjs`.
-
-## Composition
-
-Target capability graph:
-
-```text
-unit/backend/nestjs
-    needs operation.server
-              │
-              ▼
-inject/backend/nestjs
-    needs schema.validation
-    needs schema.persistence
-```
-
-Usage chooses concrete providers.
-
-The unit never silently activates a sibling pack.
-
-## Aggregate registration
-
-The root application module must consume the public representation exposed by the bound `operation.server` provider.
-
-Do not solve root assembly by:
-
-- scanning generated directories;
-- deriving module symbols from filenames;
-- hardcoding `inject/backend/nestjs` paths;
-- duplicating feature modules.
-
-If current Dryv cannot aggregate provider artifacts correctly, record/fix the generic composition gap.
-
-## Pack manifest
-
-Bring `dryv.pack.yaml` fully current:
-
-- `layout: unit`;
-- key `unit.backend.nestjs`;
-- current info metadata;
-- keyed needs;
-- correct templates;
-- correct dependencies;
-- only intrinsic actions;
-- package metadata only when genuinely needed.
-
-## Completion
-
-The unit must be thin, explicit and framework-native.
-
-It is complete only when it can assemble the inject pack into a runnable NestJS application without duplicated implementation.
+`AppModule` imports bound feature modules through `file.dependencies[]` from `operation.server`; it does not duplicate controllers/services/modules, scan folders, or hardcode the inject pack path.

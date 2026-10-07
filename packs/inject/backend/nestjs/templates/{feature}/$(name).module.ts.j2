@@ -1,4 +1,4 @@
-{#- The dependency a subject resolves to through one slot. -#}
+{#- Dependency helpers. -#}
 {%- macro symbol_for(link, slot) -%}
 {%- for dependency in file.dependencies -%}
 {%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.symbol }}{%- endif -%}
@@ -9,8 +9,6 @@
 {%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.pack }}{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
-
-{#- Non-empty when some dependency comes through the slot (and, optionally, from the pack). -#}
 {%- macro has_slot(slot) -%}
 {%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
 {%- endmacro -%}
@@ -31,7 +29,6 @@
 {%- endif -%}
 {%- endmacro -%}
 
-{#- class-validator DTOs rely on Nest's global ValidationPipe; zod and Joi schemas get a pipe. -#}
 {%- macro body_pipe(value) -%}
 {%- if value.is.schema -%}
   {%- set pack = pack_for(value.schema, 'schema.validation') -%}
@@ -40,7 +37,6 @@
 {%- endif -%}
 {%- endmacro -%}
 
-{#- One input object, like props: a schema input is its DTO, named fields an object type. -#}
 {%- macro input_type(operation) -%}
 {%- if operation.input.kind == 'schema' -%}{{ ts_type(operation.input.value) }}
 {%- else -%}{ {% for field in operation.input.fields %}{{ field.name.camel }}{% if field.optional %}?{% endif %}: {{ ts_type(field.value) }}{% if not loop.last %}; {% endif %}{% endfor %} }
@@ -58,11 +54,9 @@ Promise<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}
 {%- elif value.is.boolean -%}, ParseBoolPipe
 {%- endif -%}
 {%- endmacro -%}
-{#- Non-empty when HTTP binds the whole (schema) input in one parameter. -#}
 {%- macro binds_whole(http) -%}
 {%- for binding in http.inputs %}{% if binding.port.field is none %}x{% endif %}{% endfor -%}
 {%- endmacro -%}
-{#- The controller flattens the input into parameters, then hands the service one object. -#}
 {%- macro call_input(operation, http) -%}
 {%- if operation.input -%}
 {%- if binds_whole(http) -%}input
@@ -79,12 +73,13 @@ import {
   Controller,
   createParamDecorator,
   Delete,
-  type DynamicModule,
   type ExecutionContext,
   Get,
   Headers,
   HttpCode,
+  Injectable,
   Module,
+  NotImplementedException,
   Param,
   ParseBoolPipe,
   ParseFloatPipe,
@@ -93,7 +88,6 @@ import {
   Post,
   Put,
   Query,
-  type Type,
 } from "@nestjs/common";
 {%- if persistence %}
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -106,7 +100,7 @@ import type { z } from "zod";
 import { SchemaValidationPipe } from "../../common/server/validation/schema-validation.pipe.ts";
 {%- endif %}
 {%- for dependency in file.dependencies %}{% if dependency.symbol %}
-import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+import { {{ dependency.symbol }} } from "{{ dependency.path.relative }}";
 {%- endif %}{% endfor %}
 
 const Cookie = createParamDecorator(
@@ -123,11 +117,12 @@ const Cookie = createParamDecorator(
   },
 );
 
-/** What {{ feature.name.title }} needs from handwritten code. */
-export abstract class {{ file.symbols.service }} {
+@Injectable()
+export class {{ file.symbols.service }} {
 {%- for operation in operations %}
-  /** {{ ((operation.description or operation.name.title) ~ '.') | replace('..', '.') }}{% if operation.role %} Role: {{ operation.role }}.{% endif %} */
-  abstract {{ operation.name.camel }}({{ signature(operation) }}): {{ result(operation) }};
+  async {{ operation.name.camel }}({{ signature(operation) }}): {{ result(operation) }} {
+    throw new NotImplementedException("{{ operation.name.camel }} is not implemented yet.");
+  }
 {%- endfor %}
 }
 
@@ -151,24 +146,18 @@ export class {{ file.symbols.controller }} {
 {%- endfor %}
 }
 
-/** Registers {{ feature.name.title }}: pass the class that implements {{ file.symbols.service }}. */
-@Module({})
-export class {{ file.symbols.module }} {
-  static register(implementation: Type<{{ file.symbols.service }}>): DynamicModule {
-    return {
-      module: {{ file.symbols.module }},
+@Module({
 {%- if persistence %}
-      imports: [
-        TypeOrmModule.forFeature([
+  imports: [
+    TypeOrmModule.forFeature([
 {%- for entity in file.dependencies %}{% if entity.slot == 'schema.persistence' %}
-          {{ entity.symbol }},
+      {{ entity.symbol }},
 {%- endif %}{% endfor %}
-        ]),
-      ],
+    ]),
+  ],
 {%- endif %}
-      controllers: [{{ file.symbols.controller }}],
-      providers: [{ provide: {{ file.symbols.service }}, useClass: implementation }],
-    };
-  }
-}
-
+  controllers: [{{ file.symbols.controller }}],
+  providers: [{{ file.symbols.service }}],
+  exports: [{{ file.symbols.service }}],
+})
+export class {{ file.symbols.module }} {}

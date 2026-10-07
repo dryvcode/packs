@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.exposed-tables
+key: unit.persistence.exposed-tables
 layout: unit
 package:
   name: dryv-exposed-tables

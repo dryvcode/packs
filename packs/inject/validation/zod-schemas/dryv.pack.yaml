@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.zod-schemas
+key: inject.validation.zod-schemas
 source: templates
 
 info:

@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.phoenix-backend
+key: unit.backend.phoenix-backend
 layout: unit
 package:
   name: dryv_phoenix_backend

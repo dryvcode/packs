@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.http4s-backend
+key: unit.backend.http4s-backend
 layout: unit
 package:
   name: dryv-http4s-backend

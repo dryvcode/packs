@@ -25,7 +25,7 @@ Status: ASP.NET Core backend, EF Core persistence, FluentValidation DTOs and Htt
 
 Models:
 
-- `nestjs-backend`
+- `nestjs`
 - `fastapi-backend`
 
 ## Persistence

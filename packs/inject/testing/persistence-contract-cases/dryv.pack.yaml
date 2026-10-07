@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: testing.persistence-contract-cases
+key: inject.testing.persistence-contract-cases
 source: templates
 
 info:

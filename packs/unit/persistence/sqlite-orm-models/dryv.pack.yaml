@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.sqlite-orm-models
+key: unit.persistence.sqlite-orm-models
 layout: unit
 package:
   name: dryv_cpp_persistence

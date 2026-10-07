@@ -85,8 +85,8 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
     }
   }
 
-  if (document.key !== `${purpose}.${name}`) {
-    problems.push(`${id}: key is ${document.key}, expected ${purpose}.${name}`);
+  if (document.key !== `${layout}.${purpose}.${name}`) {
+    problems.push(`${id}: key is ${document.key}, expected ${layout}.${purpose}.${name}`);
   }
   if (effectiveLayout !== layout) {
     problems.push(`${id}: layout is ${effectiveLayout}, folder is ${layout}`);

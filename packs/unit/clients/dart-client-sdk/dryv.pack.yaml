@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.dart-client-sdk
+key: unit.clients.dart-client-sdk
 layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }

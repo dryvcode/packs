@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.persistent-models
+key: unit.persistence.persistent-models
 layout: unit
 package:
   name: dryv-persistent-models

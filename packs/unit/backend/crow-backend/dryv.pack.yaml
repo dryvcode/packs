@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.crow-backend
+key: unit.backend.crow-backend
 layout: unit
 package:
   name: dryv_cpp_backend

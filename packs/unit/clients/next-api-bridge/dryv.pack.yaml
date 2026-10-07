@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.next-api-bridge
+key: unit.clients.next-api-bridge
 layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }

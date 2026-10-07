@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.sequel-models
+key: unit.persistence.sequel-models
 layout: unit
 package:
   name: dryv-sequel-models

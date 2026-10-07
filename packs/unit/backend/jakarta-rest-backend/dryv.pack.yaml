@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.jakarta-rest-backend
+key: unit.backend.jakarta-rest-backend
 layout: unit
 package:
   name: { $ref: "#/inputs.artifact_id" }

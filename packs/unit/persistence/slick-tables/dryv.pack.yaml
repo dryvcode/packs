@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.slick-tables
+key: unit.persistence.slick-tables
 layout: unit
 package:
   name: dryv-slick-tables

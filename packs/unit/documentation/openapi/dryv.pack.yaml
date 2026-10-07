@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: documentation.openapi
+key: unit.documentation.openapi
 layout: unit
 package:
   name: dryv-openapi

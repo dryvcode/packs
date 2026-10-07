@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.gin-backend
+key: unit.backend.gin-backend
 layout: unit
 package:
   name: { $ref: "#/inputs.package_name" }

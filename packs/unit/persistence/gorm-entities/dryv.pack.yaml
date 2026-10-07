@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.gorm-entities
+key: unit.persistence.gorm-entities
 layout: unit
 package:
   name: { $ref: "#/inputs.package_name" }

@@ -130,8 +130,8 @@ Perform the layout move and terminal-name simplification together so public IDs 
 Examples:
 
 ```text
-inject/backend/nestjs-backend -> inject/backend/nestjs
-project/backend/nestjs-app    -> unit/backend/nestjs
+inject/backend/nestjs -> inject/backend/nestjs
+project/backend/nestjs    -> unit/backend/nestjs
 inject/validation/zod-schemas -> inject/validation/zod
 package/clients/dart-client-sdk -> unit/clients/dart
 ```
@@ -236,7 +236,7 @@ bun run test:packs
 
 Also audit:
 
-- no active docs mention `layout: project`;
+- no active docs mention `layout: unit`;
 - no active docs describe `package` as a layout;
 - no active pack paths remain under `packs/package` or `packs/project`;
 - no release/source examples use old IDs;

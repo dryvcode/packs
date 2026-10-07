@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.actix-web-backend
+key: unit.backend.actix-web-backend
 layout: unit
 package:
   name: { $ref: "#/inputs.crate_name" }

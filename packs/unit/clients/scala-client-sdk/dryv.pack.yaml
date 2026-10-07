@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.scala-client-sdk
+key: unit.clients.scala-client-sdk
 layout: unit
 package:
   name: dryv-scala-client

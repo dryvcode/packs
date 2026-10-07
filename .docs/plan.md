@@ -12,7 +12,7 @@ packs/
 └── unit/
 ```
 
-This is **not yet a completed contract migration**. Some real manifests still carry transitional `layout: package` / `layout: project` values, keys still follow the older identity rule, and repository helpers still need to be brought to the `inject | unit` contract. Stage A exists to reconcile those layers.
+This is **not yet a completed contract migration**. Some real manifests still carry transitional `layout: unit` / `layout: unit` values, keys still follow the older identity rule, and repository helpers still need to be brought to the `inject | unit` contract. Stage A exists to reconcile those layers.
 
 The active work is now tracked only under:
 

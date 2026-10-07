@@ -4,7 +4,7 @@ import { type INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 
 import {
-  CoreUserManagementController as ClassValidatorController,
+  CoreUserManagementModule as ClassValidatorModule,
   CoreUserManagementService as ClassValidatorService,
 } from "./out/server/index.ts";
 import {
@@ -92,9 +92,11 @@ describe("generated NestJS server over class-validator", () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      controllers: [ClassValidatorController],
-      providers: [{ provide: ClassValidatorService, useClass: InMemoryClassValidatorUsers }],
-    }).compile();
+      imports: [ClassValidatorModule],
+    })
+      .overrideProvider(ClassValidatorService)
+      .useClass(InMemoryClassValidatorUsers)
+      .compile();
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     base = (await start(app)).replace("[::1]", "localhost");
@@ -131,8 +133,11 @@ describe("generated NestJS server over zod", () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [ZodModule.register(InMemoryZodUsers)],
-    }).compile();
+      imports: [ZodModule],
+    })
+      .overrideProvider(ZodService)
+      .useClass(InMemoryZodUsers)
+      .compile();
     app = moduleRef.createNestApplication();
     base = (await start(app)).replace("[::1]", "localhost");
   });

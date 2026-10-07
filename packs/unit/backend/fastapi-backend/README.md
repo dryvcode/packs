@@ -15,7 +15,7 @@ app.include_router(build_core_user_management_router(MyUserService()))
 
 Services raise `fastapi.HTTPException` for failures such as "not found".
 
-**Test:** `bun scripts/test-pack.ts package/backend/fastapi-backend` renders the flagship IR into a small app with in-memory services and runs its tests against the real endpoints.
+**Test:** `bun scripts/test-pack.ts unit/backend/fastapi-backend` renders the flagship IR into a small app with in-memory services and runs its tests against the real endpoints.
 
 ## Use it
 

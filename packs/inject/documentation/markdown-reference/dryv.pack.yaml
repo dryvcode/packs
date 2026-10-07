@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: documentation.markdown-reference
+key: inject.documentation.markdown-reference
 source: templates
 
 info:

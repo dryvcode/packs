@@ -24,7 +24,7 @@ Status: Phoenix backend, Ecto persistence, Ecto changeset validation and Req cli
 Models:
 
 - `fastapi-backend`
-- `nestjs-backend`
+- `nestjs`
 
 ## Persistence
 

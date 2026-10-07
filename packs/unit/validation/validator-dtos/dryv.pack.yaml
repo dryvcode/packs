@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.validator-dtos
+key: unit.validation.validator-dtos
 layout: unit
 package:
   name: { $ref: "#/inputs.crate_name" }

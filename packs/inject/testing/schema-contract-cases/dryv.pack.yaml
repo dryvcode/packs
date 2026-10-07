@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: testing.schema-contract-cases
+key: inject.testing.schema-contract-cases
 source: templates
 
 info:

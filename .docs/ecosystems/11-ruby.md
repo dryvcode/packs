@@ -23,7 +23,7 @@ Status: Sinatra backend, Active Record persistence, dry-validation contracts and
 
 Models:
 
-- `nestjs-backend`
+- `nestjs`
 - `fastapi-backend`
 
 ## Persistence

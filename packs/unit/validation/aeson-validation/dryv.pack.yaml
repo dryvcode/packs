@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.aeson-validation
+key: unit.validation.aeson-validation
 layout: unit
 package:
   name: dryv-validation

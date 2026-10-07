@@ -1,0 +1,87 @@
+version: dryv.pack/v1alpha1
+key: unit.backend.nestjs
+layout: unit
+package:
+  name: { $ref: "#/inputs/package_name" }
+  import_root: src
+source: templates
+
+info:
+  title: NestJS Application
+  version: 0.2.0
+  description: Generates a runnable NestJS application shell that assembles bound operation.server feature modules.
+
+catalog:
+  purpose: backend
+  summary: NestJS application root with bootstrap, config and AppModule composition.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, http, unit, nestjs]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  package_name:
+    type: string
+    default: dryv-nest-app
+    description: npm package name written to package.json.
+
+needs:
+  operation.server: { required: true }
+
+selections:
+  server_operations:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  app-module:
+    $ref: "#/selections/server_operations"
+    imports:
+      - $ref: "#/needs/operation.server"
+
+# shared:js-package-manager:start
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
+
+dependencies:
+  runtime:
+    "@nestjs/common": ^11
+    "@nestjs/core": ^11
+    "@nestjs/platform-express": ^11
+    reflect-metadata: ^0.2
+    rxjs: ^7
+  dev:
+    "@nestjs/cli": ^11
+    "@nestjs/testing": ^11
+    "@types/node": ^24
+    "@types/supertest": ^6
+    prettier: "*"
+    supertest: ^7
+    typescript: ^5.9
+    vitest: ^3
+
+# shared:js-prettier-actions:start
+actions:
+  files:
+    format:
+      extensions: [.ts]
+      commands:
+        - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+        - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+        - run: [bun, x, prettier@3.9.9, --write, $(files)]
+  final:
+    install:
+      dependencies:
+        args:
+          - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+          - { pinned: "$(name)@$(version)", any: "$(name)" }
+      commands:
+        - run: [(pnpm|bun|yarn), add]
+        - run: [npm, install]
+# shared:js-prettier-actions:end

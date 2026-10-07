@@ -8,7 +8,7 @@ This is currently Dryv's strongest ecosystem. Expansion here should not crowd ou
 
 ### Backend
 
-- [x] `inject/backend/nestjs-backend`
+- [x] `inject/backend/nestjs`
 
 ### Persistence
 
@@ -47,7 +47,7 @@ This is currently Dryv's strongest ecosystem. Expansion here should not crowd ou
 
 Models:
 
-- `nestjs-backend`
+- `nestjs`
 - `fastapi-backend`
 
 ## Persistence candidates

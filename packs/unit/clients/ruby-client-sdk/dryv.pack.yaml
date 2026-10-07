@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.ruby-client-sdk
+key: unit.clients.ruby-client-sdk
 layout: unit
 package:
   name: dryv-ruby-client

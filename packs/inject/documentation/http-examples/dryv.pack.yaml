@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: documentation.http-examples
+key: inject.documentation.http-examples
 source: templates
 
 info:

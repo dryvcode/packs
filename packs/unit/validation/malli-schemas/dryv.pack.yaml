@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.malli-schemas
+key: unit.validation.malli-schemas
 layout: unit
 package:
   name: dryv-generated-validation

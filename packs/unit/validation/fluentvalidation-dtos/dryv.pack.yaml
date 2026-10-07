@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.fluentvalidation-dtos
+key: unit.validation.fluentvalidation-dtos
 layout: unit
 package:
   name: { $ref: "#/inputs.project_name" }

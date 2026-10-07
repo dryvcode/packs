@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: persistence.doctrine-orm-entities
+key: unit.persistence.doctrine-orm-entities
 layout: unit
 package:
   name: dryv/generated-entities

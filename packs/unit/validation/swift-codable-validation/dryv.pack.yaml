@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.swift-codable-validation
+key: unit.validation.swift-codable-validation
 layout: unit
 package:
   name: DryvValidation

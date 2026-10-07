@@ -27,7 +27,7 @@ The terminal name should therefore be the **smallest stable discriminator inside
 Current examples:
 
 ```text
-inject/backend/nestjs-backend
+inject/backend/nestjs
 inject/persistence/typeorm-entities
 inject/validation/zod-schemas
 package/clients/dart-client-sdk
@@ -138,8 +138,8 @@ It should not copy implementation already available through an inject pack.
 Today these two packs overlap heavily:
 
 ```text
-inject/backend/nestjs-backend
-project/backend/nestjs-app
+inject/backend/nestjs
+project/backend/nestjs
 ```
 
 Both select HTTP Operations by Feature and generate controller/service/module behavior.
@@ -551,7 +551,7 @@ The important rule is that the consumer should import the capability's declared 
 Representative target mapping:
 
 ```text
-inject/backend/nestjs-backend
+inject/backend/nestjs
   -> inject/backend/nestjs
 
 inject/persistence/typeorm-entities
@@ -572,7 +572,7 @@ inject/validation/class-validator-dtos
 package/backend/spring-boot-backend
   -> unit/backend/spring
 
-package/backend/fastapi-backend
+unit/backend/fastapi-backend
   -> unit/backend/fastapi
 
 package/clients/dart-client-sdk
@@ -593,7 +593,7 @@ package/testing/k6-smoke-tests
 package/documentation/openapi
   -> unit/documentation/openapi
 
-project/backend/nestjs-app
+project/backend/nestjs
   -> unit/backend/nestjs
 
 project/frontend/flutter-app

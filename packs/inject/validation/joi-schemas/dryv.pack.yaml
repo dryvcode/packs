@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: validation.joi-schemas
+key: inject.validation.joi-schemas
 source: templates
 
 info:

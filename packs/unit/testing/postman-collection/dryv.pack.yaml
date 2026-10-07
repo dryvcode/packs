@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: testing.postman-collection
+key: unit.testing.postman-collection
 layout: unit
 package:
   name: dryv-postman

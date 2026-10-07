@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.rust-client-sdk
+key: unit.clients.rust-client-sdk
 layout: unit
 package:
   name: { $ref: "#/inputs.crate_name" }

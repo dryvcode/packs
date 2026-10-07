@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.elixir-client-sdk
+key: unit.clients.elixir-client-sdk
 layout: unit
 package:
   name: dryv_elixir_client

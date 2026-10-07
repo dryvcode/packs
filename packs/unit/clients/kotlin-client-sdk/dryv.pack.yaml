@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.kotlin-client-sdk
+key: unit.clients.kotlin-client-sdk
 layout: unit
 package:
   name: dryv-kotlin-client

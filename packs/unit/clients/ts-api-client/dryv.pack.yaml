@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: clients.ts-api-client
+key: unit.clients.ts-api-client
 layout: unit
 package:
   name: { $ref: "#/inputs/package_name" }

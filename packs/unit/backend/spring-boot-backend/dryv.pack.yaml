@@ -1,5 +1,5 @@
 version: dryv.pack/v1alpha1
-key: backend.spring-boot-backend
+key: unit.backend.spring-boot-backend
 layout: unit
 package:
   name: { $ref: "#/inputs.artifact_id" }
