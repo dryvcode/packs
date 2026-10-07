@@ -190,7 +190,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 - auth/security generation contracts
 - cross-language contract output beyond Markdown Reference, OpenAPI and HTTP testing collections
 - additional UI ecosystems and native/mobile application packs
-- portable JSON Schema 2020-12 is now represented by `package/validation/json-schema`
+- portable JSON Schema 2020-12 is now represented by `unit/validation/json-schema`
 - database migration/schema packs for defaults, checks and target-specific DDL semantics that ORMs cannot express portably
 
 ## Audit checklist for future candidates
@@ -198,7 +198,7 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 Before implementation:
 
 - [ ] identify the closest existing Dryv pack
-- [ ] decide `inject`, `package` or `project`
+- [ ] decide `inject` or `unit`
 - [ ] define purpose, language and framework/library
 - [ ] define realistic generated artifacts
 - [ ] define selections
