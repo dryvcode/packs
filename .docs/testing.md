@@ -31,7 +31,7 @@ Reusable mappings are declared centrally in `fixtures/manifest.json`:
 ```json
 {
   "packs": {
-    "package/clients/example-client": {
+    "unit/clients/example-client": {
       "<temporary-project-path>": "<path-under-fixtures>"
     }
   }
@@ -80,7 +80,7 @@ Pack test projects are created under:
 
 For example:
 
-`/tmp/dryv/project/frontend/react-native-app/run-a1b2c3/`
+`/tmp/dryv/unit/frontend/react-native-app/run-a1b2c3/`
 
 Open the whole test workspace tree in VS Code with:
 
