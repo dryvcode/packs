@@ -5,7 +5,7 @@ Status: **review example aligned with current Dryv planning**
 ## Composition
 
 ```text
-project/backend/nestjs
+unit/backend/nestjs
   needs operation.server: required
 
 inject/backend/nestjs
