@@ -14,7 +14,7 @@ Kotlin shares the JVM with Java but has enough distinct framework, coroutine and
 
 ## Backends
 
-- [x] `package/backend/ktor-backend` — implementation present; verification deferred
+- [x] `unit/backend/ktor-backend` — implementation present; verification deferred
 - [ ] Spring Boot Kotlin backend
 - [ ] http4k research
 - [x] generated routes separated from business services
@@ -30,7 +30,7 @@ Primary models:
 
 ## Persistence
 
-- [x] `package/persistence/exposed-tables` — implementation present; verification deferred
+- [x] `unit/persistence/exposed-tables` — implementation present; verification deferred
 - [ ] JPA/Hibernate Kotlin entities
 - [ ] Spring Data Kotlin integration
 - [ ] KMongo research
@@ -47,7 +47,7 @@ The Exposed package is driver-neutral: consuming projects choose JDBC or R2DBC.
 
 ## Validation/schema
 
-- [x] `package/validation/kotlinx-validation` — implementation present; verification deferred
+- [x] `unit/validation/kotlinx-validation` — implementation present; verification deferred
 - [ ] Jakarta Validation Kotlin DTO alternative
 - [ ] Konform research
 - [ ] Valiktor research
@@ -60,7 +60,7 @@ The Exposed package is driver-neutral: consuming projects choose JDBC or R2DBC.
 
 ## Client SDKs
 
-- [x] `package/clients/kotlin-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/kotlin-client-sdk` — implementation present; verification deferred
 - [x] Ktor Client transport
 - [x] kotlinx.serialization
 - [x] typed coroutine operations
