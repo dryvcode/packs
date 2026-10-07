@@ -6,12 +6,21 @@ Status: **ready**
 
 Finish the repository-wide pack identity cleanup on top of the layout migration that is already physically present.
 
-Current repository layout:
+Current physical repository layout:
 
 ```text
 packs/inject/**
 packs/unit/**
 ```
+
+Known transition state to reconcile in this task:
+
+- some `unit/**` manifests still declare `layout: package` or `layout: project`;
+- manifest keys still use the older non-layout-aware identity style;
+- repository helpers may still validate `inject | package | project`;
+- active source/fixture/shared references must be audited against the physical IDs.
+
+Do not treat the folder move alone as completion.
 
 The remaining structural work is primarily:
 
