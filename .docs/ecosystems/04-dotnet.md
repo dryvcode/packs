@@ -13,7 +13,7 @@ Status: ASP.NET Core backend, EF Core persistence, FluentValidation DTOs and Htt
 ## Backends
 
 - [ ] ASP.NET Core controllers backend
-- [x] `package/backend/aspnet-core-backend` — endpoint-registration implementation present; verification deferred
+- [x] `unit/backend/aspnet-core-backend` — endpoint-registration implementation present; verification deferred
 - [ ] FastEndpoints backend research
 - [ ] Carter backend research
 - [x] generated endpoint layer separated from business services
@@ -30,7 +30,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/ef-core-entities` — entity + fluent configuration implementation present; verification deferred
+- [x] `unit/persistence/ef-core-entities` — entity + fluent configuration implementation present; verification deferred
 - [ ] EF Core fluent configuration variant
 - [ ] Dapper model/repository research
 - [ ] Linq2db research
@@ -49,7 +49,7 @@ Primary model: `typeorm-entities`.
 
 ## Validation
 
-- [x] `package/validation/fluentvalidation-dtos` — implementation present; verification deferred
+- [x] `unit/validation/fluentvalidation-dtos` — implementation present; verification deferred
 - [ ] DataAnnotations DTO validation
 - [x] nested validation
 - [x] collection validation
@@ -63,7 +63,7 @@ Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [x] `package/clients/csharp-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/csharp-client-sdk` — implementation present; verification deferred
 - [x] HttpClient baseline transport
 - [x] System.Text.Json models
 - [x] typed operations
