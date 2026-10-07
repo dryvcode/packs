@@ -10,15 +10,16 @@ sources:
 destinations:
   app:
     path: app
+    choose: { js.package_manager: bun }
     imports:
       root: src
       prefix: "@/"
   server:
     path: app
+    choose: { js.package_manager: bun }
   dtos:
     path: app
-  entities:
-    path: app
+    choose: { js.package_manager: bun }
 authoring:
   source:
     $ref: "#/sources/authoring/main"
@@ -40,15 +41,8 @@ packs:
     bind:
       schema.validation:
         $ref: "#/packs/dtos"
-      schema.persistence:
-        $ref: "#/packs/entities"
   dtos:
     source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
       $ref: "#/destinations/dtos"
       root: [src, dto]
-  entities:
-    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
-    destination:
-      $ref: "#/destinations/entities"
-      root: [src, entities]

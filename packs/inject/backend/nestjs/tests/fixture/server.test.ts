@@ -4,7 +4,7 @@ import { type INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 
 import {
-  CoreUserManagementModule as ClassValidatorModule,
+  CoreUserManagementController as ClassValidatorController,
   CoreUserManagementService as ClassValidatorService,
 } from "./out/server/index.ts";
 import {
@@ -73,7 +73,7 @@ async function start(app: INestApplication): Promise<string> {
 }
 
 async function post(base: string, body: unknown): Promise<number> {
-  const response = await fetch(`${base}/users`, {
+  const response = await fetch(`${base}/api/users`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -92,11 +92,9 @@ describe("generated NestJS server over class-validator", () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [ClassValidatorModule],
-    })
-      .overrideProvider(ClassValidatorService)
-      .useClass(InMemoryClassValidatorUsers)
-      .compile();
+      controllers: [ClassValidatorController],
+      providers: [{ provide: ClassValidatorService, useClass: InMemoryClassValidatorUsers }],
+    }).compile();
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     base = (await start(app)).replace("[::1]", "localhost");
@@ -110,13 +108,13 @@ describe("generated NestJS server over class-validator", () => {
   });
 
   test("routes path parameters", async () => {
-    const response = await fetch(`${base}/users/${created.id}`);
+    const response = await fetch(`${base}/api/users/${created.id}`);
     expect(response.status).toBe(200);
     expect((await response.json()).displayName).toBe("Ada");
   });
 
   test("binds query, header and cookie inputs", async () => {
-    const response = await fetch(`${base}/users/search?status=active&limit=25`, {
+    const response = await fetch(`${base}/api/users/search?status=active&limit=25`, {
       headers: {
         "X-Trace-Id": created.id,
         Cookie: "session=session-1",

@@ -10,14 +10,19 @@ sources:
 destinations:
   dtos:
     path: out/dtos
+    choose: { js.package_manager: bun }
   entities:
     path: out/entities
+    choose: { js.package_manager: bun }
   zod:
     path: out/zod
+    choose: { js.package_manager: bun }
   server:
     path: out/server
+    choose: { js.package_manager: bun }
   server_zod:
     path: out/server-zod
+    choose: { js.package_manager: bun }
 authoring:
   source:
     $ref: "#/sources/authoring/main"

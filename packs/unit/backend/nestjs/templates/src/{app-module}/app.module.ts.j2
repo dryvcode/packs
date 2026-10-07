@@ -1,14 +1,14 @@
 import { Module } from "@nestjs/common";
 
-{%- for dependency in file.dependencies %}{% if dependency.slot == 'operation.server' and dependency.symbol %}
-import { {{ dependency.symbol }} } from "{{ dependency.path.relative }}";
-{%- endif %}{% endfor %}
+{%- for dependency in file.dependency_groups.operation_server %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endfor %}
 
 @Module({
   imports: [
-{%- for dependency in file.dependencies %}{% if dependency.slot == 'operation.server' and dependency.symbol %}
+{%- for dependency in file.dependency_groups.operation_server %}
     {{ dependency.symbol }},
-{%- endif %}{% endfor %}
+{%- endfor %}
   ],
 })
 export class AppModule {}

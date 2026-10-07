@@ -126,10 +126,7 @@ export class {{ file.symbols.service }} {
 {%- endfor %}
 }
 
-@Controller()
-export class {{ file.symbols.controller }} {
-  constructor(private readonly service: {{ file.symbols.service }}) {}
-{%- for operation in operations %}
+{%- macro render_operation(operation) -%}
 {%- set http = operation.facets.http %}
 
   @{{ http.method | lower | capitalize }}("{{ http.path.effective | replace('{', ':') | replace('}', '') }}")
@@ -143,6 +140,20 @@ export class {{ file.symbols.controller }} {
   ): {{ result(operation) }} {
     return this.service.{{ operation.name.camel }}({{ call_input(operation, http) }});
   }
+{%- endmacro %}
+
+@Controller()
+export class {{ file.symbols.controller }} {
+  constructor(private readonly service: {{ file.symbols.service }}) {}
+{%- for operation in operations %}
+{%- if '{' not in operation.facets.http.path.effective %}
+{{ render_operation(operation) }}
+{%- endif %}
+{%- endfor %}
+{%- for operation in operations %}
+{%- if '{' in operation.facets.http.path.effective %}
+{{ render_operation(operation) }}
+{%- endif %}
 {%- endfor %}
 }
 
