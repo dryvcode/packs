@@ -13,7 +13,7 @@ Status: Symfony backend, Doctrine ORM persistence, Symfony Validator DTOs and Gu
 ## Backends
 
 - [ ] Laravel controllers/routes
-- [x] `package/backend/symfony-backend` — implementation present; verification deferred
+- [x] `unit/backend/symfony-backend` — implementation present; verification deferred
 - [ ] Slim backend
 - [ ] Mezzio backend research
 - [ ] API Platform compatibility research
@@ -30,7 +30,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/doctrine-orm-entities` — implementation present; verification deferred
+- [x] `unit/persistence/doctrine-orm-entities` — implementation present; verification deferred
 - [ ] Laravel Eloquent models
 - [ ] Cycle ORM research
 - [x] primary/generated keys
@@ -47,7 +47,7 @@ Primary model: `typeorm-entities`.
 
 ## Validation/schema
 
-- [x] `package/validation/symfony-validator-dtos` — implementation present; verification deferred
+- [x] `unit/validation/symfony-validator-dtos` — implementation present; verification deferred
 - [ ] Laravel validation request classes
 - [ ] Respect/Validation research
 - [x] nested validation
@@ -61,7 +61,7 @@ Primary model: `class-validator-dtos`.
 
 ## Client SDKs
 
-- [x] `package/clients/php-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/php-client-sdk` — implementation present; verification deferred
 - [ ] PSR-18 compatible baseline research
 - [x] Guzzle 8.2 implementation
 - [x] typed DTOs/enums
@@ -80,7 +80,7 @@ Models:
 - [ ] Laravel API project
 - [ ] Symfony API project
 - [ ] Slim API project
-- [ ] Composer package/project ownership rules
+- [ ] Composer unit ownership and ecosystem package identity rules
 - [ ] compose persistence/validation explicitly
 - [ ] realistic config and test harness
 
