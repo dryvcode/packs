@@ -11,7 +11,7 @@ Detailed execution is tracked under [tasks/pack-modernization](tasks/pack-modern
 - [ ] [01 — Repository identity and naming audit](tasks/pack-modernization/01-repository-layout-and-naming.md)
 - [ ] [02 — Repository rename/move and identity verification](tasks/pack-modernization/02-repository-move-and-verification.md)
 
-The repository already physically uses `packs/inject/**` and `packs/unit/**`. The remaining structural pass is to normalize terminal names, keys and references and correct any pack whose actual ownership role is wrong.
+The repository already physically uses `packs/inject/**` and `packs/unit/**`, but some manifests/tooling still encode the old layout contract. The remaining structural pass must reconcile manifest layouts, terminal names, keys, repository helpers and references, and correct any pack whose actual ownership role is wrong.
 
 ### Stage B — NestJS reference-quality proof
 
