@@ -8,13 +8,15 @@ Public packs use:
 packs/<layout>/<purpose>/<name>
 ```
 
-The repository now has only two top-level layouts:
+The repository filesystem now has only two top-level pack directories:
 
 ```text
 packs/
 ├── inject/
 └── unit/
 ```
+
+This describes the physical tree. The migration is still transitional until every real manifest, key, repository helper, fixture mapping and release identity agrees with `inject | unit`. That reconciliation is the current Stage A task.
 
 ## Layout meaning
 
