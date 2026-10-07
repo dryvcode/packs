@@ -14,7 +14,7 @@ This file covers Java-first JVM packs. Kotlin-specific packs are tracked separat
 
 ## Validation
 
-- [x] `package/validation/jakarta-validation-dtos` — implementation present; verification deferred
+- [x] `unit/validation/jakarta-validation-dtos` — implementation present; verification deferred
   - generate Java records/classes or DTO classes
   - generate enums
   - map required/nullability semantics
@@ -38,7 +38,7 @@ Primary model: `class-validator-dtos`.
 - [ ] Quarkus REST backend
 - [ ] Javalin backend
 - [ ] Helidon backend
-- [x] `package/backend/jakarta-rest-backend` — implementation present; verification deferred
+- [x] `unit/backend/jakarta-rest-backend` — implementation present; verification deferred
 - [x] generated resource layer separated from business services
 - [x] request/model binding
 - [x] path/query/query-object/body/header/cookie/form mapping
@@ -54,7 +54,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/jpa-entities` — portable JPA implementation present; verification deferred
+- [x] `unit/persistence/jpa-entities` — portable JPA implementation present; verification deferred
 - [ ] Spring Data JPA integration
 - [ ] EclipseLink/JPA portability research
 - [ ] jOOQ-oriented models/integration
@@ -73,7 +73,7 @@ Primary model: `typeorm-entities`.
 
 ## Client SDKs
 
-- [x] `package/clients/java-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/java-client-sdk` — implementation present; verification deferred
 - [x] Java `HttpClient` baseline
 - [x] Jackson models
 - [x] typed operations
