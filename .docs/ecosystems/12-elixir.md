@@ -13,7 +13,7 @@ Status: Phoenix backend, Ecto persistence, Ecto changeset validation and Req cli
 ## Backends
 
 - [ ] Phoenix controllers/routes
-- [x] `package/backend/phoenix-backend` — implementation present; verification deferred
+- [x] `unit/backend/phoenix-backend` — implementation present; verification deferred
 - [ ] Plug backend research
 - [ ] Ash Framework research
 - [x] generated transport layer separated from application/domain logic
@@ -28,7 +28,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/ecto-schemas` — implementation present; verification deferred
+- [x] `unit/persistence/ecto-schemas` — implementation present; verification deferred
 - [x] Ecto associations with scalar FK ownership preserved
 - [x] table/schema naming
 - [x] primary/generated integer/UUID keys
@@ -43,7 +43,7 @@ Primary model: `typeorm-entities`.
 
 ## Validation/schema
 
-- [x] `package/validation/ecto-changesets`
+- [x] `unit/validation/ecto-changesets`
 - [x] shared generated wire structs with changeset validation
 - [x] changeset constraints from field semantics
 - [x] nested/collection validation
@@ -53,7 +53,7 @@ Primary model: `typeorm-entities`.
 
 ## Client SDKs
 
-- [x] `package/clients/elixir-client-sdk` — implementation present; verification deferred
+- [x] `unit/clients/elixir-client-sdk` — implementation present; verification deferred
 - [x] Req 0.7 transport
 - [ ] Tesla alternative research
 - [x] model/struct generation
@@ -67,7 +67,7 @@ Primary model: `typeorm-entities`.
 - [ ] Phoenix API project
 - [ ] Phoenix JSON project
 - [ ] Plug API project research
-- [ ] Mix project/package ownership
+- [ ] Mix unit ownership and ecosystem package identity
 - [ ] compose Ecto/validation explicitly
 - [ ] real ExUnit integration fixture
 
