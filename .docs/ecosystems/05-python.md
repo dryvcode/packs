@@ -4,10 +4,10 @@ Status: FastAPI backend, standalone Pydantic models, SQLAlchemy persistence and 
 
 ## Existing coverage
 
-- [x] `package/backend/fastapi-backend`
-- [x] `package/validation/pydantic-models` — verification deferred
-- [x] `package/persistence/sqlalchemy-models` — verification deferred
-- [x] `package/clients/python-client-sdk` — verification deferred
+- [x] `unit/backend/fastapi-backend`
+- [x] `unit/validation/pydantic-models` — verification deferred
+- [x] `unit/persistence/sqlalchemy-models` — verification deferred
+- [x] `unit/clients/python-client-sdk` — verification deferred
 
 ## Backend candidates
 
@@ -31,7 +31,7 @@ Models:
 
 ## Persistence
 
-- [x] `package/persistence/sqlalchemy-models`
+- [x] `unit/persistence/sqlalchemy-models`
 - [ ] SQLModel models
 - [ ] Django ORM models
 - [ ] Tortoise ORM models
@@ -55,7 +55,7 @@ Models:
 
 ## Validation and schema types
 
-- [x] `package/validation/pydantic-models`
+- [x] `unit/validation/pydantic-models`
 - [ ] Marshmallow schemas
 - [ ] attrs/cattrs research
 - [ ] dataclass schema/types pack research
@@ -75,7 +75,7 @@ Models:
 
 ## Client SDKs
 
-- [x] `package/clients/python-client-sdk`
+- [x] `unit/clients/python-client-sdk`
 - [x] httpx transport
 - [ ] requests-based variant research
 - [x] Pydantic or dataclass models
@@ -98,7 +98,7 @@ Models:
 - [ ] Django REST Framework project
 - [ ] Flask project
 - [ ] Litestar project
-- [ ] package/project ownership boundary audit
+- [ ] unit ownership versus ecosystem package identity audit
 - [ ] compose persistence and validation packs instead of duplicating them
 - [ ] realistic pyproject configuration
 - [ ] real pytest integration fixture
