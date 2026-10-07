@@ -193,11 +193,11 @@ Also review:
 - [INVALID-EXAMPLES.md](INVALID-EXAMPLES.md)
 
 
-## Remaining review gaps
+## Prerequisites to verify against Dryv
 
-The example architecture now exposes two pre-existing Engine gaps clearly:
+Before treating these review fixtures as executable proof, verify the current Dryv `develop` branch supports the generic capabilities they depend on:
 
-1. The NestJS composition uses `operation.server` as the capability between the unit pack and the injected server pack, but the current Engine slot catalogue does not yet include `operation.server`.
-2. The import-addressing review examples use destination `imports` configuration, but the current Engine `CodeDestination` contract does not yet expose that field.
+1. `operation.server` as the explicit capability used between the NestJS unit and inject packs;
+2. destination import-address configuration used by the import-addressing examples.
 
-These are separate from the `$options` refactor. They should be resolved explicitly rather than hidden with example-only syntax.
+If either capability is still incomplete in Dryv, finish it there. Do not hide the gap with Packs-only syntax or framework-specific Engine behavior.
