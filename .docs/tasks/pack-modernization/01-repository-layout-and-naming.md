@@ -1,44 +1,44 @@
-# 01 — Repository layout and naming migration
+# 01 — Repository identity and naming audit
 
 Status: **ready**
 
 ## Goal
 
-Prepare and execute the repository-wide identity model change:
+Finish the repository-wide pack identity cleanup on top of the layout migration that is already physically present.
+
+Current repository layout:
 
 ```text
-inject | package | project
-        ↓
-inject | unit
+packs/inject/**
+packs/unit/**
 ```
 
-while simplifying redundant terminal names.
+The remaining structural work is primarily:
 
-This task is structural only.
+- simplify redundant terminal names;
+- verify each pack is in the correct `inject` or `unit` role;
+- make manifest keys/IDs layout-aware and consistent;
+- remove stale references to old names.
 
 Do not redesign framework templates in this task.
 
-## Preconditions
+## Layout rule
 
-Dryv `dryv.pack/v1alpha1` must accept:
+```text
+inject
+  contributes implementation artifacts into a unit
 
-```yaml
-layout: inject
+unit
+  establishes and owns a generated unit root
 ```
 
-and:
+A pack should only move between `inject` and `unit` if its actual ownership role is wrong.
 
-```yaml
-layout: unit
-```
+Do not mechanically relocate packs by purpose.
 
-Old `package` and `project` spellings must not remain the desired contract.
+## Identity rule
 
-If Dryv still blocks the new layout, stop the move and fix the Dryv contract first.
-
-## Identity rules
-
-Canonical path and ID:
+Canonical pack ID:
 
 ```text
 <layout>/<purpose>/<name>
@@ -50,7 +50,7 @@ Canonical manifest key:
 <layout>.<purpose>.<name>
 ```
 
-The same terminal name may exist in both layouts.
+The same short name may exist in both layouts.
 
 Example:
 
@@ -59,13 +59,33 @@ inject/backend/nestjs
 unit/backend/nestjs
 ```
 
-## Naming audit
+## Terminal-name rule
 
-For every pack, determine the smallest stable terminal discriminator.
+The terminal name is the smallest stable discriminator inside its layout/purpose.
 
-Remove suffixes that merely repeat layout/purpose.
+Prefer:
 
-Representative migrations:
+```text
+<technology>
+<technology>-<variant>
+```
+
+Avoid suffixes that merely repeat parent meaning:
+
+```text
+-backend
+-client-sdk
+-entities
+-models
+-schemas
+-validation
+-collection
+-app
+```
+
+when removing them does not lose meaning.
+
+Representative candidates currently visible in the repository:
 
 ```text
 inject/backend/nestjs-backend
@@ -86,48 +106,47 @@ inject/validation/joi-schemas
 inject/validation/class-validator-dtos
 → inject/validation/class-validator
 
-package/backend/spring-boot-backend
-→ unit/backend/spring
-
-package/backend/fastapi-backend
-→ unit/backend/fastapi
-
-package/clients/dart-client-sdk
-→ unit/clients/dart
-
-package/clients/ts-api-client
-→ unit/clients/typescript
-
-package/testing/postman-collection
-→ unit/testing/postman
-
-package/testing/bruno-collection
-→ unit/testing/bruno
-
-package/testing/k6-smoke-tests
-→ unit/testing/k6
-
-package/documentation/openapi
-→ unit/documentation/openapi
-
-project/backend/nestjs-app
+unit/backend/nestjs-app
 → unit/backend/nestjs
 
-project/frontend/flutter-app
+unit/backend/fastapi-backend
+→ unit/backend/fastapi
+
+unit/backend/spring-boot-backend
+→ unit/backend/spring
+
+unit/clients/dart-client-sdk
+→ unit/clients/dart
+
+unit/clients/ts-api-client
+→ unit/clients/typescript
+
+unit/testing/postman-collection
+→ unit/testing/postman
+
+unit/testing/bruno-collection
+→ unit/testing/bruno
+
+unit/testing/k6-smoke-tests
+→ unit/testing/k6
+
+unit/frontend/flutter-app
 → unit/frontend/flutter
 
-project/frontend/nextjs-app
+unit/frontend/nextjs-app
 → unit/frontend/nextjs
 
-project/frontend/react-native-app
+unit/frontend/react-native-app
 → unit/frontend/react-native
 ```
 
-These are examples, not a blind rename table. Audit genuine variants before shortening.
+These are candidates, not a blind rename table.
 
-## Repository tooling to update first
+Audit each name for real variants before shortening.
 
-Inspect and update:
+## Repository tooling audit
+
+Inspect all identity consumers before renaming:
 
 ```text
 scripts/lib/repository.ts
@@ -141,19 +160,22 @@ shared/assets.json
 shared/fragments.json
 ```
 
-Any identity/path logic must use the same `inject | unit` model.
+Ensure every helper derives identity from the same canonical path/key model.
 
-Do not maintain parallel identity rules.
+## Deliverable
 
-## Acceptance
+Produce the exact repository-wide rename/move table to execute in Task 02.
 
-Before moving directories, prove repository tooling recognizes:
+For every pack record:
 
 ```text
-inject/<purpose>/<name>
-unit/<purpose>/<name>
+current ID
+target ID
+current key
+target key
+layout role confirmed?
+package identity retained?
+references/mappings affected?
 ```
 
-and rejects obsolete layout identities where appropriate.
-
-No template redesign is required for acceptance.
+Do not modify templates merely to improve generated code quality in this task.
