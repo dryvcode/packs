@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Phoenix 1.8 JSON controllers, explicit router macros and service behaviours.
 
-catalog:
   purpose: backend
   summary: Phoenix JSON transport with generated wire structs and explicit service-module bindings.
   languages: [elixir]

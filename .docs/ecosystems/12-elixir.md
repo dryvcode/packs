@@ -39,7 +39,7 @@ Models:
 - [x] relation navigation; database FK lifecycle remains migration-layer concern
 - [ ] migration ownership research
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation/schema
 

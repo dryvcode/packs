@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates typed React forms for HTTP create and update operations using bound DTO/types and operation clients.
 
-catalog:
   purpose: frontend
   summary: Pure Handlebars React forms driven by create/update operations and their input DTO semantics.
   languages: [typescript]

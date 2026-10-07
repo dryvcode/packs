@@ -40,7 +40,7 @@ Models:
 - [x] temporal/decimal types
 - [ ] defaults/check constraints
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation/schema
 
@@ -53,7 +53,7 @@ Primary model: `typeorm-entities`.
 - [x] common string formats
 - [x] cross-field invariant mapping
 
-Primary model: `class-validator-dtos`.
+Primary model: `class-validator`.
 
 ## Client SDKs
 

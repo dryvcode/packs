@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Doctrine ORM 3.7 entities from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Doctrine ORM entities with typed columns, keys and indexes.
   languages: [php]

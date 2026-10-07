@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Scala 3.9 Circe wire models with pure generated validation functions.
 
-catalog:
   purpose: validation
   summary: Scala 3.9 Circe models with reusable generated validators.
   languages: [scala]

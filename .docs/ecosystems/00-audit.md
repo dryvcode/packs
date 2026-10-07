@@ -20,14 +20,14 @@ Frontend:
 
 Persistence:
 
-- [x] `inject/persistence/typeorm-entities`
-- [x] `inject/persistence/mongoose-models`
+- [x] `inject/persistence/typeorm`
+- [x] `inject/persistence/mongoose`
 
 Validation:
 
-- [x] `inject/validation/class-validator-dtos`
-- [x] `inject/validation/zod-schemas`
-- [x] `inject/validation/joi-schemas`
+- [x] `inject/validation/class-validator`
+- [x] `inject/validation/zod`
+- [x] `inject/validation/joi`
 
 Documentation:
 
@@ -167,10 +167,10 @@ Dart/Flutter is represented strongly for clients and frontend projects, but is n
 
 ## Proven pack patterns to reuse
 
-- SQL persistence → `typeorm-entities`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`, `ecto-schemas`, `sqlite-orm-models`
-- document persistence → `mongoose-models`
-- validation DTOs/models → `class-validator-dtos`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
-- schema validation → `zod-schemas`, `joi-schemas`
+- SQL persistence → `typeorm`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`, `ecto-schemas`, `sqlite-orm-models`
+- document persistence → `mongoose`
+- validation DTOs/models → `class-validator`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
+- schema validation → `zod`, `joi`
 - HTTP backends → `fastapi-backend`, `nestjs`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`, `http4s-backend`, `reitit-backend`
 - HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`, `scala-client-sdk`, `clojure-client-sdk`
 - existing-project UI → `react-crud-forms`

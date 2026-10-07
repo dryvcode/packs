@@ -10,20 +10,20 @@ It doesn't generate DTOs or entities. It imports them through slots the project 
 
 ```yaml
 packs:
-  dtos: { source: …/class-validator-dtos }
-  entities: { source: …/typeorm-entities }
+  dtos: { source: …/class-validator }
+  entities: { source: …/typeorm }
   server:
     source: …/nestjs
     bind:
-      schema.validation: { $ref: '#/packs/dtos' }       # or zod-schemas / joi-schemas
+      schema.validation: { $ref: '#/packs/dtos' }       # or zod / joi
       schema.persistence: { $ref: '#/packs/entities' }  # optional
 ```
 
 | Bound validation pack | Parameters and results | Validation |
 | --- | --- | --- |
-| class-validator-dtos | DTO classes | Nest's global `ValidationPipe` |
-| zod-schemas | `z.infer<typeof XSchema>` | generated `SchemaValidationPipe(XSchema)` |
-| joi-schemas | `Record<string, unknown>` | generated `SchemaValidationPipe(XSchema)` |
+| class-validator | DTO classes | Nest's global `ValidationPipe` |
+| zod | `z.infer<typeof XSchema>` | generated `SchemaValidationPipe(XSchema)` |
+| joi | `Record<string, unknown>` | generated `SchemaValidationPipe(XSchema)` |
 
 When persistence is bound, the feature module registers the entities its operations use with `TypeOrmModule.forFeature([...])`. The pipe duck-types zod and Joi, so the output compiles with whichever library the project uses.
 

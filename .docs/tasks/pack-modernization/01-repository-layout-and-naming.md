@@ -100,19 +100,19 @@ Representative candidates currently visible in the repository:
 inject/backend/nestjs
 → inject/backend/nestjs
 
-inject/persistence/typeorm-entities
+inject/persistence/typeorm
 → inject/persistence/typeorm
 
-inject/persistence/mongoose-models
+inject/persistence/mongoose
 → inject/persistence/mongoose
 
-inject/validation/zod-schemas
+inject/validation/zod
 → inject/validation/zod
 
-inject/validation/joi-schemas
+inject/validation/joi
 → inject/validation/joi
 
-inject/validation/class-validator-dtos
+inject/validation/class-validator
 → inject/validation/class-validator
 
 unit/backend/nestjs

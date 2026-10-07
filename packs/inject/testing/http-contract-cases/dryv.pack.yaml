@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates machine-readable HTTP contract case descriptors from Dryv HTTP operations.
 
-catalog:
   purpose: testing
   summary: Portable JSON contract cases for cross-language backend and client test harnesses.
   languages: [json]

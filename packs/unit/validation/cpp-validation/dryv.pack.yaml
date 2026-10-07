@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates C++20 wire models and dependency-light validation helpers from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: C++20 generated validation helpers over nlohmann/json wire models.
   languages: [cpp]

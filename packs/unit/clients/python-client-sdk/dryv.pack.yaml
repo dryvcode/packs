@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates an async Python 3.11+ HTTPX client with Pydantic models and typed operations.
 
-catalog:
   purpose: clients
   summary: Async HTTPX client SDK with shared Pydantic models and typed operations.
   languages: [python]

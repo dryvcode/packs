@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a Ruby 4 Net::HTTP client SDK with typed-ish wire models and operations.
 
-catalog:
   purpose: clients
   summary: Ruby Net::HTTP client SDK with generated models, operations and structured errors.
   languages: [ruby]

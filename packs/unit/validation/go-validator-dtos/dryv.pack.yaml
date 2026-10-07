@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Go DTOs and enums with go-playground/validator v10 validation.
 
-catalog:
   purpose: validation
   summary: Go DTOs with validator tags and generated custom validators.
   languages: [go]

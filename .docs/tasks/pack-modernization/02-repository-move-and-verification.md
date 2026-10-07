@@ -111,3 +111,31 @@ Record:
 - fixture/shared mappings changed;
 - stale references removed;
 - repository verification results.
+
+## Progress — NestJS slice (2026-10-07)
+
+Applied for the packs NestJS uses or targets:
+
+| Current ID | Target ID | Key |
+| --- | --- | --- |
+| `inject/persistence/typeorm-entities` | `inject/persistence/typeorm` | `inject.persistence.typeorm` |
+| `inject/persistence/mongoose-models` | `inject/persistence/mongoose` | `inject.persistence.mongoose` |
+| `inject/validation/class-validator-dtos` | `inject/validation/class-validator` | `inject.validation.class-validator` |
+| `inject/validation/zod-schemas` | `inject/validation/zod` | `inject.validation.zod` |
+| `inject/validation/joi-schemas` | `inject/validation/joi` | `inject.validation.joi` |
+
+No layout moves; package identity unchanged. Shared asset/fragment mappings, fixtures and active docs updated.
+
+Contract alignment done with it:
+
+- every manifest keeps catalogue metadata under `info` (the top-level `catalog` block is removed in Dryv);
+- `js-prettier-actions` uses flat `actions` with `stage`;
+- NestJS templates compare validation packs by full key (`inject.validation.zod`, `inject.validation.joi`);
+- the five fixtures use the current Usage shape (`source: { $ref, path }`, flat destinations).
+
+Verification: `shared:check` and `catalog:check` pass; `test:packs` passes for all five packs.
+
+Still open:
+
+- `inject/backend/nestjs`: the `feature` template declares both `output.symbol` and `output.symbols`, which the Engine rejects, while a provider template must declare `output.symbol`. Needs a decision (split feature files, or an Engine contract change).
+- the remaining packs in the Task 01 candidate table.

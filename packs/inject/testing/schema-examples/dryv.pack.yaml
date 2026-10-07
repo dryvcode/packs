@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Materializes authored Dryv schema examples as deterministic JSON fixture files with a generated index.
 
-catalog:
   purpose: testing
   summary: Canonical schema examples exported as JSON fixtures for tests and tooling.
   languages: [json]

@@ -11,7 +11,6 @@ info:
   title: Dart Client SDK
   version: 0.1.0
   description: Generates typed Dart models, enums, feature API clients, feature libraries, and a root SDK library.
-catalog:
   purpose: clients
   summary: A typed Dart client SDK for the application's HTTP API.
   languages: [dart]

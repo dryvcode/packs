@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a stable Cohttp Lwt 6.3 backend with Yojson models and separated service records.
 
-catalog:
   purpose: backend
   summary: OCaml Cohttp/Lwt server routes with Yojson models and explicit service boundaries.
   languages: [ocaml]

@@ -28,7 +28,7 @@ This file covers Java-first JVM packs. Kotlin-specific packs are tracked separat
 
 - [ ] Hibernate Validator-specific enhancements where portable Jakarta annotations are insufficient
 
-Primary model: `class-validator-dtos`.
+Primary model: `class-validator`.
 
 ## Backends
 
@@ -69,7 +69,7 @@ Models:
 - [ ] embedded/value objects
 - [ ] simple check constraints where target supports them
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Client SDKs
 

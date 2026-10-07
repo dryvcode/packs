@@ -45,7 +45,7 @@ Models:
 - [ ] concurrency/version fields if represented semantically
 - [ ] database checks where supported
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation
 
@@ -59,7 +59,7 @@ Primary model: `typeorm-entities`.
 - [ ] cross-field invariant strategy
 - [x] provide `schema.validation` and `schema.types`
 
-Primary model: `class-validator-dtos`.
+Primary model: `class-validator`.
 
 ## Client SDKs
 

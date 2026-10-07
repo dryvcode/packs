@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Aeson models with pure validation helpers from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: Haskell Aeson models with generated pure validation functions.
   languages: [haskell]

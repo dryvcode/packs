@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates portable Jakarta Persistence 3.2 entity classes from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Portable Jakarta Persistence entities with keys, indexes and relations.
   languages: [java]

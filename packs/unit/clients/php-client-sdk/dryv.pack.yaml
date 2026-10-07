@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a typed PHP 8.4+ Guzzle client SDK with plain DTOs and canonical enum wrappers.
 
-catalog:
   purpose: clients
   summary: Typed PHP Guzzle client SDK with generated DTOs and HTTP operations.
   languages: [php]

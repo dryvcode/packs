@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates machine-readable persistence contract descriptors from Dryv entity schemas.
 
-catalog:
   purpose: testing
   summary: Portable JSON persistence cases for testing ORM and migration mappings across languages.
   languages: [json]

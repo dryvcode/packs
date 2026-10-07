@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates machine-readable schema contract descriptors for cross-language validation and model tests.
 
-catalog:
   purpose: testing
   summary: Portable JSON schema cases describing fields, constraints, defaults, enums and invariants.
   languages: [json]

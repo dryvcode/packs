@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates .NET 10 DTOs, canonical enums and FluentValidation validators from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: System.Text.Json DTOs with FluentValidation 12 validators.
   languages: [csharp]

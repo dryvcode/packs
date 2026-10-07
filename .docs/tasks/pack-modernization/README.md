@@ -74,10 +74,10 @@ Examples:
 inject/backend/nestjs
 → inject/backend/nestjs
 
-inject/persistence/typeorm-entities
+inject/persistence/typeorm
 → inject/persistence/typeorm
 
-inject/validation/zod-schemas
+inject/validation/zod
 → inject/validation/zod
 
 unit/clients/dart-client-sdk

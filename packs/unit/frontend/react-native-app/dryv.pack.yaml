@@ -7,7 +7,6 @@ info:
   title: React Native App
   version: 0.1.0
   description: Generates an Expo React Native app from views, organised by feature with expo-router routes, TanStack Query state and calls through the ts-api-client package.
-catalog:
   purpose: frontend
   summary: An Expo app from views — feature screens, expo-router routes, TanStack Query hooks, a connectivity gate, calls through ts-api-client.
   languages: [typescript]

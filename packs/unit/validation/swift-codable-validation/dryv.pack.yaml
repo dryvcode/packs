@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Swift 6 Codable models and deterministic validation helpers from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: Swift Codable models with generated constraint validation.
   languages: [swift]

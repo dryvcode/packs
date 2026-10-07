@@ -43,12 +43,12 @@ packs:
       schema.persistence:
         $ref: "#/packs/entities"
   dtos:
-    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator-dtos }
+    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
       $ref: "#/destinations/dtos"
       root: [src, dto]
   entities:
-    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm-entities }
+    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
     destination:
       $ref: "#/destinations/entities"
       root: [src, entities]

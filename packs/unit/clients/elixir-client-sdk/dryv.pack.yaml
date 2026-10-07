@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates an Elixir 1.15+ Req client SDK with structs, enum wrappers and typed operation specs.
 
-catalog:
   purpose: clients
   summary: Req-based Elixir HTTP client SDK with generated wire structs and operations.
   languages: [elixir]

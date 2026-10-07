@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Ruby wire models and dry-validation 1.11 contracts from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: Ruby models with dry-validation contracts and generated constraint rules.
   languages: [ruby]

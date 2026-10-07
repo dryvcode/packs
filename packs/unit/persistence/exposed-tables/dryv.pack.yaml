@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates JetBrains Exposed 1.5 table definitions from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Exposed 1.5 tables with keys, indexes, foreign keys and portable column mappings.
   languages: [kotlin]

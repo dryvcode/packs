@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Ktor 3.6 route registration, kotlinx.serialization models and coroutine service interfaces.
 
-catalog:
   purpose: backend
   summary: Ktor 3.6 routes with typed serializable models and coroutine service boundaries.
   languages: [kotlin]

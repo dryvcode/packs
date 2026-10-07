@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a typed Haskell HTTP client using http-client-tls and Aeson.
 
-catalog:
   purpose: clients
   summary: Typed Haskell HTTP client with Aeson wire models and explicit operation functions.
   languages: [haskell]

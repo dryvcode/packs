@@ -1,7 +1,7 @@
 name: release pack
 
 # A pack is released by a tag made of its path and version:
-#   inject/persistence/typeorm-entities/v0.1.0
+#   inject/persistence/typeorm/v0.1.0
 # The tag's version must equal the pack's info.version. The release carries the pack as a
 # tarball and the full catalogue (catalog.json), generated from every pack's metadata.
 on:

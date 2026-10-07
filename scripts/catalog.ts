@@ -28,8 +28,7 @@ type CatalogMetadata = {
 type PackDocument = {
   key: string;
   layout?: PackLayout;
-  info: { title: string; version: string; description?: string };
-  catalog?: CatalogMetadata;
+  info: { title: string; version: string; description?: string } & Partial<CatalogMetadata>;
   provides?: Record<string, unknown>;
   needs?: Record<string, unknown>;
 };
@@ -70,18 +69,18 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
     readFileSync(join(PACKS, id, "dryv.pack.yaml"), "utf8"),
   ) as PackDocument;
   const problems: string[] = [];
-  const catalog = document.catalog;
+  const catalog = document.info.purpose === undefined ? undefined : (document.info as CatalogMetadata);
   const effectiveLayout = document.layout ?? "inject";
 
   if (catalog === undefined) {
-    problems.push(`${id}: no catalog block`);
+    problems.push(`${id}: info.purpose is missing`);
   } else {
     if (catalog.purpose !== purpose) {
-      problems.push(`${id}: catalog.purpose is ${catalog.purpose}, folder is ${purpose}`);
+      problems.push(`${id}: info.purpose is ${catalog.purpose}, folder is ${purpose}`);
     }
-    if (!catalog.summary?.trim()) problems.push(`${id}: catalog.summary must be non-empty`);
+    if (!catalog.summary?.trim()) problems.push(`${id}: info.summary must be non-empty`);
     if ((catalog.languages ?? []).length === 0) {
-      problems.push(`${id}: catalog.languages must not be empty`);
+      problems.push(`${id}: info.languages must not be empty`);
     }
   }
 
@@ -107,9 +106,9 @@ export function entry(id: string): { entry: CatalogEntry | null; problems: strin
       summary: catalog.summary ?? null,
       purpose: catalog.purpose,
       layout: effectiveLayout,
-      languages: normalized(catalog.languages, `${id}: catalog.languages`, problems),
-      frameworks: normalized(catalog.frameworks, `${id}: catalog.frameworks`, problems),
-      tags: normalized(catalog.tags, `${id}: catalog.tags`, problems),
+      languages: normalized(catalog.languages, `${id}: info.languages`, problems),
+      frameworks: normalized(catalog.frameworks, `${id}: info.frameworks`, problems),
+      tags: normalized(catalog.tags, `${id}: info.tags`, problems),
       provides: Object.keys(document.provides ?? {}).sort(),
       needs: Object.keys(document.needs ?? {}).sort(),
       source: { repository: REPOSITORY_URL, ref: releaseRef(id, version), root: "packs" },

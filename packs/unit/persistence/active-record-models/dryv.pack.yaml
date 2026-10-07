@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Active Record 8.1 model classes from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Ruby Active Record models with typed attributes, primary keys and associations.
   languages: [ruby]

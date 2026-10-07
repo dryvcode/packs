@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates storage-focused Markdown documentation for persistent Dryv schemas without claiming DDL ownership.
 
-catalog:
   purpose: documentation
   summary: Storage, key, index and relation reference for persistent schemas.
   languages: [markdown]

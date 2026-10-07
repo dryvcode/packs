@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates .NET 10 ASP.NET Core endpoint registration, feature service interfaces and System.Text.Json models.
 
-catalog:
   purpose: backend
   summary: ASP.NET Core endpoint mappings with typed models and DI service boundaries.
   languages: [csharp]

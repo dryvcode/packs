@@ -1,17 +1,17 @@
 actions:
-  files:
-    format:
-      extensions: [.ts]
-      commands:
-        - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
-        - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
-        - run: [bun, x, prettier@3.9.9, --write, $(files)]
-  final:
-    install:
-      dependencies:
-        args:
-          - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
-          - { pinned: "$(name)@$(version)", any: "$(name)" }
-      commands:
-        - run: [(pnpm|bun|yarn), add]
-        - run: [npm, install]
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+        - { pinned: "$(name)@$(version)", any: "$(name)" }
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]

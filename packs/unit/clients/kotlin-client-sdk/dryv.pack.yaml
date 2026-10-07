@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a Kotlin 2.4.20 Ktor Client SDK with kotlinx.serialization wire types.
 
-catalog:
   purpose: clients
   summary: Coroutine-first Ktor Client SDK with kotlinx.serialization models.
   languages: [kotlin]

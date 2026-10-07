@@ -42,7 +42,7 @@ Best initial structural model: `fastapi-backend`.
 - [ ] decimal/money mapping
 - [ ] database invariants/checks where supported
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation and schema types
 
@@ -59,8 +59,8 @@ Primary model: `typeorm-entities`.
 
 Models:
 
-- `class-validator-dtos`
-- `zod-schemas`
+- `class-validator`
+- `zod`
 
 ## Client SDKs
 

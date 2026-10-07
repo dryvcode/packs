@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a C++20 cpr HTTP client SDK with nlohmann/json wire models and operations.
 
-catalog:
   purpose: clients
   summary: C++20 cpr client SDK with generated JSON models and typed operations.
   languages: [cpp]

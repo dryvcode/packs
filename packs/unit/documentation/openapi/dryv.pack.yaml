@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates an OpenAPI 3.1 document plus referenced JSON Schema 2020-12 artifacts from Dryv HTTP operations.
 
-catalog:
   purpose: documentation
   summary: OpenAPI 3.1 API description using canonical effective HTTP paths and JSON Schema artifacts.
   languages: [json]

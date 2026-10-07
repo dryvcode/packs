@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a Scala 3.9 URL/JDK HttpClient SDK with Circe wire models and typed async operations.
 
-catalog:
   purpose: clients
   summary: Scala 3.9 async HTTP client SDK using JDK HttpClient and Circe.
   languages: [scala]

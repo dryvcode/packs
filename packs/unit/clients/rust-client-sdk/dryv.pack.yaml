@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a typed async Rust HTTP client with reqwest, serde models, enums and one callable per HTTP operation.
 
-catalog:
   purpose: clients
   summary: Typed async Rust HTTP client SDK using reqwest and serde.
   languages: [rust]

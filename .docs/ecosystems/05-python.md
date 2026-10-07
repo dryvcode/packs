@@ -50,8 +50,8 @@ Models:
 
 Models:
 
-- SQL ORM → `typeorm-entities`
-- document model → `mongoose-models`
+- SQL ORM → `typeorm`
+- document model → `mongoose`
 
 ## Validation and schema types
 
@@ -70,7 +70,7 @@ Models:
 
 Models:
 
-- `class-validator-dtos`
+- `class-validator`
 - FastAPI's existing Pydantic model generation
 
 ## Client SDKs

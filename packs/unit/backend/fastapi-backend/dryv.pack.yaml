@@ -10,7 +10,6 @@ info:
   title: FastAPI Backend
   version: 0.1.0
   description: Generates Pydantic models, abstract feature services and FastAPI routers that delegate to them.
-catalog:
   purpose: backend
   summary: FastAPI routers and Pydantic models.
   languages: [python]

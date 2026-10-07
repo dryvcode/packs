@@ -21,8 +21,8 @@
 {%- macro ts_type(value) -%}
 {%- if value.is.schema -%}
   {%- set pack = pack_for(value.schema, 'schema.validation') -%}
-  {%- if pack == 'validation.zod-schemas' -%}z.infer<typeof {{ symbol_for(value.schema, 'schema.validation') }}>
-  {%- elif pack == 'validation.joi-schemas' -%}Record<string, unknown>
+  {%- if pack == 'inject.validation.zod' -%}z.infer<typeof {{ symbol_for(value.schema, 'schema.validation') }}>
+  {%- elif pack == 'inject.validation.joi' -%}Record<string, unknown>
   {%- else -%}{{ symbol_for(value.schema, 'schema.validation') }}
   {%- endif -%}
 {%- elif value.is.property and value.is.primitive -%}{{ value.property.primitive.type }}
@@ -35,7 +35,7 @@
 {%- macro body_pipe(value) -%}
 {%- if value.is.schema -%}
   {%- set pack = pack_for(value.schema, 'schema.validation') -%}
-  {%- if pack == 'validation.zod-schemas' or pack == 'validation.joi-schemas' -%}new SchemaValidationPipe({{ symbol_for(value.schema, 'schema.validation') }})
+  {%- if pack == 'inject.validation.zod' or pack == 'inject.validation.joi' -%}new SchemaValidationPipe({{ symbol_for(value.schema, 'schema.validation') }})
   {%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
@@ -71,8 +71,8 @@ Promise<{% if operation.output %}{{ ts_type(operation.output.value) }}{% else %}
 {%- endif -%}
 {%- endmacro -%}
 
-{%- set zod = uses_pack('validation.zod-schemas') != '' -%}
-{%- set joi = uses_pack('validation.joi-schemas') != '' -%}
+{%- set zod = uses_pack('inject.validation.zod') != '' -%}
+{%- set joi = uses_pack('inject.validation.joi') != '' -%}
 {%- set persistence = has_slot('schema.persistence') != '' -%}
 import {
   Body,

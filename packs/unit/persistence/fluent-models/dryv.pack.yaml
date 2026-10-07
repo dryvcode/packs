@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Swift 6.4 Vapor Fluent models and migrations from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Vapor Fluent models and migrations with keys, unique constraints and foreign keys.
   languages: [swift]

@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Sequel 5.109 models and portable schema helpers from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: Connection-neutral Sequel models with schema, indexes and explicit foreign keys.
   languages: [ruby]

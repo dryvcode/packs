@@ -64,7 +64,7 @@ Primary model: `fastapi-backend`.
 - [ ] defaults/check expressions
 - [x] enum/temporal/decimal mapping
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation/schema
 

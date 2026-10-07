@@ -10,7 +10,6 @@ info:
   title: Next API Bridge
   version: 0.1.0
   description: Generates Next.js server actions over next-api-bridge for every HTTP operation, with route maps, useActionState form actions and schema types.
-catalog:
   purpose: clients
   summary: Next.js server actions over next-api-bridge, with routes, form actions and types.
   languages: [typescript]

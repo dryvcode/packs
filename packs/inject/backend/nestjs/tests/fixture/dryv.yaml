@@ -23,15 +23,15 @@ authoring:
     $ref: "#/sources/authoring/main"
 packs:
   dtos:
-    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator-dtos }
+    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
       $ref: "#/destinations/dtos"
   entities:
-    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm-entities }
+    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
     destination:
       $ref: "#/destinations/entities"
   zod:
-    source: { $ref: "#/sources/packs/local", path: inject/validation/zod-schemas }
+    source: { $ref: "#/sources/packs/local", path: inject/validation/zod }
     destination:
       $ref: "#/destinations/zod"
   server:

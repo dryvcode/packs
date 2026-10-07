@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Yojson wire models and pure OCaml validation functions from Dryv schemas.
 
-catalog:
   purpose: validation
   summary: OCaml Yojson models with generated pure validation helpers.
   languages: [ocaml]

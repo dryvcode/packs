@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates a typed .NET 10 HttpClient SDK with System.Text.Json models and operations.
 
-catalog:
   purpose: clients
   summary: Typed .NET 10 HttpClient SDK using System.Text.Json.
   languages: [csharp]

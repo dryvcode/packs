@@ -70,7 +70,7 @@ Primary model: `fastapi-backend`.
 - [x] decimal/money exact-string persistence mapping
 - [x] temporal mappings where Fluent has portable schema types
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Apps/projects
 

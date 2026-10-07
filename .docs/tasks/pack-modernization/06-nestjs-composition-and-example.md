@@ -10,8 +10,8 @@ Status: **done**
 unit/backend/nestjs
   needs operation.server
     -> inject/backend/nestjs
-         needs schema.validation -> inject/validation/class-validator-dtos
-         needs schema.persistence -> inject/persistence/typeorm-entities
+         needs schema.validation -> inject/validation/class-validator
+         needs schema.persistence -> inject/persistence/typeorm
 ```
 
 The example uses the unambiguous pack source shape:

@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Persistent 2.18 entity definitions and an aggregate migration module.
 
-catalog:
   purpose: persistence
   summary: Haskell Persistent models with explicit keys, unique constraints and foreign-key lifecycle.
   languages: [haskell]

@@ -1,16 +1,16 @@
 {
   "templates/typescript/enum.ts.j2": [
-    "packs/inject/persistence/mongoose-models/templates/enums/{enum}/$(name).enum.ts.j2",
-    "packs/inject/persistence/typeorm-entities/templates/common/entities/enums/{enum}/$(name).enum.ts.j2",
-    "packs/inject/validation/class-validator-dtos/templates/common/dto/enums/{enum}/$(name).enum.ts.j2",
+    "packs/inject/persistence/mongoose/templates/enums/{enum}/$(name).enum.ts.j2",
+    "packs/inject/persistence/typeorm/templates/common/entities/enums/{enum}/$(name).enum.ts.j2",
+    "packs/inject/validation/class-validator/templates/common/dto/enums/{enum}/$(name).enum.ts.j2",
     "packs/unit/clients/next-api-bridge/templates/types/enums/{enum}/$(name).ts.j2",
     "packs/unit/clients/ts-api-client/templates/src/enums/{enum}/$(name).ts.j2",
     "packs/unit/frontend/nextjs-app/templates/lib/types/{enum}/$(name).enum.ts.j2"
   ],
   "templates/typescript/export-index.ts.j2": [
-    "packs/inject/persistence/mongoose-models/templates/{index}/index.ts.j2",
-    "packs/inject/validation/joi-schemas/templates/{index}/index.ts.j2",
-    "packs/inject/validation/zod-schemas/templates/{index}/index.ts.j2"
+    "packs/inject/persistence/mongoose/templates/{index}/index.ts.j2",
+    "packs/inject/validation/joi/templates/{index}/index.ts.j2",
+    "packs/inject/validation/zod/templates/{index}/index.ts.j2"
   ],
   "templates/typescript/export-index.ts.hbs": [
     "packs/inject/backend/nestjs/templates/{feature-index}/index.ts.hbs",

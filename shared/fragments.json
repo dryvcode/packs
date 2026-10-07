@@ -4,11 +4,11 @@
     "targets": [
       "packs/inject/backend/nestjs/dryv.pack.yaml",
       "packs/inject/frontend/react-crud-forms/dryv.pack.yaml",
-      "packs/inject/persistence/mongoose-models/dryv.pack.yaml",
-      "packs/inject/persistence/typeorm-entities/dryv.pack.yaml",
-      "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
-      "packs/inject/validation/joi-schemas/dryv.pack.yaml",
-      "packs/inject/validation/zod-schemas/dryv.pack.yaml",
+      "packs/inject/persistence/mongoose/dryv.pack.yaml",
+      "packs/inject/persistence/typeorm/dryv.pack.yaml",
+      "packs/inject/validation/class-validator/dryv.pack.yaml",
+      "packs/inject/validation/joi/dryv.pack.yaml",
+      "packs/inject/validation/zod/dryv.pack.yaml",
       "packs/unit/clients/ts-api-client/dryv.pack.yaml",
       "packs/unit/frontend/nextjs-app/dryv.pack.yaml",
       "packs/unit/frontend/react-native-app/dryv.pack.yaml",
@@ -26,11 +26,11 @@
     "marker": "js-prettier-actions",
     "targets": [
       "packs/inject/backend/nestjs/dryv.pack.yaml",
-      "packs/inject/persistence/mongoose-models/dryv.pack.yaml",
-      "packs/inject/persistence/typeorm-entities/dryv.pack.yaml",
-      "packs/inject/validation/class-validator-dtos/dryv.pack.yaml",
-      "packs/inject/validation/joi-schemas/dryv.pack.yaml",
-      "packs/inject/validation/zod-schemas/dryv.pack.yaml",
+      "packs/inject/persistence/mongoose/dryv.pack.yaml",
+      "packs/inject/persistence/typeorm/dryv.pack.yaml",
+      "packs/inject/validation/class-validator/dryv.pack.yaml",
+      "packs/inject/validation/joi/dryv.pack.yaml",
+      "packs/inject/validation/zod/dryv.pack.yaml",
       "packs/unit/backend/nestjs/dryv.pack.yaml"
     ]
   },

@@ -12,14 +12,14 @@ This is currently Dryv's strongest ecosystem. Expansion here should not crowd ou
 
 ### Persistence
 
-- [x] `inject/persistence/typeorm-entities`
-- [x] `inject/persistence/mongoose-models`
+- [x] `inject/persistence/typeorm`
+- [x] `inject/persistence/mongoose`
 
 ### Validation
 
-- [x] `inject/validation/class-validator-dtos`
-- [x] `inject/validation/zod-schemas`
-- [x] `inject/validation/joi-schemas`
+- [x] `inject/validation/class-validator`
+- [x] `inject/validation/zod`
+- [x] `inject/validation/joi`
 
 ### Clients
 
@@ -61,7 +61,7 @@ Models:
 - [ ] Prisma MongoDB applicability audit
 - [ ] database schema/migration ownership audit for tools that have their own schema authority
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 Important: do not create a second semantic schema model inside a pack merely to feed another generator.
 
@@ -79,9 +79,9 @@ Important: do not create a second semantic schema model inside a pack merely to 
 
 Models:
 
-- `zod-schemas`
-- `joi-schemas`
-- `class-validator-dtos`
+- `zod`
+- `joi`
+- `class-validator`
 
 ## Client candidates
 

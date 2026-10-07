@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Scotty 0.30 routes, Aeson models and feature service boundaries.
 
-catalog:
   purpose: backend
   summary: Haskell Scotty routes with Aeson models and separated IO service records.
   languages: [haskell]

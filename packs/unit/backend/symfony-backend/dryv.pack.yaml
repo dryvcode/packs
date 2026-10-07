@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Symfony 8.1 route controllers, typed DTOs and feature service interfaces.
 
-catalog:
   purpose: backend
   summary: Symfony controllers with typed DTOs and separated service boundaries.
   languages: [php]

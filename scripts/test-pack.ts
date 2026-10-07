@@ -2,7 +2,7 @@
 /**
  * Render each pack's test fixture through the Dryv CLI and run its checks.
  *
- *   bun scripts/test-pack.ts inject/persistence/typeorm-entities [...]
+ *   bun scripts/test-pack.ts inject/persistence/typeorm [...]
  *   bun scripts/test-pack.ts --all
  *   bun scripts/test-pack.ts --keep <pack>
  *   bun scripts/test-pack.ts --clean --all

@@ -43,7 +43,7 @@ Models:
 - [x] decimal/money
 - [ ] defaults/checks
 
-Primary model: `typeorm-entities`.
+Primary model: `typeorm`.
 
 ## Validation/schema
 
@@ -57,7 +57,7 @@ Primary model: `typeorm-entities`.
 - [x] common formats
 - [x] cross-field invariants
 
-Primary model: `class-validator-dtos`.
+Primary model: `class-validator`.
 
 ## Client SDKs
 

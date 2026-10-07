@@ -1,0 +1,14 @@
+{
+  "name": "class-validator-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "class-transformer": "^0.5",
+    "class-validator": "^0.14",
+    "reflect-metadata": "^0.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1",
+    "typescript": "^5.8"
+  }
+}

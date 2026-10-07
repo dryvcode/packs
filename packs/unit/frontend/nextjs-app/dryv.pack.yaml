@@ -7,7 +7,6 @@ info:
   title: Next.js App
   version: 0.1.0
   description: Generates Next.js App Router pages from views, with typed API calls for HTTP operations and schema-driven forms and results.
-catalog:
   purpose: frontend
   summary: Next.js App Router pages from views, typed API calls and schema-driven forms.
   languages: [typescript]

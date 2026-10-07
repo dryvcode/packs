@@ -7,7 +7,6 @@ info:
   version: 0.1.0
   description: Generates portable Markdown reference documentation and Mermaid schema relationships from Dryv Runtime IR.
 
-catalog:
   purpose: documentation
   summary: Runtime-IR-driven Markdown catalogues for schemas, operations, policies, failures, events and workflows.
   languages: [markdown]

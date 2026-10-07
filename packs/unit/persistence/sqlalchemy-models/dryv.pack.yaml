@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates SQLAlchemy 2.1 declarative models from persistent Dryv schemas.
 
-catalog:
   purpose: persistence
   summary: SQLAlchemy 2.1 declarative models with keys, indexes and typed columns.
   languages: [python]

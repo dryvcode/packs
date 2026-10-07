@@ -11,7 +11,6 @@ info:
   version: 0.1.0
   description: Generates Spring Boot 4.1 MVC controllers, Jackson models and feature service interfaces.
 
-catalog:
   purpose: backend
   summary: Spring MVC controllers with shared Jackson models and separated service boundaries.
   languages: [java]
