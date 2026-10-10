@@ -47,18 +47,6 @@ templates:
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
 
-
-  feature-contract:
-    $ref: '#/selections/features'
-    output:
-      name: $(feature.name.kebab)
-      path:
-        - $(group.name.kebab)
-        - $(feature.name.kebab)
-      symbols:
-        contract: $(group.name.pascal)$(feature.name.pascal)ApiContract
-      symbol: $(group.name.pascal)$(feature.name.pascal)ApiContract
-
   feature-index:
     output:
       path:
@@ -67,7 +55,6 @@ templates:
     barrel: each
     exports:
       - $ref: '#/templates/feature'
-      - $ref: '#/templates/feature-contract'
 
   root-index:
     exports:
@@ -87,7 +74,6 @@ dependencies:
     '@nestjs/common': ^11
     '@nestjs/core': ^11
     '@nestjs/typeorm': ^11
-    codepot-openapi: ^0.0.4
     reflect-metadata: ^0.2
     rxjs: ^7
   dev:
