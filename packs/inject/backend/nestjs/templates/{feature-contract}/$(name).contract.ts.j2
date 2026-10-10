@@ -1,0 +1,124 @@
+import { z } from "zod";
+
+import { sharedPropsRef, transportSchemasRef, v1 } from "../../common/server/contracts/shared.contract.ts";
+
+{%- macro prop_for(value) -%}
+{%- if value.is.property and value.is.primitive -%}
+  {%- if value.property.primitive.type == 'number' -%}sharedPropsRef.number
+  {%- elif value.property.primitive.type == 'integer' -%}sharedPropsRef.integer
+  {%- elif value.property.primitive.type == 'boolean' -%}sharedPropsRef.boolean
+  {%- else -%}sharedPropsRef.text
+  {%- endif -%}
+{%- elif value.is.property and value.is.temporal -%}sharedPropsRef.dateTime
+{%- elif value.is.property and value.is.enum -%}apiContractPropsRef.text
+{%- elif value.is.schema -%}sharedPropsRef.jsonObject
+{%- else -%}sharedPropsRef.jsonScalar
+{%- endif -%}
+{%- endmacro -%}
+{%- macro schema_value(value, optional=false, nullable=false, array=false) -%}
+{{ prop_for(value) }}{% if array %}.array(){% endif %}{% if optional %}.optional(){% endif %}{% if nullable %}.nullable(){% endif %}
+{%- endmacro -%}
+{%- macro schema_fields_from_schema(schema) -%}
+{%- for field in schema.fields %}
+    {{ field.name.camel }}: {{ schema_value(field.value, field.optional, field.nullable, field.array is not none) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endmacro -%}
+{%- macro schema_fields_from_operation_input(operation) -%}
+{%- if operation.input and operation.input.kind == 'schema' and operation.input.value.schema %}
+{{ schema_fields_from_schema(operation.input.value.schema) }}
+{%- elif operation.input and operation.input.kind == 'fields' %}
+{%- for field in operation.input.fields %}
+    {{ field.name.camel }}: {{ schema_value(field.value, field.optional, false, false) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro binding_schema_value(binding) -%}
+{{ schema_value(binding.port.value, false, false, false) }}
+{%- endmacro -%}
+{%- macro route_path(path) -%}{{ path | replace('{', ':') | replace('}', '') }}{%- endmacro -%}
+const apiContract = v1.defineResource({
+  name: "{{ feature.name.kebab }}",
+  route: "",
+  folders: ["{{ group.name.kebab }}", "{{ feature.name.kebab }}"],
+  tags: ["{{ group.name.kebab }}", "{{ feature.name.kebab }}"],
+  ui: { enabled: true, infer: true },
+});
+
+export const apiContractPropsRef = apiContract.defineProperties("{{ feature.name.pascal }}", {
+  text: z.string(),
+  number: z.coerce.number(),
+  integer: z.coerce.number().int(),
+  boolean: z.coerce.boolean(),
+}).ref;
+
+const apiContractRouteSchemasRef = apiContract.defineSchemas({
+{%- for operation in operations %}
+  {{ operation.name.pascal }}Params: {
+{%- set http = operation.facets.http %}
+{%- for binding in http.inputs %}{% if binding.is.path %}
+    {{ binding.port.name.camel }}: {{ binding_schema_value(binding) }}{% if not loop.last %},{% endif %}
+{%- endif %}{% endfor %}
+  }{% if not loop.last %},{% endif %}
+{%- endfor %}
+}).ref;
+
+const apiContractQuerySchemasRef = apiContract.defineSchemas({
+{%- for operation in operations %}
+  {{ operation.name.pascal }}Query: {
+{%- set http = operation.facets.http %}
+{%- for binding in http.inputs %}{% if binding.is.query or binding.is.header or binding.is.cookie %}
+    {{ binding.port.name.camel }}: {{ binding_schema_value(binding) }}.optional(){% if not loop.last %},{% endif %}
+{%- elif binding.is.query_object and operation.input %}
+{{ schema_fields_from_operation_input(operation) }}
+{%- endif %}{% endfor %}
+  }{% if not loop.last %},{% endif %}
+{%- endfor %}
+}).ref;
+
+const apiContractBodySchemasRef = apiContract.defineSchemas({
+{%- for operation in operations %}
+  {{ operation.name.pascal }}Body: {
+{%- set http = operation.facets.http %}
+{%- for binding in http.inputs %}{% if binding.is.body %}
+{%- if binding.port.field is none %}
+{{ schema_fields_from_operation_input(operation) }}
+{%- else %}
+    {{ binding.port.name.camel }}: {{ binding_schema_value(binding) }}
+{%- endif %}
+{%- endif %}{% endfor %}
+  }{% if not loop.last %},{% endif %}
+{%- endfor %}
+}).ref;
+
+const apiContractResponseSchemasRef = apiContract.defineSchemas({
+{%- for operation in operations %}
+  {{ operation.name.pascal }}Response: transportSchemasRef.ApiMessage.extendWith({
+{%- if operation.output and operation.output.value %}
+    result: {{ schema_value(operation.output.value, false, false, false) }}
+{%- else %}
+    result: sharedPropsRef.jsonObject.optional()
+{%- endif %}
+  }){% if not loop.last %},{% endif %}
+{%- endfor %}
+}).ref;
+
+export const {{ file.symbols.contract }} = apiContract
+  .defineRoutes()
+  .routes((r) => ({
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+    {{ operation.name.camel }}: r
+      .{{ http.method | lower }}("{{ route_path(http.path.effective) }}")
+      .summary("{{ operation.name.title }}")
+{%- for binding in http.inputs %}{% if binding.is.path %}
+      .params(apiContractRouteSchemasRef.{{ operation.name.pascal }}Params)
+{%- endif %}{% endfor %}
+{%- set has_query = false -%}
+{%- for binding in http.inputs %}{% if binding.is.query or binding.is.query_object or binding.is.header or binding.is.cookie %}{% set has_query = true %}{% endif %}{% endfor %}
+      .query(apiContractQuerySchemasRef.{{ operation.name.pascal }}Query)
+{%- for binding in http.inputs %}{% if binding.is.body %}
+      .body(apiContractBodySchemasRef.{{ operation.name.pascal }}Body)
+{%- endif %}{% endfor %}
+      .response(apiContractResponseSchemasRef.{{ operation.name.pascal }}Response){% if not loop.last %},{% endif %}
+{%- endfor %}
+  }));
