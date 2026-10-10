@@ -1,6 +1,6 @@
 # 01 — Repository identity and naming audit
 
-Status: **ready**
+Status: **in progress** — NestJS slice applied; remaining names need naming decisions
 
 ## Goal
 
@@ -13,12 +13,12 @@ packs/inject/**
 packs/unit/**
 ```
 
-Known transition state to reconcile in this task:
+Resolved transition state (2026-10-07):
 
-- some `unit/**` manifests still declare `layout: unit` or `layout: unit`;
-- manifest keys still use the older non-layout-aware identity style;
-- repository helpers may still validate `inject | package | project`;
-- active source/fixture/shared references must be audited against the physical IDs.
+- every manifest declares `layout: inject | unit`;
+- manifest keys are layout-aware (`<layout>.<purpose>.<name>`);
+- repository helpers validate only `inject | unit`;
+- fixture and README references to the former `package/` and `project/` paths now use `unit/` (2026-10-10).
 
 Do not treat the folder move alone as completion.
 
@@ -164,7 +164,7 @@ scripts/release-tag.ts
 scripts/test-pack.ts
 scripts/sync-shared.ts
 scripts/audit-duplication.ts
-fixtures/manifest.json
+shared/fixtures/manifest.json
 shared/assets.json
 shared/fragments.json
 ```

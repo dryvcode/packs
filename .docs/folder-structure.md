@@ -75,15 +75,14 @@ The repository still contains names awaiting this normalization. The active migr
 ## Repository support folders
 
 ```text
-fixtures/
-  dryv.ir.yaml
-  manifest.json
-
 shared/
   assets.json
   fragments.json
   templates/
   manifests/
+  fixtures/
+    dryv.ir.yaml
+    manifest.json
 
 scripts/
   lib/repository.ts

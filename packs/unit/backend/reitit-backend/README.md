@@ -6,6 +6,6 @@ Each Dryv feature becomes a route function that accepts a plain service map. Gen
 
 Path, query, query-object, header, cookie, JSON body and URL-encoded form bindings are explicit. Binding/JSON conversion failures return HTTP 400. Service exceptions are not reinterpreted as authored failure semantics. Multipart remains HTTP 501 until Dryv has first-class semantic file/multipart meaning.
 
-The reusable Clojure schema capability lives in `package/validation/malli-schemas`; this backend intentionally does not duplicate it.
+The reusable Clojure schema capability lives in `unit/validation/malli-schemas`; this backend intentionally does not duplicate it.
 
 Verification is deferred while the Dryv Engine is under maintenance.

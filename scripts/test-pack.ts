@@ -11,9 +11,9 @@
  * Runs are created under /tmp/dryv/<layout>/<purpose>/<name>/run-<id>/ by default.
  * Override the root with DRYV_TMP_ROOT.
  *
- * Every pack test receives the same fixtures/dryv.ir.yaml. Pack-specific fixture files
+ * Every pack test receives the same shared/fixtures/dryv.ir.yaml. Pack-specific fixture files
  * remain under tests/fixture/. Reusable non-IR fixture mappings live centrally in
- * fixtures/manifest.json.
+ * shared/fixtures/manifest.json.
  *
  * DRYV_API_URL defaults to http://127.0.0.1:8750.
  * DRYV_CLI may point at a local current CLI, for example:
@@ -88,7 +88,7 @@ function prepare(pack: string): string {
   const privateIr = join(fixture, "dryv.ir.yaml");
   if (existsSync(privateIr)) {
     throw new Error(
-      `${pack}: pack-local dryv.ir.yaml is forbidden; extend fixtures/dryv.ir.yaml instead`,
+      `${pack}: pack-local dryv.ir.yaml is forbidden; extend shared/fixtures/dryv.ir.yaml instead`,
     );
   }
 

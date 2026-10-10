@@ -6,7 +6,7 @@ Operations are ordinary functions over idiomatic Clojure values/maps. Path, quer
 
 Multipart remains unsupported until Dryv has first-class semantic file/multipart meaning. Non-2xx responses throw `ex-info` with `:status`, `:payload` and the decoded/raw response message.
 
-Clojure's reusable schema/type capability is provided separately by `package/validation/malli-schemas`; the client does not duplicate that semantic layer.
+Clojure's reusable schema/type capability is provided separately by `unit/validation/malli-schemas`; the client does not duplicate that semantic layer.
 
 **Provides:** `operation.client`.
 

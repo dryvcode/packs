@@ -6,7 +6,7 @@ Public packs use one reusable fixture model.
 
 All pack tests use:
 
-`fixtures/dryv.ir.yaml`
+`shared/fixtures/dryv.ir.yaml`
 
 The harness copies that file into the temporary project as `dryv.ir.yaml`.
 
@@ -24,9 +24,9 @@ If a new pack needs semantics the shared fixture does not cover, extend the root
 
 ## Reusable non-IR fixture files
 
-Shared environment/test files belong under `fixtures/`.
+Shared environment/test files belong under `shared/fixtures/`.
 
-Reusable mappings are declared centrally in `fixtures/manifest.json`:
+Reusable mappings are declared centrally in `shared/fixtures/manifest.json`:
 
 ```json
 {

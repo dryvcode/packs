@@ -18,7 +18,7 @@ A `present` part queries when the screen opens, unless a `collect` part of the s
 
 **Limits in 0.1.0:** views must belong to a feature; screen-opening queries call operations without arguments; nested schemas and arrays aren't editable in generated forms.
 
-**Test:** `bun scripts/test-pack.ts project/frontend/react-native-app` generates the client (`out/api`) and the app (`out/app`) bound to it, installs Expo, React Native and TanStack Query, and typechecks the app.
+**Test:** `bun scripts/test-pack.ts unit/frontend/react-native-app` generates the client (`out/api`) and the app (`out/app`) bound to it, installs Expo, React Native and TanStack Query, and typechecks the app.
 
 ## Use it
 

@@ -28,4 +28,4 @@ Successful responses decode JSON into the generated output type. Non-2xx respons
 
 The pack owns `go.mod`; use `module_path` to set its module path and `package_name` for the Go package identifier.
 
-**Test:** `bun scripts/test-pack.ts package/clients/go-client-sdk` renders the fixture and runs `go test ./...`.
+**Test:** `bun scripts/test-pack.ts unit/clients/go-client-sdk` renders the fixture and runs `go test ./...`.

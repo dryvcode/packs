@@ -2,7 +2,7 @@ version: dryv.pack/v1alpha1
 key: unit.clients.rust-client-sdk
 layout: unit
 package:
-  name: { $ref: "#/inputs.crate_name" }
+  name: { $ref: "#/inputs/crate_name" }
 
 source: templates
 

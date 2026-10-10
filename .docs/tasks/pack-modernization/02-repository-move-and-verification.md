@@ -1,6 +1,6 @@
 # 02 — Repository rename/move and identity verification
 
-Status: **blocked by Task 01**
+Status: **in progress** — NestJS slice done; remaining renames wait on Task 01 naming decisions
 
 ## Goal
 
@@ -135,7 +135,17 @@ Contract alignment done with it:
 
 Verification: `shared:check` and `catalog:check` pass; `test:packs` passes for all five packs.
 
+The `feature` template's `output.symbol` + `output.symbols` conflict was resolved on 2026-10-07 by an Engine contract change (Dryv `5b3c6c0d`): a template may declare both, and a provider template must still declare `output.symbol`.
+
+## Progress — reference and fixture cleanup (2026-10-10)
+
+- READMEs and fixtures that still named `package/…` or `project/…` pack paths now use `unit/…` (18 files).
+- Ten fixtures moved to the current Usage shape: code destinations directly under `destinations`, and `source: { $ref, path }`. All 17 pack fixtures now pass the Engine Usage contract.
+- 17 manifests used `#/inputs.<name>`; they now use `#/inputs/<name>`.
+- Docs point at the real shared fixture location, `shared/fixtures/`.
+
 Still open:
 
-- `inject/backend/nestjs`: the `feature` template declares both `output.symbol` and `output.symbols`, which the Engine rejects, while a provider template must declare `output.symbol`. Needs a decision (split feature files, or an Engine contract change).
+- 50 unit manifests declare a literal `package.name` (for example `dryv-cohttp-backend`). The Engine contract requires an input reference (`{ $ref: "#/inputs/<name>" }`), so these packs fail to load until each gets a declared input. Naming that input and its default is a pack design decision.
+- `unit/persistence/active-record-models` (`package-index`) and `unit/persistence/sqlalchemy-models` (`models-index`) declare both a top-level `$ref` and `exports`, which the Engine rejects.
 - the remaining packs in the Task 01 candidate table.

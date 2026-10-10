@@ -2,7 +2,7 @@
 
 Status: **current execution plan**
 
-Updated: **2026-10-07**
+Updated: **2026-10-10**
 
 The repository filesystem already uses the target top-level pack directories:
 
@@ -12,7 +12,7 @@ packs/
 └── unit/
 ```
 
-This is **not yet a completed contract migration**. Some real manifests still carry transitional `layout: unit` / `layout: unit` values, keys still follow the older identity rule, and repository helpers still need to be brought to the `inject | unit` contract. Stage A exists to reconcile those layers.
+The contract layer now matches: every manifest declares `layout: inject | unit`, keys are layout-aware (`<layout>.<purpose>.<name>`), and repository helpers accept only `inject | unit`. What remains of Stage A is shortening redundant terminal names outside the NestJS slice.
 
 The active work is now tracked only under:
 
@@ -24,7 +24,9 @@ Historical architecture planning lives under `.docs/_archives/` and is not imple
 
 ## Current sequence
 
-### Stage A — finish repository identity
+### Stage A — finish repository identity (in progress)
+
+Done: layout-aware keys, `inject | unit` tooling, and the NestJS slice renames (`typeorm`, `mongoose`, `class-validator`, `zod`, `joi`). Open: the remaining terminal names in the Task 01 table.
 
 1. audit every real pack's layout role and terminal name;
 2. simplify redundant names;
@@ -34,9 +36,9 @@ Historical architecture planning lives under `.docs/_archives/` and is not imple
 
 This stage is structural only. Do not redesign framework templates.
 
-### Stage B — NestJS reference-quality pass
+### Stage B — NestJS reference-quality pass (done)
 
-After Stage A:
+Completed in tasks 03–07; the steps were:
 
 1. research current NestJS architecture and native generator conventions;
 2. fully audit `inject/backend/nestjs`;
@@ -90,8 +92,7 @@ Dryv consistency means consistent contracts, not identical filesystem layouts.
 
 ```text
 packs/       portable pack implementations
-fixtures/    shared reusable test inputs
-shared/      canonical reusable portable assets/fragments
+shared/      canonical reusable portable assets/fragments, and shared/fixtures/ for reusable test inputs
 scripts/     discovery, catalogue, release and verification tooling
 .docs/       current guidance, tasks and historical archive
 ```

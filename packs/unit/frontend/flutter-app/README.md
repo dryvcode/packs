@@ -21,7 +21,7 @@ A `present` part loads when the screen opens, unless a `collect` part of the sam
 - A screen-opening `present` calls its operation with no arguments, so operations with required inputs need a form or hand-written code in the screen.
 - Nested schemas and arrays aren't editable in generated forms.
 
-**Test:** `bun scripts/test-pack.ts project/frontend/flutter-app` generates the bridge (`out/api`) and the app (`out/app`) bound to it, resolves both with Flutter, runs `build_runner` on the bridge, and runs `flutter analyze` and `flutter test` on the app.
+**Test:** `bun scripts/test-pack.ts unit/frontend/flutter-app` generates the bridge (`out/api`) and the app (`out/app`) bound to it, resolves both with Flutter, runs `build_runner` on the bridge, and runs `flutter analyze` and `flutter test` on the app.
 
 ## Use it
 

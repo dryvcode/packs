@@ -2,7 +2,7 @@ version: dryv.pack/v1alpha1
 key: unit.backend.spring-boot-backend
 layout: unit
 package:
-  name: { $ref: "#/inputs.artifact_id" }
+  name: { $ref: "#/inputs/artifact_id" }
 
 source: templates
 

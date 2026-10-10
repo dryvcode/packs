@@ -30,7 +30,7 @@ Framework-specific concepts do not belong in this fixture.
 
 Reusable non-IR fixture files also belong under this directory.
 
-Reusable mappings are declared once in `fixtures/manifest.json`, keyed by canonical pack ID. Each mapping sends a destination inside the temporary fixture project to a path under this directory.
+Reusable mappings are declared once in `shared/fixtures/manifest.json`, keyed by canonical pack ID. Each mapping sends a destination inside the temporary fixture project to a path under this directory.
 
 Example:
 

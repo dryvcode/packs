@@ -23,7 +23,7 @@ After generating, run `dart run build_runner build` for the model code.
 
 **Provides:** `operation.client` (the group feature clients), `schema.types` (models) and `property.enum.types` (enums), so apps such as `frontend/flutter-app` can bind to it.
 
-**Test:** `bun scripts/test-pack.ts package/clients/flutter-api-bridge` resolves the package, runs `build_runner`, `flutter analyze` and unit tests over models, endpoints and the facade.
+**Test:** `bun scripts/test-pack.ts unit/clients/flutter-api-bridge` resolves the package, runs `build_runner`, `flutter analyze` and unit tests over models, endpoints and the facade.
 
 ## Use it
 

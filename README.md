@@ -26,9 +26,7 @@ unit
   establishes and owns a generated unit root
 ```
 
-The physical repository already uses `inject/` and `unit/`, while some manifests and identity tooling are still being reconciled from the former layout model. Track that migration in the active modernization tasks.
-
-The repository is currently normalizing older verbose terminal names to the smallest stable technology/variant names. See [pack modernization](.docs/tasks/pack-modernization/README.md).
+Every manifest declares `layout: inject | unit` and a layout-aware key (`<layout>.<purpose>.<name>`). The repository is still shortening older verbose terminal names to the smallest stable technology/variant names. See [pack modernization](.docs/tasks/pack-modernization/README.md).
 
 ## Pack philosophy
 
@@ -86,8 +84,8 @@ packs:
 The repository avoids parallel sources of truth:
 
 - catalogue metadata is derived from each `dryv.pack.yaml`;
-- every pack test uses the shared `fixtures/dryv.ir.yaml`;
-- reusable fixture inputs live under `fixtures/`;
+- every pack test uses the shared `shared/fixtures/dryv.ir.yaml`;
+- reusable fixture inputs live under `shared/fixtures/`;
 - exact portable reusable assets/fragments have canonical sources under `shared/`;
 - discovery, IDs and release refs are centralized in repository tooling.
 
@@ -105,10 +103,9 @@ See [pack testing](.docs/testing.md), [folder structure](.docs/folder-structure.
 
 Current execution is intentionally narrow:
 
-1. finish repository pack identity/name normalization;
-2. then make `inject/backend/nestjs` and `unit/backend/nestjs` the first reference-quality framework pair;
-3. prove their output using the native NestJS/TypeScript toolchain;
-4. only then begin another framework-quality pass.
+1. `inject/backend/nestjs` and `unit/backend/nestjs` are the first reference-quality framework pair, proven with the native NestJS/TypeScript toolchain (done);
+2. finish repository pack identity/name normalization for the remaining packs (in progress);
+3. only then begin another framework-quality pass.
 
 Track this work in [.docs/tasks/pack-modernization/](.docs/tasks/pack-modernization/README.md).
 

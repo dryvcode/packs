@@ -8,16 +8,13 @@ sources:
     local:
       path: packs
 destinations:
-  code:
-    generated:
-      path: app/gen
+  generated:
+    path: app/gen
 authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
   api:
-    source:
-      $ref: "#/sources/packs/local"
-    path: unit/backend/fastapi-backend
+    source: { $ref: "#/sources/packs/local", path: unit/backend/fastapi-backend }
     destination:
-      $ref: "#/destinations/code/generated"
+      $ref: "#/destinations/generated"

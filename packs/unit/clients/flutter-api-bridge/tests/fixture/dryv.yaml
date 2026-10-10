@@ -8,16 +8,13 @@ sources:
     local:
       path: packs
 destinations:
-  code:
-    out:
-      path: out
+  out:
+    path: out
 authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
   sdk:
-    source:
-      $ref: "#/sources/packs/local"
-    path: package/clients/flutter-api-bridge
+    source: { $ref: "#/sources/packs/local", path: unit/clients/flutter-api-bridge }
     destination:
-      $ref: "#/destinations/code/out"
+      $ref: "#/destinations/out"

@@ -15,4 +15,4 @@ Configure once: `configureApi({ baseUrl: "https://api.example.com", headers })`.
 
 **Provides:** `operation.client` (the calls), `schema.types` (models), `property.enum.types` (enums).
 
-**Test:** `bun scripts/test-pack.ts package/clients/ts-api-client` typechecks the package and exercises calls against a mocked `fetch`.
+**Test:** `bun scripts/test-pack.ts unit/clients/ts-api-client` typechecks the package and exercises calls against a mocked `fetch`.

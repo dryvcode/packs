@@ -2,7 +2,7 @@ version: dryv.pack/v1alpha1
 key: unit.persistence.ef-core-entities
 layout: unit
 package:
-  name: { $ref: "#/inputs.project_name" }
+  name: { $ref: "#/inputs/project_name" }
 
 source: templates
 

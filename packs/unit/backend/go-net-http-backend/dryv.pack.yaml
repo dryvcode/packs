@@ -2,7 +2,7 @@ version: dryv.pack/v1alpha1
 key: unit.backend.go-net-http-backend
 layout: unit
 package:
-  name: { $ref: "#/inputs.package_name" }
+  name: { $ref: "#/inputs/package_name" }
 
 source: templates
 

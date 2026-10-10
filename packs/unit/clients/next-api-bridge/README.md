@@ -32,7 +32,7 @@ Reserved fields start with `__` and never reach the API: `__redirect_path`, `__d
 
 `SERVER_URL` (or `NEXT_PUBLIC_API_URL`), `API_COOKIE_PREFIX`, `SERVER_APP_API_KEY`, `SERVER_APP_API_KEY_HEADER_KEY` and `ENABLE_VERBOSE_LOGGING`. Requires `next-api-bridge` ^0.1.10 and `server-only`.
 
-**Test:** `bun scripts/test-pack.ts package/clients/next-api-bridge` typechecks against the real `next` and `next-api-bridge`, then runs the actions, routes and a form action with the bridge's network client mocked.
+**Test:** `bun scripts/test-pack.ts unit/clients/next-api-bridge` typechecks against the real `next` and `next-api-bridge`, then runs the actions, routes and a form action with the bridge's network client mocked.
 
 ## Use it
 

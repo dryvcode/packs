@@ -2,7 +2,7 @@ version: dryv.pack/v1alpha1
 key: unit.validation.go-validator-dtos
 layout: unit
 package:
-  name: { $ref: "#/inputs.package_name" }
+  name: { $ref: "#/inputs/package_name" }
 
 source: templates
 

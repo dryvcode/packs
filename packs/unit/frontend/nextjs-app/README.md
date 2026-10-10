@@ -18,7 +18,7 @@ Support files, written once per generation: `lib/dryv/transport.ts` (`fetch` aga
 - Routes use each operation's local path (`facets.http.path.local`), as the other HTTP packs do.
 - Forms cover string, number, boolean, enum and date fields. Nested schemas and arrays aren't editable yet.
 
-**Test:** `bun scripts/test-pack.ts project/frontend/nextjs-app` renders the flagship IR, typechecks against the real `next` and `react`, checks the API calls, and renders the generated page with a mocked API, including submitting its form.
+**Test:** `bun scripts/test-pack.ts unit/frontend/nextjs-app` renders the flagship IR, typechecks against the real `next` and `react`, checks the API calls, and renders the generated page with a mocked API, including submitting its form.
 
 ## Use it
 

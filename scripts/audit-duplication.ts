@@ -77,7 +77,7 @@ const problems: string[] = [];
 const packFiles = files(PACKS).map((path) => relative(REPO, path));
 
 if (!existsSync(join(FIXTURES, "dryv.ir.yaml"))) {
-  problems.push("fixtures/dryv.ir.yaml is missing");
+  problems.push("shared/fixtures/dryv.ir.yaml is missing");
 }
 
 for (const path of packFiles.filter((path) => path.endsWith("/tests/fixture/dryv.ir.yaml"))) {
@@ -90,7 +90,7 @@ for (const path of packFiles.filter((path) => path.endsWith("/tests/shared-fixtu
 
 for (const [pack, mappings] of Object.entries(fixtureManifest.packs ?? {})) {
   if (!knownPacks.has(pack)) {
-    problems.push(`fixtures/manifest.json references unknown pack: ${pack}`);
+    problems.push(`shared/fixtures/manifest.json references unknown pack: ${pack}`);
   }
 
   for (const [destinationValue, sourceValue] of Object.entries(mappings)) {
