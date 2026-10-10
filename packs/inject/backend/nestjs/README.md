@@ -1,10 +1,12 @@
 # NestJS backend pack
 
-Generates, for every feature with HTTP operations:
+Generates, for every feature with HTTP operations, the standard NestJS feature layout under `<group>/<feature>/`:
 
-- an abstract `<Group><Feature>Service` that handwritten code implements;
-- a `<Group><Feature>Controller` that routes each `http` facet (`GET /users/{id}` → `@Get("/users/:id")`) and delegates to the service;
-- a `<Group><Feature>Module.register(Implementation)` that binds the two.
+- `<feature>.controller.ts`: a `<Group><Feature>Controller` that routes each `http` facet (`GET /users/{id}` → `@Get("/users/:id")`) and delegates to the service;
+- `<feature>.service.ts`: an injectable `<Group><Feature>Service` whose methods throw `NotImplementedException` until implemented, so the app boots without handwritten code;
+- `<feature>.module.ts`: a `<Group><Feature>Module` that registers the controller and service (and bound TypeORM entities). It is the `operation.server` provider that `unit/backend/nestjs` imports into `AppModule`.
+
+Cookie inputs use the shared `common/server/http/cookie.decorator.ts` parameter decorator.
 
 It doesn't generate DTOs or entities. It imports them through slots the project binds:
 

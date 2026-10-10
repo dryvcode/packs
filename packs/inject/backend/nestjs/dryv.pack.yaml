@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.2.0
+  version: 0.3.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -31,6 +31,7 @@ selections:
     scope: collects.feature
 
 templates:
+  # NestJS feature layout: <group>/<feature>/<feature>.{module,controller,service}.ts
   feature:
     $ref: '#/selections/features'
     output:
@@ -38,14 +39,32 @@ templates:
       path:
         - $(group.name.kebab)
         - $(feature.name.kebab)
-      symbols:
-        controller: $(group.name.pascal)$(feature.name.pascal)Controller
-        service: $(group.name.pascal)$(feature.name.pascal)Service
-        module: $(group.name.pascal)$(feature.name.pascal)Module
       symbol: $(group.name.pascal)$(feature.name.pascal)Module
     imports:
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
+
+  feature-controller:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Controller
+    imports:
+      - $ref: '#/needs/schema.validation'
+
+  feature-service:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Service
+    imports:
+      - $ref: '#/needs/schema.validation'
 
   feature-index:
     output:
@@ -55,6 +74,8 @@ templates:
     barrel: each
     exports:
       - $ref: '#/templates/feature'
+      - $ref: '#/templates/feature-controller'
+      - $ref: '#/templates/feature-service'
 
   root-index:
     exports:

@@ -76,12 +76,20 @@
 {%- endmacro -%}
 
 {#- One class member: a column, a relation, or both. Each starts with a blank line. -#}
+{#- The relation property is named after its foreign-key field (actingAffiliationId ->
+    actingAffiliation), so two keys to the same entity never produce the same property. -#}
+{%- macro relation_name(key) -%}
+{#- Strip a trailing "Id" only: the sentinel marks the end of the name. -#}
+{%- set stripped = (key ~ '#') | replace('Id#', '') | replace('#', '') -%}
+{%- if stripped != key and stripped != '' -%}{{ stripped }}{%- else -%}{{ key }}Relation{%- endif -%}
+{%- endmacro -%}
+
 {%- macro member(schema, storage, field) -%}
 {%- if field.related is not none and symbol_for(field.related.via.schema) == '' %}
 {#- The other side isn't a generated entity, so there's no navigation to declare. -#}
 {%- elif field.related is not none %}
 
-  @OneToMany(() => {{ symbol_for(field.related.via.schema) }}, (item) => item.{{ schema.name.camel }})
+  @OneToMany(() => {{ symbol_for(field.related.via.schema) }}, (item) => item.{{ relation_name(field.related.via.field.camel) }})
   {{ field.name.camel }}?: Relation<{{ symbol_for(field.related.via.schema) }}[]>;
 {%- elif field.value.is.schema and field.relation is none %}
 
@@ -96,7 +104,7 @@
 
   @{% if field.relation.is.one_to_one %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.on_delete is not none %}, { onDelete: "{{ on_delete(field.relation.on_delete) }}" }{% endif %})
   @JoinColumn({ name: "{{ column(field.name) }}" })
-  {{ field.relation.target.schema.name.camel }}?: Relation<{{ symbol_for(field.relation.target.schema) }}>;
+  {{ relation_name(field.name.camel) }}?: Relation<{{ symbol_for(field.relation.target.schema) }}>;
 {%- endif %}
 {%- endif %}
 {%- endmacro -%}

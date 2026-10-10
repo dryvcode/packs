@@ -1,5 +1,0 @@
-export { Satisfies } from "./validators/satisfies.ts";
-{%- for item in file.exports %}
-export * from "./{{ item.path.relative }}";
-{%- endfor %}
-

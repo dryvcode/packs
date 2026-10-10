@@ -2,7 +2,8 @@ import "reflect-metadata";
 import { describe, expect, test } from "bun:test";
 import { getMetadataArgsStorage } from "typeorm";
 
-import { CartEntity, CartItemEntity } from "./out/common/entities/index.ts";
+import { CartEntity } from "./out/commerce/entities/cart.entity.ts";
+import { CartItemEntity } from "./out/commerce/entities/cart-item.entity.ts";
 
 const storage = getMetadataArgsStorage();
 const table = (target: Function) => storage.tables.find((item) => item.target === target);
