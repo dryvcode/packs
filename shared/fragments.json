@@ -12,7 +12,8 @@
       "packs/unit/clients/ts-api-client/dryv.pack.yaml",
       "packs/unit/frontend/nextjs-app/dryv.pack.yaml",
       "packs/unit/frontend/react-native-app/dryv.pack.yaml",
-      "packs/unit/backend/nestjs/dryv.pack.yaml"
+      "packs/unit/backend/nestjs/dryv.pack.yaml",
+      "packs/inject/types/typescript/dryv.pack.yaml"
     ]
   },
   "manifests/dart-tool.yaml": {
@@ -31,7 +32,8 @@
       "packs/inject/validation/class-validator/dryv.pack.yaml",
       "packs/inject/validation/joi/dryv.pack.yaml",
       "packs/inject/validation/zod/dryv.pack.yaml",
-      "packs/unit/backend/nestjs/dryv.pack.yaml"
+      "packs/unit/backend/nestjs/dryv.pack.yaml",
+      "packs/inject/types/typescript/dryv.pack.yaml"
     ]
   },
   "manifests/js-prettier-tsx-actions.yaml": {

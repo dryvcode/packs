@@ -1,0 +1,70 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{#- An inline type, unrolled to three levels (templates can't recurse). A deeper type renders
+    DryvTypeNestingTooDeep, which fails type checking and names the problem. -#}
+{%- macro t3(t) -%}
+{%- if t.kind == 'primitive' -%}{{ t.name }}
+{%- elif t.kind == 'reference' -%}{{ symbol_for(t.target) }}
+{%- elif t.kind == 'literal' -%}{{ t.value | tojson }}
+{%- elif t.kind == 'parameter' -%}{{ t.name.pascal }}
+{%- else -%}DryvTypeNestingTooDeep
+{%- endif -%}
+{%- endmacro -%}
+{%- macro t2(t) -%}
+{%- if t.kind == 'primitive' -%}{{ t.name }}
+{%- elif t.kind == 'reference' -%}{{ symbol_for(t.target) }}
+{%- elif t.kind == 'literal' -%}{{ t.value | tojson }}
+{%- elif t.kind == 'parameter' -%}{{ t.name.pascal }}
+{%- elif t.kind == 'array' -%}Array<{{ t3(t.items) }}>
+{%- elif t.kind == 'tuple' -%}[{% for item in t.items %}{{ t3(item) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- elif t.kind == 'record' -%}Record<{{ t3(t.keys) }}, {{ t3(t.values) }}>
+{%- elif t.kind == 'object' -%}{ {% for field in t.fields %}{{ field.name.camel }}{% if not field.required %}?{% endif %}: {{ t3(field.type) }}; {% endfor %}}
+{%- elif t.kind == 'union' -%}({% for member in t.members %}{{ t3(member) }}{% if not loop.last %} | {% endif %}{% endfor %})
+{%- elif t.kind == 'generic' -%}{{ symbol_for(t.target) }}<{% for argument in t.arguments %}{{ t3(argument) }}{% if not loop.last %}, {% endif %}{% endfor %}>
+{%- elif t.kind == 'nullable' -%}{{ t3(t.value) }} | null
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+{%- macro t1(t) -%}
+{%- if t.kind == 'primitive' -%}{{ t.name }}
+{%- elif t.kind == 'reference' -%}{{ symbol_for(t.target) }}
+{%- elif t.kind == 'literal' -%}{{ t.value | tojson }}
+{%- elif t.kind == 'parameter' -%}{{ t.name.pascal }}
+{%- elif t.kind == 'array' -%}Array<{{ t2(t.items) }}>
+{%- elif t.kind == 'tuple' -%}[{% for item in t.items %}{{ t2(item) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- elif t.kind == 'record' -%}Record<{{ t2(t.keys) }}, {{ t2(t.values) }}>
+{%- elif t.kind == 'object' -%}{ {% for field in t.fields %}{{ field.name.camel }}{% if not field.required %}?{% endif %}: {{ t2(field.type) }}; {% endfor %}}
+{%- elif t.kind == 'union' -%}({% for member in t.members %}{{ t2(member) }}{% if not loop.last %} | {% endif %}{% endfor %})
+{%- elif t.kind == 'generic' -%}{{ symbol_for(t.target) }}<{% for argument in t.arguments %}{{ t2(argument) }}{% if not loop.last %}, {% endif %}{% endfor %}>
+{%- elif t.kind == 'nullable' -%}{{ t2(t.value) }} | null
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+{%- macro t0(t) -%}
+{%- if t.kind == 'primitive' -%}{{ t.name }}
+{%- elif t.kind == 'reference' -%}{{ symbol_for(t.target) }}
+{%- elif t.kind == 'literal' -%}{{ t.value | tojson }}
+{%- elif t.kind == 'parameter' -%}{{ t.name.pascal }}
+{%- elif t.kind == 'array' -%}Array<{{ t1(t.items) }}>
+{%- elif t.kind == 'tuple' -%}[{% for item in t.items %}{{ t1(item) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- elif t.kind == 'record' -%}Record<{{ t1(t.keys) }}, {{ t1(t.values) }}>
+{%- elif t.kind == 'object' -%}{ {% for field in t.fields %}{{ field.name.camel }}{% if not field.required %}?{% endif %}: {{ t1(field.type) }}; {% endfor %}}
+{%- elif t.kind == 'union' -%}({% for member in t.members %}{{ t1(member) }}{% if not loop.last %} | {% endif %}{% endfor %})
+{%- elif t.kind == 'generic' -%}{{ symbol_for(t.target) }}<{% for argument in t.arguments %}{{ t1(argument) }}{% if not loop.last %}, {% endif %}{% endfor %}>
+{%- elif t.kind == 'nullable' -%}{{ t1(t.value) }} | null
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/** {{ property.union.description or property.union.name.title }} */
+export type {{ file.symbol }} =
+{%- for member in property.union.members %}
+  | {{ t0(member.type) }}
+{%- endfor %};

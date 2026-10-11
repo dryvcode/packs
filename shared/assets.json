@@ -2,6 +2,7 @@
   "templates/typescript/enum.ts.j2": [
     "packs/inject/persistence/mongoose/templates/enums/{enum}/$(name).enum.ts.j2",
     "packs/inject/persistence/typeorm/templates/{enum}/entities/enums/$(name).enum.ts.j2",
+    "packs/inject/types/typescript/templates/{enum}/$(name).enum.ts.j2",
     "packs/inject/validation/class-validator/templates/{enum}/dto/enums/$(name).enum.ts.j2",
     "packs/unit/clients/next-api-bridge/templates/types/enums/{enum}/$(name).ts.j2",
     "packs/unit/clients/ts-api-client/templates/src/enums/{enum}/$(name).ts.j2",

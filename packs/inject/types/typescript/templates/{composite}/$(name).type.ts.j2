@@ -1,0 +1,39 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{#- The TypeScript type of one semantic value (a schema or composite field). -#}
+{%- macro property_symbol(p) -%}
+{%- if p.kind == 'primitive' -%}{{ symbol_for(p.primitive) }}
+{%- elif p.kind == 'enum' -%}{{ symbol_for(p.enum) }}
+{%- elif p.kind == 'composite' -%}{{ symbol_for(p.composite) }}
+{%- elif p.kind == 'literal' -%}{{ symbol_for(p.literal) }}
+{%- elif p.kind == 'union' -%}{{ symbol_for(p.union) }}
+{%- elif p.kind == 'record' -%}{{ symbol_for(p.record) }}
+{%- elif p.kind == 'tuple' -%}{{ symbol_for(p.tuple) }}
+{%- elif p.kind == 'generic' -%}{{ symbol_for(p.generic) }}
+{%- elif p.kind == 'temporal' -%}{{ symbol_for(p.temporal) }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro value_type(field) -%}
+{%- set value = field.value -%}
+{%- if value.kind == 'property' -%}{% set base = property_symbol(value.property) %}
+{%- elif value.kind == 'schema' -%}{% set base = symbol_for(value.schema) %}
+{%- elif value.kind == 'dynamic' -%}{% set base = 'Record<string, unknown>' %}
+{%- else -%}{% set base = 'unknown' %}
+{%- endif -%}
+{%- if field.array is not none %}{{ base }}[]{% else %}{{ base }}{% endif -%}
+{%- if field.nullable %} | null{% endif -%}
+{%- endmacro -%}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/** {{ property.composite.description or property.composite.name.title }} */
+export interface {{ file.symbol }} {
+{%- for field in property.composite.fields %}
+  {{ field.name.camel }}{% if field.optional %}?{% endif %}: {{ value_type(field) }};
+{%- endfor %}
+}
