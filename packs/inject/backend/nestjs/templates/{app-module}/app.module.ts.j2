@@ -1,0 +1,26 @@
+{#- Imports every group module (Dryv members of this template) and, when generated entities are
+    in use through the persistence slot, the project's DatabaseModule. -#}
+{%- macro has_slot(slot) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- set persistence = has_slot('schema.persistence') != '' -%}
+import { Module } from "@nestjs/common";
+{%- if persistence %}
+
+import { DatabaseModule } from "./database/database.module.ts";
+{%- endif %}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot is none %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+@Module({
+  imports: [
+{%- if persistence %}
+    DatabaseModule,
+{%- endif %}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot is none %}
+    {{ dependency.symbol }},
+{%- endif %}{% endfor %}
+  ],
+})
+export class {{ file.symbol }} {}

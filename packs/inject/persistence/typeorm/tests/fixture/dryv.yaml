@@ -14,7 +14,15 @@ authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
+  types:
+    source: { $ref: "#/sources/packs/local", path: inject/types/typescript }
+    destination:
+      $ref: "#/destinations/out"
+      root: [types]
   entities:
     source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
     destination:
       $ref: "#/destinations/out"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }

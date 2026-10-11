@@ -14,7 +14,15 @@ authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
+  types:
+    source: { $ref: "#/sources/packs/local", path: inject/types/typescript }
+    destination:
+      $ref: "#/destinations/out"
+      root: [types]
   dtos:
     source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
       $ref: "#/destinations/out"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }

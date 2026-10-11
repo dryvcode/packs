@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.3.0
+  version: 0.4.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -22,6 +22,9 @@ plugins:
 needs:
   schema.validation: { required: true }
   schema.persistence: { required: false }
+  # The project's implementation of each feature service and its per-operation use cases.
+  operation.implementation: { required: true }
+  operation.usecase: { required: true }
 
 selections:
   features:
@@ -29,6 +32,16 @@ selections:
     filter:
       all: { facet: http }
     scope: collects.feature
+  groups:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.group
+  application:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
 
 templates:
   # NestJS feature layout: <group>/<feature>/<feature>.{module,controller,service}.ts
@@ -43,6 +56,8 @@ templates:
     imports:
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
+      - $ref: '#/needs/operation.implementation'
+      - $ref: '#/needs/operation.usecase'
 
   feature-controller:
     $ref: '#/selections/features'
@@ -65,6 +80,35 @@ templates:
       symbol: $(group.name.pascal)$(feature.name.pascal)Service
     imports:
       - $ref: '#/needs/schema.validation'
+
+  # <group>/<group>.module.ts imports the group's feature modules.
+  group-module:
+    $ref: '#/selections/groups'
+    output:
+      name: $(group.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(group.name.pascal)Module
+    imports:
+      - $ref: '#/templates/feature'
+        members: true
+
+  # app.module.ts imports every group module; it is written to the `app` output slot.
+  app-module:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+      symbol: AppModule
+    imports:
+      - $ref: '#/templates/group-module'
+        members: true
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
+
+  # src/database/database.module.ts: scaffolded once, then owned by the project.
+  database:
+    output:
+      destination: app
 
   feature-index:
     output:

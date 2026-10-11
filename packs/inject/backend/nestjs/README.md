@@ -1,24 +1,48 @@
 # NestJS backend pack
 
-Generates, for every feature with HTTP operations, the standard NestJS feature layout under `<group>/<feature>/`:
+Injects NestJS modules into a project, following the NestJS module structure:
 
-- `<feature>.controller.ts`: a `<Group><Feature>Controller` that routes each `http` facet (`GET /users/{id}` → `@Get("/users/:id")`) and delegates to the service;
-- `<feature>.service.ts`: an injectable `<Group><Feature>Service` whose methods throw `NotImplementedException` until implemented, so the app boots without handwritten code;
-- `<feature>.module.ts`: a `<Group><Feature>Module` that registers the controller and service (and bound TypeORM entities). It is the `operation.server` provider that `unit/backend/nestjs` imports into `AppModule`.
+```text
+<app slot>/app.module.ts                  managed: imports the group modules (and DatabaseModule)
+<app slot>/database/database.module.ts    scaffold: yours (driver, connection, migrations)
+<destination>/<group>/<group>.module.ts   managed: imports the group's feature modules
+<destination>/<group>/<feature>/
+  <feature>.controller.ts                 managed: routes each `http` facet, calls the service contract
+  <feature>.service.ts                    managed: abstract service contract
+  <feature>.module.ts                     managed: binds the contract to your implementation
+<destination>/common/server/              shared cookie decorator and schema-validation pipe
+```
 
-Cookie inputs use the shared `common/server/http/cookie.decorator.ts` parameter decorator.
+The controller routes each `http` facet (`GET /users/{id}` → `@Get("/users/:id")`) and calls the abstract `<Group><Feature>Service`. The feature module binds that token to the project's implementation and registers its use cases:
 
-It doesn't generate DTOs or entities. It imports them through slots the project binds:
+```ts
+providers: [
+  { provide: BookingsService, useClass: BookingsServiceImpl satisfies Type<BookingsService> },
+  CreateBookingUseCase,
+  FindBookingsUseCase,
+],
+```
+
+`satisfies Type<…>` makes type checking fail when the implementation drifts from the contract. `AppModule` imports `DatabaseModule` only when the feature modules use generated entities.
+
+It generates no DTOs, entities, implementations or use cases. It imports them through slots the project binds:
 
 ```yaml
 packs:
-  dtos: { source: …/class-validator }
-  entities: { source: …/typeorm }
+  types: { source: …/inject/types/typescript }
+  dtos: { source: …/class-validator, bind: { property.enum.types: …, property.types: … } }
+  entities: { source: …/typeorm, bind: { property.enum.types: …, property.types: … } }
+  use-cases: { source: …/your-use-cases-pack }          # ServiceImpl per feature + use case per operation
   server:
-    source: …/nestjs
+    source: …/inject/backend/nestjs
+    destination: { $ref: '#/destinations/modules' }     # e.g. src/modules
+    destinations:
+      app: { $ref: '#/destinations/app' }               # e.g. src (app.module.ts, database/)
     bind:
       schema.validation: { $ref: '#/packs/dtos' }       # or zod / joi
       schema.persistence: { $ref: '#/packs/entities' }  # optional
+      operation.implementation: { $ref: '#/packs/use-cases' }
+      operation.usecase: { $ref: '#/packs/use-cases' }
 ```
 
 | Bound validation pack | Parameters and results | Validation |
@@ -29,13 +53,18 @@ packs:
 
 When persistence is bound, the feature module registers the entities its operations use with `TypeOrmModule.forFeature([...])`. The pipe duck-types zod and Joi, so the output compiles with whichever library the project uses.
 
-**Test:** `bun scripts/test-pack.ts inject/backend/nestjs` renders the flagship IR twice (over class-validator + TypeORM, and over zod), typechecks both against the real framework, then boots them and sends valid and invalid requests.
+**Test:** `bun scripts/test-pack.ts inject/backend/nestjs` renders the shared IR twice (over class-validator + TypeORM, and over zod) with a test implementation pack, typechecks both against the real framework, boots them, sends valid and invalid requests, and boots the full `AppModule` → group → feature assembly.
 
 ## Use it
 
-The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source collection, destination and pack activation for this pack.
+The [executable Usage fixture](tests/fixture/dryv.yaml) shows every activation and binding.
 
 ## Slots
 
-- needs `schema.validation`
-- needs `schema.persistence`
+- needs `schema.validation`, `operation.implementation`, `operation.usecase` (required)
+- needs `schema.persistence` (optional)
+- provides `operation.server` (the feature module)
+
+## Output slots
+
+- `app`: `app.module.ts` and the `database/` scaffold.

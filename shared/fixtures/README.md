@@ -52,3 +52,7 @@ The test harness rejects:
 - non-portable or traversing shared fixture paths
 
 Pack-local `tests/fixture/` should contain only files that genuinely belong to that pack's test project.
+
+## NestJS implementation pack
+
+`nestjs/implementation-pack/` is a test-only pack that provides `operation.implementation` (one `ServiceImpl` per feature) and `operation.usecase` (one use case per operation), standing in for a project's own scaffolds. `manifest.json` copies it into the NestJS pack fixtures as `fixture-packs/implementation`.

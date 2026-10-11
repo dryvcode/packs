@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: TypeORM Entities
-  version: 0.2.0
+  version: 0.3.0
   description: Generates TypeORM entities with typed columns, indexes, checks and relations from entity-role schemas.
   purpose: persistence
   summary: TypeORM entities with typed columns, relations, checks and indexes.
@@ -22,11 +22,12 @@ inputs:
     default: snake
     description: Column naming, `snake` (cart_id) or `camel` (cartId).
 
-selections:
-  enums:
-    subject: property.enum
-    scope: each
+# Enums and named property types come from the bound types pack (inject/types/typescript).
+needs:
+  property.enum.types: { required: true }
+  property.types: { required: true }
 
+selections:
   # Persisted schemas: the entity role.
   entities:
     subject: schema
@@ -35,14 +36,6 @@ selections:
     scope: each
 
 templates:
-  enum:
-    $ref: '#/selections/enums'
-    output:
-      name: $(subject.name.kebab)
-      path:
-        - $(group.name.kebab)
-      symbol: $(subject.name.pascal)
-
   entity:
     $ref: '#/selections/entities'
     output:
@@ -51,14 +44,13 @@ templates:
         - $(group.name.kebab)
       symbol: $(subject.name.pascal)Entity
     imports:
-      - $ref: '#/templates/enum'
+      - $ref: '#/needs/property.enum.types'
+      - $ref: '#/needs/property.types'
       - $ref: '#/templates/entity'
 
 provides:
   schema.persistence:
     $ref: '#/templates/entity'
-  property.enum.types:
-    $ref: '#/templates/enum'
 
 # shared:js-package-manager:start
 choose:

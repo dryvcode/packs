@@ -8,11 +8,11 @@ source: templates
 
 info:
   title: NestJS Application
-  version: 0.2.0
-  description: Generates a runnable NestJS application shell that assembles bound operation.server feature modules.
+  version: 0.3.0
+  description: Generates a runnable NestJS application shell (bootstrap, package, tooling, e2e) around the AppModule that inject/backend/nestjs generates.
 
   purpose: backend
-  summary: NestJS application root with bootstrap, config and AppModule composition.
+  summary: NestJS application shell with bootstrap, package and tooling around the generated AppModule.
   languages: [typescript]
   frameworks: [nestjs]
   tags: [backend, http, unit, nestjs]
@@ -26,22 +26,6 @@ inputs:
     type: string
     default: dryv-nest-app
     description: npm package name written to package.json.
-
-needs:
-  operation.server: { required: true }
-
-selections:
-  server_operations:
-    subject: operation
-    filter:
-      all: { facet: http }
-    scope: all
-
-templates:
-  app-module:
-    $ref: "#/selections/server_operations"
-    imports:
-      - $ref: "#/needs/operation.server"
 
 # shared:js-package-manager:start
 choose:

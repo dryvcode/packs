@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { type INestApplication, ValidationPipe } from "@nestjs/common";
+import { Global, type INestApplication, Module, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { getDataSourceToken } from "@nestjs/typeorm";
 
 import {
   CoreUserManagementController as ClassValidatorController,
@@ -11,6 +12,21 @@ import {
   CoreUserManagementModule as ZodModule,
   CoreUserManagementService as ZodService,
 } from "./out/server-zod/index.ts";
+import { AppModule } from "./out/app/app.module.ts";
+import { DatabaseModule } from "./out/app/database/database.module.ts";
+
+// Stands in for the project's DatabaseModule: repositories resolve without a database.
+@Global()
+@Module({
+  providers: [
+    {
+      provide: getDataSourceToken(),
+      useValue: { options: { type: "postgres" }, entityMetadatas: [], getRepository: () => ({}) },
+    },
+  ],
+  exports: [getDataSourceToken()],
+})
+class InMemoryDatabaseModule {}
 
 const created = {
   id: "7f1c1f52-2f58-4a4e-9b43-0c1a3c1b0a11",
@@ -144,5 +160,31 @@ describe("generated NestJS server over zod", () => {
   test("validates bodies with the zod schema through the generated pipe", async () => {
     expect(await post(base, validRequest)).toBe(201);
     expect(await post(base, { ...validRequest, displayName: "" })).toBe(400);
+  });
+});
+
+describe("generated application assembly", () => {
+  let app: INestApplication;
+  let base: string;
+
+  beforeAll(async () => {
+    // AppModule -> group module -> feature module, which binds the contract to the
+    // project implementation; the test swaps in an in-memory implementation.
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideModule(DatabaseModule)
+      .useModule(InMemoryDatabaseModule)
+      .overrideProvider(ClassValidatorService)
+      .useClass(InMemoryClassValidatorUsers)
+      .compile();
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    base = (await start(app)).replace("[::1]", "localhost");
+  });
+  afterAll(() => app.close());
+
+  test("serves feature routes through AppModule", async () => {
+    const response = await fetch(`${base}/api/users/${created.id}`);
+    expect(response.status).toBe(200);
+    expect((await response.json()).displayName).toBe("Ada");
   });
 });

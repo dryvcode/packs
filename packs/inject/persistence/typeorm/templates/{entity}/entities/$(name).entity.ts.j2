@@ -41,14 +41,27 @@
 {#- The TypeScript type of a stored field. -#}
 {%- macro ts_type(field) -%}
 {%- set value = field.value -%}
+{#- Named properties use the declarations of the bound types pack; date-like columns are Date. -#}
 {%- if value.is.property and value.is.primitive -%}
-  {%- set base = value.property.primitive.type -%}
+  {%- set base = symbol_for(value.property.primitive) -%}
 {%- elif value.is.property and value.is.enum -%}
   {%- set base = symbol_for(value.property.enum) -%}
 {%- elif value.is.property and value.is.temporal and not value.property.temporal.is.duration and not value.property.temporal.is.interval -%}
   {%- set base = 'Date' -%}
+{%- elif value.is.property and value.is.temporal -%}
+  {%- set base = symbol_for(value.property.temporal) -%}
 {%- elif value.is.property and value.is.record -%}
-  {%- set base = 'Record<string, unknown>' -%}
+  {%- set base = symbol_for(value.property.record) -%}
+{%- elif value.is.property and value.is.composite -%}
+  {%- set base = symbol_for(value.property.composite) -%}
+{%- elif value.is.property and value.is.literal -%}
+  {%- set base = symbol_for(value.property.literal) -%}
+{%- elif value.is.property and value.is.union -%}
+  {%- set base = symbol_for(value.property.union) -%}
+{%- elif value.is.property and value.is.tuple -%}
+  {%- set base = symbol_for(value.property.tuple) -%}
+{%- elif value.is.property and value.is.generic -%}
+  {%- set base = symbol_for(value.property.generic) -%}
 {%- else -%}
   {%- set base = 'unknown' -%}
 {%- endif -%}
@@ -131,7 +144,7 @@ import {
 
 import { ColumnNumericTransformer } from "../../common/entities/base/column-numeric.transformer.ts";
 {%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
-import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+import {% if dependency.slot in ['property.types', 'schema.types'] %}type {% endif %}{ {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
 {%- endif %}{% endfor %}
 
 /**

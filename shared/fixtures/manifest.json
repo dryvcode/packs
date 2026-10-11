@@ -5,6 +5,12 @@
     },
     "unit/frontend/flutter-app": {
       "pubspec_overrides.yaml": "dart/pubspec_overrides.yaml"
+    },
+    "inject/backend/nestjs": {
+      "fixture-packs/implementation": "nestjs/implementation-pack"
+    },
+    "unit/backend/nestjs": {
+      "fixture-packs/implementation": "nestjs/implementation-pack"
     }
   }
 }

@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: class-validator DTOs
-  version: 0.2.0
+  version: 0.3.0
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
   purpose: validation
   summary: class-validator DTO classes with field limits, formats and invariants.
@@ -16,25 +16,18 @@ plugins:
   - name: jinja
     extensions: [.j2]
 
-selections:
-  enums:
-    subject: property.enum
-    scope: each
+# Enums and named property types come from the bound types pack (inject/types/typescript).
+needs:
+  property.enum.types: { required: true }
+  property.types: { required: true }
 
+selections:
   # Every schema gets a DTO, so request and response shapes are both covered.
   schemas:
     subject: schema
     scope: each
 
 templates:
-  enum:
-    $ref: '#/selections/enums'
-    output:
-      name: $(subject.name.kebab)
-      path:
-        - $(group.name.kebab)
-      symbol: $(subject.name.pascal)
-
   dto:
     $ref: '#/selections/schemas'
     output:
@@ -43,7 +36,8 @@ templates:
         - $(group.name.kebab)
       symbol: $(subject.name.pascal)Dto
     imports:
-      - $ref: '#/templates/enum'
+      - $ref: '#/needs/property.enum.types'
+      - $ref: '#/needs/property.types'
       - $ref: '#/templates/dto'
 
 provides:
@@ -51,8 +45,6 @@ provides:
     $ref: '#/templates/dto'
   schema.types:
     $ref: '#/templates/dto'
-  property.enum.types:
-    $ref: '#/templates/enum'
 
 # shared:js-package-manager:start
 choose:

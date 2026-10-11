@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- Require `property.enum.types` and `property.types` (for example from `inject/types/typescript`) and stop generating enums; DTO fields use the shared named types.
+
 ## 0.2.0
 
 - Place enums per IR group (`<group>/dto/enums/`), so groups may reuse an enum name.

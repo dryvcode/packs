@@ -1,13 +1,13 @@
-{%- macro has_persistence() -%}
-{%- for dependency in file.dependencies -%}{%- if dependency.slot == 'schema.persistence' -%}x{%- endif -%}{%- endfor -%}
+{%- macro has_slot(slot) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
 {%- endmacro -%}
-{%- set persistence = has_persistence() != '' -%}
-import { Module } from "@nestjs/common";
+{%- set persistence = has_slot('schema.persistence') != '' -%}
+import { Module, type Type } from "@nestjs/common";
 {%- if persistence %}
 import { TypeOrmModule } from "@nestjs/typeorm";
 {%- endif %}
-{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot == 'schema.persistence' %}
-import { {{ dependency.symbol }} } from "{{ dependency.path.relative }}";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot in ['schema.persistence', 'operation.implementation', 'operation.usecase'] %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
 {%- endif %}{% endfor %}
 
 import { {{ group.name.pascal }}{{ feature.name.pascal }}Controller } from "./{{ feature.name.kebab }}.controller.ts";
@@ -24,7 +24,17 @@ import { {{ group.name.pascal }}{{ feature.name.pascal }}Service } from "./{{ fe
   ],
 {%- endif %}
   controllers: [{{ group.name.pascal }}{{ feature.name.pascal }}Controller],
-  providers: [{{ group.name.pascal }}{{ feature.name.pascal }}Service],
+  providers: [
+{%- for implementation in file.dependencies %}{% if implementation.slot == 'operation.implementation' %}
+    {
+      provide: {{ group.name.pascal }}{{ feature.name.pascal }}Service,
+      useClass: {{ implementation.symbol }} satisfies Type<{{ group.name.pascal }}{{ feature.name.pascal }}Service>,
+    },
+{%- endif %}{% endfor %}
+{%- for usecase in file.dependencies %}{% if usecase.slot == 'operation.usecase' %}
+    {{ usecase.symbol }},
+{%- endif %}{% endfor %}
+  ],
   exports: [{{ group.name.pascal }}{{ feature.name.pascal }}Service],
 })
 export class {{ file.symbol }} {}

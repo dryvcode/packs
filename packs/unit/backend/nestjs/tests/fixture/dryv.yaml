@@ -7,6 +7,9 @@ sources:
   packs:
     local:
       path: packs
+    # Test-only stand-in for a project's implementation and use-case scaffolds.
+    fixture:
+      path: fixture-packs
 destinations:
   app:
     path: app
@@ -14,35 +17,44 @@ destinations:
     imports:
       root: src
       prefix: "@/"
-  server:
-    path: app
-    choose: { js.package_manager: bun }
-  dtos:
-    path: app
-    choose: { js.package_manager: bun }
 authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
+  # Application shell: main.ts, package.json, tooling and e2e test.
   app:
     source: { $ref: "#/sources/packs/local", path: unit/backend/nestjs }
     destination:
       $ref: "#/destinations/app"
     inputs:
       package_name: dryv-nestjs-fixture
-    bind:
-      operation.server:
-        $ref: "#/packs/server"
-  server:
-    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+  types:
+    source: { $ref: "#/sources/packs/local", path: inject/types/typescript }
     destination:
-      $ref: "#/destinations/server"
-      root: [src]
-    bind:
-      schema.validation:
-        $ref: "#/packs/dtos"
+      $ref: "#/destinations/app"
+      root: [src, types]
   dtos:
     source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
-      $ref: "#/destinations/dtos"
-      root: [src, dto]
+      $ref: "#/destinations/app"
+      root: [src, modules]
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }
+  implementation:
+    source: { $ref: "#/sources/packs/fixture", path: implementation }
+    destination:
+      $ref: "#/destinations/app"
+      root: [src, modules]
+  # Feature, group and app modules: modules under src/modules, AppModule in src/.
+  server:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/app"
+      root: [src, modules]
+    destinations:
+      app: { $ref: "#/destinations/app", root: [src] }
+    bind:
+      schema.validation: { $ref: "#/packs/dtos" }
+      operation.implementation: { $ref: "#/packs/implementation" }
+      operation.usecase: { $ref: "#/packs/implementation" }

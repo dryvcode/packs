@@ -7,7 +7,13 @@ sources:
   packs:
     local:
       path: packs
+    # Test-only stand-in for a project's implementation and use-case scaffolds.
+    fixture:
+      path: fixture-packs
 destinations:
+  types:
+    path: out/types
+    choose: { js.package_manager: bun }
   dtos:
     path: out/dtos
     choose: { js.package_manager: bun }
@@ -17,41 +23,68 @@ destinations:
   zod:
     path: out/zod
     choose: { js.package_manager: bun }
+  implementation:
+    path: out/implementation
   server:
     path: out/server
     choose: { js.package_manager: bun }
+  app:
+    path: out/app
+    choose: { js.package_manager: bun }
   server_zod:
     path: out/server-zod
+    choose: { js.package_manager: bun }
+  app_zod:
+    path: out/app-zod
     choose: { js.package_manager: bun }
 authoring:
   source:
     $ref: "#/sources/authoring/main"
 packs:
+  types:
+    source: { $ref: "#/sources/packs/local", path: inject/types/typescript }
+    destination:
+      $ref: "#/destinations/types"
   dtos:
     source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
     destination:
       $ref: "#/destinations/dtos"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }
   entities:
     source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
     destination:
       $ref: "#/destinations/entities"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }
   zod:
     source: { $ref: "#/sources/packs/local", path: inject/validation/zod }
     destination:
       $ref: "#/destinations/zod"
+  implementation:
+    source: { $ref: "#/sources/packs/fixture", path: implementation }
+    destination:
+      $ref: "#/destinations/implementation"
   server:
     source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
     destination:
       $ref: "#/destinations/server"
+    destinations:
+      app: { $ref: "#/destinations/app" }
     bind:
-      schema.validation:
-        $ref: "#/packs/dtos"
-      schema.persistence:
-        $ref: "#/packs/entities"
+      schema.validation: { $ref: "#/packs/dtos" }
+      schema.persistence: { $ref: "#/packs/entities" }
+      operation.implementation: { $ref: "#/packs/implementation" }
+      operation.usecase: { $ref: "#/packs/implementation" }
   server-zod:
     source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
     destination:
       $ref: "#/destinations/server_zod"
+    destinations:
+      app: { $ref: "#/destinations/app_zod" }
     bind:
-      schema.validation:
-        $ref: "#/packs/zod"
+      schema.validation: { $ref: "#/packs/zod" }
+      operation.implementation: { $ref: "#/packs/implementation" }
+      operation.usecase: { $ref: "#/packs/implementation" }
