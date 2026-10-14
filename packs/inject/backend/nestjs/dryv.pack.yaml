@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.4.0
+  version: 0.5.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -25,6 +25,8 @@ needs:
   # The project's implementation of each feature service and its per-operation use cases.
   operation.implementation: { required: true }
   operation.usecase: { required: true }
+  # Valid payloads for the generated e2e specs (for example from inject/validation/class-validator).
+  schema.examples: { required: false }
 
 selections:
   features:
@@ -102,8 +104,50 @@ templates:
     imports:
       - $ref: '#/templates/group-module'
         members: true
+      - $ref: '#/templates/http-options'
+        members: true
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
+
+  # server/http.options.ts: the global validation options, shared by AppModule and the specs.
+  http-options:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+      symbol: httpOptions
+
+  # <feature>.controller.e2e.spec.ts (Vitest): routing, binding, validation and status codes.
+  feature-e2e:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+    imports:
+      - $ref: '#/templates/feature'
+        members: true
+      - $ref: '#/templates/feature-service'
+        members: true
+      - $ref: '#/templates/http-options'
+        members: true
+      - $ref: '#/needs/schema.examples'
+
+  # app.e2e.spec.ts (Vitest): the assembled AppModule serves every contract route.
+  app-e2e:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+    imports:
+      - $ref: '#/templates/app-module'
+        members: true
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
+
+  # vitest.config.ts: scaffolded once, then owned by the project.
+  vitest-config:
+    output:
+      destination: app
 
   # src/database/database.module.ts: scaffolded once, then owned by the project.
   database:
@@ -142,7 +186,11 @@ dependencies:
     reflect-metadata: ^0.2
     rxjs: ^7
   dev:
+    "@nestjs/testing": ^11
+    "@swc/core": ^1
     prettier: "*"
+    unplugin-swc: ^1
+    vitest: ^3
 
 # shared:js-prettier-actions:start
 actions:

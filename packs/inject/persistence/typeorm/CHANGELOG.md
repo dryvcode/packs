@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+- Generate `common/entities/testing/entities.integrity.spec.ts` (Vitest + pg-mem): schema synchronization plus per-entity table, column, key, index and NOT NULL checks against the contract.
+
 ## 0.3.0
 
 - Require `property.enum.types` and `property.types` (for example from `inject/types/typescript`) and stop generating enums; columns use the shared named types (date-like columns stay `Date`).

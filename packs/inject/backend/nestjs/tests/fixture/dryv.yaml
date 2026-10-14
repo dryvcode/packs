@@ -76,6 +76,7 @@ packs:
     bind:
       schema.validation: { $ref: "#/packs/dtos" }
       schema.persistence: { $ref: "#/packs/entities" }
+      schema.examples: { $ref: "#/packs/dtos" }
       operation.implementation: { $ref: "#/packs/implementation" }
       operation.usecase: { $ref: "#/packs/implementation" }
   server-zod:

@@ -68,3 +68,12 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows every activation a
 ## Output slots
 
 - `app`: `app.module.ts` and the `database/` scaffold.
+
+## Generated tests
+
+Vitest specs, regenerated with the contracts:
+
+- `<feature>.controller.e2e.spec.ts`: each operation's route, input binding (path, query, headers, cookies, body), contract status code and response passthrough, plus rejection of an invalid body, with the project implementation mocked. Valid payloads come from the bound `schema.examples` pack; without one, body checks are `todo`.
+- `app.e2e.spec.ts` (app slot): the assembled AppModule boots and serves every contract route (no 404).
+
+`vitest.config.ts` is scaffolded in the app slot; run `vitest run --root <app slot>`. With pnpm, approve esbuild's build script (`pnpm approve-builds`), which Vitest needs.

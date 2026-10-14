@@ -15,7 +15,6 @@ import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import { describe, expect, it } from "vitest";
 
-import { buildExample, violations } from "../../common/dto/testing/examples.ts";
 import { {{ own('dto') }} } from "{{ own_path('dto') }}";
 import { {{ own('example') }} } from "{{ own_path('example') }}";
 
@@ -28,15 +27,15 @@ async function errorsFor(value: Record<string, unknown>): Promise<string[]> {
   return errors.map((error) => error.property);
 }
 
-const cases = violations({{ own('example') }}).map((item) => [item.field, item.reason, item.value] as const);
+const cases = {{ own('example') }}.violations().map((item) => [item.field, item.reason, item.value] as const);
 
 describe("{{ own('dto') }} contract", () => {
   it("accepts the contract example", async () => {
-    expect(await errorsFor(buildExample({{ own('example') }}))).toEqual([]);
+    expect(await errorsFor({{ own('example') }}.valid())).toEqual([]);
   });
 
   it("rejects unknown properties", async () => {
-    expect(await errorsFor({ ...buildExample({{ own('example') }}), unexpectedField: 1 })).toContain(
+    expect(await errorsFor({ ...{{ own('example') }}.valid(), unexpectedField: 1 })).toContain(
       "unexpectedField",
     );
   });

@@ -1,0 +1,11 @@
+import type { ValidationPipeOptions } from "@nestjs/common";
+
+/**
+ * Managed by Dryv: the request validation every generated route runs with. AppModule registers
+ * it as the global pipe, and the generated e2e specs use the same options, so tests exercise the
+ * exact production behaviour.
+ */
+export const {{ file.symbol }}: ValidationPipeOptions = {
+  transform: true,
+  whitelist: true,
+};

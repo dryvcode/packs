@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Generate `<name>.dto.example.ts` (provides `schema.examples`) and `<name>.dto.spec.ts` (Vitest: accepts its contract example, rejects unknown properties and every single-constraint violation).
+- Required nested objects get `@IsDefined()`.
+
 ## 0.3.0
 
 - Require `property.enum.types` and `property.types` (for example from `inject/types/typescript`) and stop generating enums; DTO fields use the shared named types.

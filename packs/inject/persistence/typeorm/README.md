@@ -30,3 +30,7 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source
 
 - provides `schema.persistence`
 - provides `property.enum.types`
+
+## Generated tests
+
+`common/entities/testing/entities.integrity.spec.ts` (Vitest) synchronizes every entity into an in-memory Postgres (pg-mem) and checks each against its contract: table, columns with nullability and primary keys, foreign keys, indexes, and rejection of rows missing required columns.

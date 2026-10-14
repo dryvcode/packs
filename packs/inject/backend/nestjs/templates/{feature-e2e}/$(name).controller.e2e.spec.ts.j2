@@ -1,0 +1,222 @@
+{#- Dependency helpers. -#}
+{%- macro symbol_for(link, slot) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.slot == slot -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{#- This feature's own file of a same-pack template. -#}
+{%- macro own(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.slot is none and dependency.template == template -%}
+{%- for operation in operations -%}{%- if dependency.target.id == operation.id -%}{{ dependency.symbol }}{%- endif -%}{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro own_path(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.slot is none and dependency.template == template -%}
+{%- for operation in operations -%}{%- if dependency.target.id == operation.id -%}./{{ dependency.path.relative }}{%- endif -%}{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{#- The single application-wide file of a same-pack template. -#}
+{%- macro shared(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.slot is none and dependency.template == template -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro shared_path(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.slot is none and dependency.template == template -%}./{{ dependency.path.relative }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- A literal for a scalar input, and the value the controller receives after its pipe. -#}
+{%- macro scalar_sample(value) -%}
+{%- if value.is.integer -%}1
+{%- elif value.is.number -%}1.5
+{%- elif value.is.boolean -%}true
+{%- elif value.is.uuid -%}"7f1c1f52-2f58-4a4e-9b43-0c1a3c1b0a11"
+{%- elif value.is.property and value.is.enum and value.property.enum.values -%}{% for item in value.property.enum.values %}{% if loop.first %}{{ item.value_json }}{% endif %}{% endfor %}
+{%- else -%}"value"
+{%- endif -%}
+{%- endmacro -%}
+{%- macro scalar_received(value) -%}
+{%- if value.is.integer or value.is.number or value.is.boolean -%}{{ scalar_sample(value) }}
+{%- else -%}String({{ scalar_sample(value) }})
+{%- endif -%}
+{%- endmacro -%}
+{%- macro binds_whole(http) -%}
+{%- for binding in http.inputs %}{% if binding.port.field is none %}x{% endif %}{% endfor -%}
+{%- endmacro -%}
+{%- macro body_binding(http) -%}
+{%- for binding in http.inputs %}{% if binding.is.body %}x{% endif %}{% endfor -%}
+{%- endmacro -%}
+{%- macro body_example(http) -%}
+{%- for binding in http.inputs %}{% if binding.is.body and binding.port.value.is.schema %}{{ symbol_for(binding.port.value.schema, 'schema.examples') }}{% endif %}{% endfor -%}
+{%- endmacro -%}
+{%- macro success_status(http) -%}
+{%- for binding in http.outputs %}{% if loop.first %}{{ binding.status }}{% endif %}{% endfor -%}
+{%- if not http.outputs -%}{% if http.method == 'POST' %}201{% else %}200{% endif %}{%- endif -%}
+{%- endmacro -%}
+{%- macro output_example(operation) -%}
+{%- if operation.output is not none and operation.output.value.is.schema -%}{{ symbol_for(operation.output.value.schema, 'schema.examples') }}{%- endif -%}
+{%- endmacro -%}
+{#- The request parts and the expected service input for a valid call. -#}
+{%- macro request(operation, http) -%}
+{
+        params: { {% for binding in http.inputs %}{% if binding.is.path %}{{ binding.name | tojson }}: {{ scalar_sample(binding.port.value) }}, {% endif %}{% endfor %}},
+        query: {
+{%- for binding in http.inputs %}{% if binding.is.query %} {{ binding.name | tojson }}: {{ scalar_sample(binding.port.value) }},{% elif binding.is.query_object and binding.port.value.is.schema and symbol_for(binding.port.value.schema, 'schema.examples') %} ...queryOf({{ symbol_for(binding.port.value.schema, 'schema.examples') }}.valid()),{% endif %}{% endfor %} },
+        headers: {
+{%- for binding in http.inputs %}{% if binding.is.header %} {{ binding.name | tojson }}: String({{ scalar_sample(binding.port.value) }}),{% elif binding.is.cookie %} cookie: `{{ binding.name }}=${String({{ scalar_sample(binding.port.value) }})}`,{% endif %}{% endfor %} },
+{%- if body_example(http) %}
+        body: {{ body_example(http) }}.valid(),
+{%- endif %}
+      }
+{%- endmacro -%}
+{%- macro expected_input(operation, http) -%}
+{%- if operation.input is not none and operation.input.kind -%}
+{%- if binds_whole(http) -%}
+{%- if body_example(http) -%}expect.objectContaining(sent.body){%- else -%}expect.anything(){%- endif -%}
+{%- else -%}
+expect.objectContaining({ {% for binding in http.inputs %}{{ binding.port.name.camel }}: {% if binding.is.body %}{% if body_example(http) %}expect.objectContaining(sent.body){% else %}expect.anything(){% endif %}{% elif binding.is.query_object %}expect.anything(){% else %}{{ scalar_received(binding.port.value) }}{% endif %}, {% endfor %}})
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+import "reflect-metadata";
+
+import { Global, type INestApplication, Module, ValidationPipe } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { getDataSourceToken } from "@nestjs/typeorm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot == 'schema.examples' %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+import { {{ shared('http-options') }} } from "{{ shared_path('http-options') }}";
+import { {{ own('feature') }} } from "{{ own_path('feature') }}";
+import { {{ own('feature-service') }} } from "{{ own_path('feature-service') }}";
+
+/**
+ * Managed by Dryv: the {{ feature.name.title }} HTTP surface behaves as its contract says. The
+ * project implementation is replaced with mocks, so these specs check routing, input binding,
+ * validation, status codes and response passthrough without business logic or a database.
+ */
+
+// Repositories resolve without a database; the mocked service never reaches them.
+@Global()
+@Module({
+  providers: [
+    {
+      provide: getDataSourceToken(),
+      useValue: { options: { type: "postgres" }, entityMetadatas: [], getRepository: () => ({}) },
+    },
+  ],
+  exports: [getDataSourceToken()],
+})
+class InMemoryDataSourceModule {}
+
+const service = {
+{%- for operation in operations %}
+  {{ operation.name.camel }}: vi.fn(),
+{%- endfor %}
+};
+
+type Sent = {
+  params: Record<string, unknown>;
+  query: Record<string, unknown>;
+  headers: Record<string, string>;
+  body?: unknown;
+};
+
+let app: INestApplication;
+let base: string;
+
+beforeAll(async () => {
+  const moduleRef = await Test.createTestingModule({
+    imports: [InMemoryDataSourceModule, {{ own('feature') }}],
+  })
+    .overrideProvider({{ own('feature-service') }})
+    .useValue(service)
+    .compile();
+  app = moduleRef.createNestApplication();
+  app.useGlobalPipes(new ValidationPipe({{ shared('http-options') }}));
+  await app.listen(0);
+  base = (await app.getUrl()).replace("[::1]", "localhost");
+});
+
+afterAll(async () => {
+  await app?.close();
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+/** Scalar query parameters from an example; nested values stay out of the query string. */
+function queryOf(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item === null || typeof item !== "object" || Array.isArray(item)),
+  );
+}
+
+async function send(method: string, path: string, sent: Sent): Promise<Response> {
+  const url = new URL(
+    base + path.replace(/\{(\w+)\}/g, (_match, name: string) => encodeURIComponent(String(sent.params[name]))),
+  );
+  for (const [key, value] of Object.entries(sent.query)) {
+    for (const item of Array.isArray(value) ? value : [value]) url.searchParams.append(key, String(item));
+  }
+  return fetch(url, {
+    method,
+    headers: { "content-type": "application/json", ...sent.headers },
+    body: sent.body === undefined ? undefined : JSON.stringify(sent.body),
+  });
+}
+{%- for operation in operations %}
+{%- set http = operation.facets.http %}
+
+describe("{{ http.method }} {{ http.path.effective }} ({{ operation.name.camel }})", () => {
+{%- if body_binding(http) and not body_example(http) %}
+  it.todo("passes a valid request to the service (bind schema.examples to generate this check)");
+{%- else %}
+  it("passes a valid request to the service and answers with the contract status", async () => {
+    const sent: Sent = {{ request(operation, http) }};
+{%- if output_example(operation) %}
+    const result = {{ output_example(operation) }}.valid();
+{%- else %}
+    const result = undefined;
+{%- endif %}
+    service.{{ operation.name.camel }}.mockResolvedValue(result);
+
+    const response = await send("{{ http.method }}", "{{ http.path.effective }}", sent);
+
+    expect(response.status, await response.clone().text()).toBe({{ success_status(http) }});
+    expect(service.{{ operation.name.camel }}).toHaveBeenCalledTimes(1);
+{%- if expected_input(operation, http) %}
+    expect(service.{{ operation.name.camel }}).toHaveBeenCalledWith({{ expected_input(operation, http) }});
+{%- endif %}
+{%- if output_example(operation) %}
+    expect(await response.json()).toEqual(JSON.parse(JSON.stringify(result)));
+{%- endif %}
+  });
+{%- endif %}
+{%- if body_example(http) %}
+
+  it("rejects an invalid body without calling the service", async () => {
+    const [violation] = {{ body_example(http) }}.violations();
+    if (violation === undefined) return;
+    const sent: Sent = { ...{{ request(operation, http) }}, body: violation.value };
+
+    const response = await send("{{ http.method }}", "{{ http.path.effective }}", sent);
+
+    expect(response.status).toBe(400);
+    expect(service.{{ operation.name.camel }}).not.toHaveBeenCalled();
+  });
+{%- elif body_binding(http) %}
+
+  it.todo("rejects an invalid body (bind schema.examples to generate this check)");
+{%- endif %}
+});
+{%- endfor %}

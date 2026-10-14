@@ -357,3 +357,13 @@ export function violations(example: SchemaExample): Violation[] {
   }
   return found;
 }
+
+/** A schema example that builds its own valid value and violations, for other packs' tests. */
+export interface ContractExample extends SchemaExample {
+  valid(): Record<string, unknown>;
+  violations(): Violation[];
+}
+
+export function contractExample(shape: SchemaExample): ContractExample {
+  return { ...shape, valid: () => buildExample(shape), violations: () => violations(shape) };
+}

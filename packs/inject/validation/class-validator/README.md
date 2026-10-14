@@ -29,3 +29,8 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source
 - provides `schema.validation`
 - provides `schema.types`
 - provides `property.enum.types`
+
+## Generated tests
+
+- `<name>.dto.example.ts`: the contract shape of each schema; provides `schema.examples` for other packs' tests.
+- `<name>.dto.spec.ts` (Vitest): the DTO accepts its contract example, rejects unknown properties and rejects every single-constraint violation (missing, null, wrong type, length, range, format, pattern, enum, array bounds, nested).
