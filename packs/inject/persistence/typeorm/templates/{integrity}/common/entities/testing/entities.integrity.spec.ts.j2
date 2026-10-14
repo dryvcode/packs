@@ -1,0 +1,161 @@
+{#- Contract expectations use the same naming rules as the entity template. -#}
+{%- macro column(name) -%}
+{%- if pack.inputs.naming_strategy == 'camel' -%}{{ name.camel }}{%- else -%}{{ name.snake }}{%- endif -%}
+{%- endmacro -%}
+{%- macro entity_for(schema) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == schema.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro table(schema) -%}
+{%- set storage = schema.facets.storage -%}
+{%- if storage is not none and storage.name is not none -%}{{ storage.name }}{%- else -%}{{ schema.name.snake }}{%- endif -%}
+{%- endmacro -%}
+{#- How TypeORM names a referenced table: namespace-qualified when the entity has one. -#}
+{%- macro table_path_of(id) -%}
+{%- for candidate in schemas -%}{%- if candidate.id == id -%}
+{%- if candidate.facets.storage is not none and candidate.facets.storage.namespace is not none -%}{{ candidate.facets.storage.namespace }}.{%- endif -%}{{ table(candidate) }}
+{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- macro is_primary(schema, field) -%}
+{%- set storage = schema.facets.storage -%}
+{%- if storage is not none -%}{%- for key in storage.primary_key -%}{%- if key.raw == field.name.raw -%}yes{%- endif -%}{%- endfor -%}{%- endif -%}
+{%- endmacro -%}
+{#- "yes" when the column must be supplied on insert (no default, not generated, not nullable). -#}
+{%- macro required(schema, field) -%}
+{%- if field.related is none and not field.optional and not field.nullable and field.default is none -%}
+{%- if not (is_primary(schema, field) == 'yes' and field.mutation == 'system') -%}yes{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro has_references(schema) -%}
+{%- for field in schema.fields -%}{%- if field.relation is not none and entity_for(field.relation.target.schema) -%}x{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- macro has_required(schema) -%}
+{%- for field in schema.fields -%}{{ required(schema, field) }}{%- endfor -%}
+{%- endmacro -%}
+import "reflect-metadata";
+
+import { randomUUID } from "node:crypto";
+import { DataType, newDb } from "pg-mem";
+import type { DataSource, EntityMetadata } from "typeorm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot is none %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/**
+ * Managed by Dryv: every generated entity synchronizes into a Postgres schema (pg-mem) and maps
+ * exactly the tables, columns, keys and constraints its contract declares.
+ */
+const entities = [
+{%- for schema in schemas %}{% if entity_for(schema) %}
+  {{ entity_for(schema) }},
+{%- endif %}{% endfor %}
+];
+
+let dataSource: DataSource;
+
+beforeAll(async () => {
+  const db = newDb({ autoCreateForeignKeyIndices: true });
+  db.public.registerFunction({ name: "current_database", implementation: () => "dryv" });
+  db.public.registerFunction({ name: "version", implementation: () => "PostgreSQL 16" });
+  db.public.registerFunction({
+    name: "gen_random_uuid",
+    returns: DataType.uuid,
+    implementation: randomUUID,
+    impure: true,
+  });
+  db.registerExtension("uuid-ossp", (schema) =>
+    schema.registerFunction({
+      name: "uuid_generate_v4",
+      returns: DataType.uuid,
+      implementation: randomUUID,
+      impure: true,
+    }),
+  );
+  const namespaces = new Set<string>([
+{%- for schema in schemas %}{% if entity_for(schema) and schema.facets.storage is not none and schema.facets.storage.namespace is not none %}
+    "{{ schema.facets.storage.namespace }}",
+{%- endif %}{% endfor %}
+  ]);
+  for (const namespace of namespaces) db.createSchema(namespace);
+  dataSource = await db.adapters.createTypeormDataSource({ type: "postgres", entities });
+  await dataSource.initialize();
+  await dataSource.synchronize();
+});
+
+afterAll(async () => {
+  await dataSource?.destroy();
+});
+
+/** [column, nullable, primary] for every stored column. */
+function columns(metadata: EntityMetadata): Array<[string, boolean, boolean]> {
+  return metadata.columns
+    .map((item) => [item.databaseName, item.isNullable, item.isPrimary] as [string, boolean, boolean])
+    .sort(([left], [right]) => left.localeCompare(right));
+}
+
+describe("entity schema matches the contract", () => {
+  it("synchronizes every entity into Postgres", () => {
+    expect(dataSource.isInitialized).toBe(true);
+    expect(dataSource.entityMetadatas).toHaveLength(entities.length);
+  });
+{%- for schema in schemas %}{% if entity_for(schema) %}
+{%- set storage = schema.facets.storage %}
+
+  describe("{{ schema.name.pascal }}", () => {
+    const metadata = () => dataSource.getMetadata({{ entity_for(schema) }});
+
+    it("maps its contract table and columns", () => {
+      expect(metadata().tableName).toBe("{{ table(schema) }}");
+      expect(columns(metadata())).toEqual(
+        (
+          [
+{%- for field in schema.fields %}{% if field.related is none %}
+            ["{{ column(field.name) }}", {{ (field.optional or field.nullable) | tojson }}, {{ (is_primary(schema, field) == 'yes') | tojson }}],
+{%- endif %}{% endfor %}
+          ] as Array<[string, boolean, boolean]>
+        ).sort(([left], [right]) => left.localeCompare(right)),
+      );
+    });
+{%- if has_references(schema) %}
+
+    it("references the contract's related tables", () => {
+      const keys = metadata()
+        .foreignKeys.map((key) => `${key.columnNames.join(",")}->${key.referencedTablePath}`)
+        .sort();
+      expect(keys).toEqual(
+        [
+{%- for field in schema.fields %}{% if field.relation is not none and entity_for(field.relation.target.schema) %}
+          "{{ column(field.name) }}->{{ table_path_of(field.relation.target.schema.id) }}",
+{%- endif %}{% endfor %}
+        ].sort(),
+      );
+    });
+{%- endif %}
+{%- if storage is not none and storage.indexes %}
+
+    it("declares the contract's indexes", () => {
+      const indexes = metadata()
+        .indices.map((index) => `${index.isUnique ? "unique:" : ""}${index.columns.map((item) => item.databaseName).join(",")}`)
+        .sort();
+      expect(indexes).toEqual(
+        expect.arrayContaining([
+{%- for index in storage.indexes %}
+          "{% if index.unique %}unique:{% endif %}{% for item in index.fields %}{% for field in schema.fields %}{% if field.name.raw == item.raw %}{{ column(field.name) }}{% endif %}{% endfor %}{% if not loop.last %},{% endif %}{% endfor %}",
+{%- endfor %}
+        ]),
+      );
+    });
+{%- endif %}
+{%- if has_required(schema) %}
+
+    it("rejects a row without its required columns", async () => {
+      await expect(
+        dataSource.query('INSERT INTO {% if storage is not none and storage.namespace is not none %}"{{ storage.namespace }}".{% endif %}"{{ table(schema) }}" DEFAULT VALUES'),
+      ).rejects.toThrow();
+    });
+{%- endif %}
+  });
+{%- endif %}{% endfor %}
+});

@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: TypeORM Entities
-  version: 0.3.0
+  version: 0.4.0
   description: Generates TypeORM entities with typed columns, indexes, checks and relations from entity-role schemas.
   purpose: persistence
   summary: TypeORM entities with typed columns, relations, checks and indexes.
@@ -34,6 +34,11 @@ selections:
     filter:
       all: { role: entity }
     scope: each
+  all-entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: all
 
 templates:
   entity:
@@ -47,6 +52,14 @@ templates:
       - $ref: '#/needs/property.enum.types'
       - $ref: '#/needs/property.types'
       - $ref: '#/templates/entity'
+
+  # common/entities/testing/entities.integrity.spec.ts (Vitest + pg-mem): every entity
+  # synchronizes into Postgres and maps exactly its contract's tables, keys and constraints.
+  integrity:
+    $ref: '#/selections/all-entities'
+    imports:
+      - $ref: '#/templates/entity'
+        members: true
 
 provides:
   schema.persistence:
@@ -64,6 +77,9 @@ dependencies:
     typeorm: ^0.3
   dev:
     prettier: "*"
+    pg: ^8
+    pg-mem: ^3
+    vitest: ^3
 
 # shared:js-prettier-actions:start
 actions:

@@ -10,6 +10,7 @@ sources:
 destinations:
   out:
     path: out
+    choose: { js.package_manager: bun }
 authoring:
   source:
     $ref: "#/sources/authoring/main"
