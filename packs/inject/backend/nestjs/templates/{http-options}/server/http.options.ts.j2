@@ -1,4 +1,5 @@
 import { type ArgumentMetadata, ValidationPipe, type ValidationPipeOptions } from "@nestjs/common";
+import { getMetadataStorage } from "class-validator";
 
 /**
  * Managed by Dryv: the request validation every generated route runs with. AppModule registers
@@ -28,18 +29,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const NUMERIC = new Set(["isInt", "isNumber", "isDivisibleBy", "min", "max"]);
+const BOOLEAN = new Set(["isBoolean"]);
+
+/**
+ * The scalar kind of each validated field, read from the DTO's class-validator metadata rather
+ * than reflected design types, which per-file compilers (SWC, esbuild) cannot resolve for
+ * imported type aliases.
+ */
+function fieldKinds(type: abstract new (...args: never[]) => unknown): Map<string, "number" | "boolean"> {
+  const kinds = new Map<string, "number" | "boolean">();
+  for (const item of getMetadataStorage().getTargetValidationMetadatas(type as never, "", true, false)) {
+    const name = item.name ?? "";
+    if (NUMERIC.has(name)) kinds.set(item.propertyName, "number");
+    else if (BOOLEAN.has(name)) kinds.set(item.propertyName, "boolean");
+  }
+  return kinds;
+}
+
 function coerceQuery(query: Record<string, unknown>, type: abstract new (...args: never[]) => unknown) {
+  const kinds = fieldKinds(type);
   const coerced: Record<string, unknown> = { ...query };
   for (const [key, raw] of Object.entries(query)) {
-    const declared: unknown = Reflect.getMetadata("design:type", type.prototype as object, key);
-    coerced[key] = Array.isArray(raw) ? raw.map((item) => coerce(item, declared)) : coerce(raw, declared);
+    const kind = kinds.get(key);
+    coerced[key] = Array.isArray(raw) ? raw.map((item) => coerce(item, kind)) : coerce(raw, kind);
   }
   return coerced;
 }
 
-function coerce(value: unknown, declared: unknown): unknown {
+function coerce(value: unknown, kind: "number" | "boolean" | undefined): unknown {
   if (typeof value !== "string") return value;
-  if (declared === Number && value.trim() !== "" && !Number.isNaN(Number(value))) return Number(value);
-  if (declared === Boolean && (value === "true" || value === "false")) return value === "true";
+  if (kind === "number" && value.trim() !== "" && !Number.isNaN(Number(value))) return Number(value);
+  if (kind === "boolean" && (value === "true" || value === "false")) return value === "true";
   return value;
 }
