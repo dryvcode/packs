@@ -9,6 +9,9 @@ import { getMetadataStorage } from "class-validator";
 export const {{ file.symbol }}: ValidationPipeOptions = {
   transform: true,
   whitelist: true,
+  // Unknown properties are already stripped; this only stops field-less DTOs (an empty query)
+  // being rejected as "unknown values" by class-validator 0.14.
+  forbidUnknownValues: false,
 };
 
 /**
