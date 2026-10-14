@@ -5,7 +5,7 @@
 {%- endmacro -%}
 {%- macro shared_path(template) -%}
 {%- for dependency in file.dependencies -%}
-{%- if dependency.slot is none and dependency.template == template -%}./{{ dependency.path.relative }}{%- endif -%}
+{%- if dependency.slot is none and dependency.template == template -%}{{ (dependency.path.prefixed or ('./' ~ dependency.path.relative)) }}{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 {%- macro has_slot(slot) -%}

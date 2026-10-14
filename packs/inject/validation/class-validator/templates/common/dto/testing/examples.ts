@@ -294,8 +294,9 @@ function itemViolations(spec: FieldSpec): Array<{ reason: string; value: unknown
   if (spec.kind === "string") {
     const [min, max] = stringBounds(spec);
     const base = exampleString(spec);
-    if (spec.exactLength !== undefined || min > 0) {
-      if (min > 0) found.push({ reason: `shorter than ${min}`, value: base.slice(0, min - 1) });
+    // Only lengths the contract declares; an undeclared minimum accepts "".
+    if ((spec.exactLength !== undefined || spec.minLength !== undefined) && min > 0) {
+      found.push({ reason: `shorter than ${min}`, value: base.slice(0, min - 1) });
     }
     if (spec.maxLength !== undefined || spec.exactLength !== undefined) {
       found.push({ reason: `longer than ${max}`, value: base.padEnd(max + 1, base.at(-1) ?? "a") });

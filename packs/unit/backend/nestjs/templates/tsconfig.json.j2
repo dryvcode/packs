@@ -15,7 +15,11 @@
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
     "types": ["vitest/globals", "node"],
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "#/*": ["./src/*"],
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

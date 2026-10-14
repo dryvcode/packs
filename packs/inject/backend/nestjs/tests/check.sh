@@ -6,4 +6,4 @@ set -euo pipefail
 bun install --silent
 bunx tsc -p tsconfig.json
 bun test server.test.ts
-bunx vitest run --root out --config app/vitest.config.ts --reporter=dot
+bunx vitest run --config out/app/vitest.config.ts --reporter=dot

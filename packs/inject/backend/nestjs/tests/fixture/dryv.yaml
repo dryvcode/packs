@@ -13,29 +13,38 @@ sources:
 destinations:
   types:
     path: out/types
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   dtos:
     path: out/dtos
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   entities:
     path: out/entities
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   zod:
     path: out/zod
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   implementation:
     path: out/implementation
+    imports: { path: out, prefix: "#/" }
+  # No alias here, so the server's own static imports exercise the relative fallback.
   server:
     path: out/server
     choose: { js.package_manager: bun }
   app:
     path: out/app
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   server_zod:
     path: out/server-zod
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
   app_zod:
     path: out/app-zod
+    imports: { path: out, prefix: "#/" }
     choose: { js.package_manager: bun }
 authoring:
   source:
@@ -65,6 +74,8 @@ packs:
       $ref: "#/destinations/zod"
   implementation:
     source: { $ref: "#/sources/packs/fixture", path: implementation }
+    # A pack-specific alias overrides the destination's #/.
+    imports: { path: out, prefix: "@gen/" }
     destination:
       $ref: "#/destinations/implementation"
   server:

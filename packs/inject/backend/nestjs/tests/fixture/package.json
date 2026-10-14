@@ -23,6 +23,7 @@
     "@swc/core": "^1",
     "randexp": "^0.5",
     "pg": "^8",
-    "pg-mem": "^3"
+    "pg-mem": "^3",
+    "vite-tsconfig-paths": "^5"
   }
 }

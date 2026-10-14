@@ -60,7 +60,7 @@
 {%- endif -%}
 {%- endmacro -%}
 {%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
-import type { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+import type { {{ dependency.symbol }} } from "{{ (dependency.path.prefixed or ('./' ~ dependency.path.relative)) }}";
 {%- endif %}{% endfor %}
 
 /** {{ property.tuple.description or property.tuple.name.title }} */

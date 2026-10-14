@@ -40,7 +40,7 @@ import { DataType, newDb } from "pg-mem";
 import type { DataSource, EntityMetadata } from "typeorm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 {%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot is none %}
-import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+import { {{ dependency.symbol }} } from "{{ (dependency.path.prefixed or ('./' ~ dependency.path.relative)) }}";
 {%- endif %}{% endfor %}
 
 /**
@@ -85,7 +85,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await dataSource?.destroy();
+  if (dataSource?.isInitialized) await dataSource.destroy();
 });
 
 /** [column, nullable, primary] for every stored column. */

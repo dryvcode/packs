@@ -88,12 +88,12 @@ import {
 import type { z } from "zod";
 {%- endif %}
 
-import { Cookie } from "../../common/server/http/cookie.decorator.ts";
+import { Cookie } from "{{ (file.path.import_base ~ 'common/server/http/cookie.decorator.ts') if file.path.import_base else '../../common/server/http/cookie.decorator.ts' }}";
 {%- if zod or joi %}
-import { SchemaValidationPipe } from "../../common/server/validation/schema-validation.pipe.ts";
+import { SchemaValidationPipe } from "{{ (file.path.import_base ~ 'common/server/validation/schema-validation.pipe.ts') if file.path.import_base else '../../common/server/validation/schema-validation.pipe.ts' }}";
 {%- endif %}
 {%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.slot == 'schema.validation' %}
-import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+import { {{ dependency.symbol }} } from "{{ (dependency.path.prefixed or ('./' ~ dependency.path.relative)) }}";
 {%- endif %}{% endfor %}
 import { {{ group.name.pascal }}{{ feature.name.pascal }}Service } from "./{{ feature.name.kebab }}.service.ts";
 

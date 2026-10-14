@@ -190,6 +190,7 @@ dependencies:
     "@swc/core": ^1
     prettier: "*"
     unplugin-swc: ^1
+    vite-tsconfig-paths: ^5
     vitest: ^3
 
 # shared:js-prettier-actions:start

@@ -9,7 +9,23 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ],
+    "paths": {
+      "#/*": [
+        "./out/*"
+      ],
+      "@/*": [
+        "./out/*"
+      ],
+      "@gen/*": [
+        "./out/*"
+      ]
+    }
   },
-  "include": ["out/**/*.ts", "server.test.ts"]
+  "include": [
+    "out/**/*.ts",
+    "server.test.ts"
+  ]
 }
