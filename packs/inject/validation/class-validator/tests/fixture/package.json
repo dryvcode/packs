@@ -9,6 +9,8 @@
   },
   "devDependencies": {
     "@types/bun": "^1",
-    "typescript": "^5.8"
+    "typescript": "^5.8",
+    "randexp": "^0.5",
+    "vitest": "^3"
   }
 }

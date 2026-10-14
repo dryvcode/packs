@@ -1,0 +1,74 @@
+{#- The generated symbol of another planned file, found by the subject it represents. -#}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#- The contract constraints of one field value, mirroring the DTO's validators. -#}
+{%- macro spec(value) -%}
+{%- if value.is.schema -%}{ kind: "schema", example: () => {{ symbol_for(value.schema) }} }
+{%- elif value.is.property and value.is.primitive -%}
+{%- set primitive = value.property.primitive -%}
+{%- if primitive.is.boolean -%}{ kind: "boolean" }
+{%- elif primitive.is.number -%}{ kind: "number"
+  {%- if primitive.is.integer %}, integer: true{% endif %}
+  {%- if primitive.constraints.range is not none and primitive.constraints.range.has_min %}, min: {{ primitive.constraints.range.min }}{% endif %}
+  {%- if primitive.constraints.range is not none and primitive.constraints.range.has_max %}, max: {{ primitive.constraints.range.max }}{% endif %}
+  {%- if primitive.constraints.has_multiple_of %}, multipleOf: {{ primitive.constraints.multiple_of }}{% endif %} }
+{%- else -%}
+{%- set length = primitive.constraints.length -%}
+{ kind: "string"
+  {%- if primitive.format %}, format: {{ primitive.format | tojson }}{% endif %}
+  {%- if length is not none and length.has_exact %}, exactLength: {{ length.exact }}{% endif %}
+  {%- if length is not none and length.has_min and not length.has_exact %}, minLength: {{ length.min }}{% endif %}
+  {%- if length is not none and length.has_max and not length.has_exact %}, maxLength: {{ length.max }}{% endif %}
+  {%- if primitive.constraints.pattern is not none %}, patterns: [{% for expression in primitive.constraints.pattern.match %}{{ expression | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %} }
+{%- endif -%}
+{%- elif value.is.property and value.is.enum -%}{ kind: "enum", values: Object.values({{ symbol_for(value.property.enum) }}) }
+{%- elif value.is.property and value.is.temporal -%}{ kind: "temporal", temporal: {{ value.property.temporal.kind | tojson }} }
+{%- elif value.is.property and value.is.record -%}{ kind: "record" }
+{%- else -%}{ kind: "unknown" }
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand(o) -%}
+{%- if o.is.field -%}{ field: {{ o.field.camel | tojson }} }
+{%- elif o.is.literal -%}{ literal: {{ o.value | tojson }} }
+{%- else -%}{ operator: {{ o.operator | tojson }}, terms: [{% for term in o.terms %}{% if term.kind == 'field' %}{ field: {{ term.field.camel | tojson }} }{% else %}{ literal: {{ term.value | tojson }} }{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}] }
+{%- endif -%}
+{%- endmacro -%}
+import type { SchemaExample } from "../../common/dto/testing/examples.ts";
+{%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.symbol != file.symbol %}
+import { {{ dependency.symbol }} } from "./{{ dependency.path.relative }}";
+{%- endif %}{% endfor %}
+
+/** The contract shape of {{ schema.name.pascal }}, for generated tests. */
+export const {{ file.symbol }}: SchemaExample = {
+  name: {{ schema.name.pascal | tojson }},
+  fields: [
+{%- for field in schema.fields %}
+    {
+      name: {{ field.name.camel | tojson }},
+      optional: {{ field.optional | tojson }},
+      nullable: {{ field.nullable | tojson }},
+{%- if field.array is not none %}
+      array: { {% if field.array.has_min %}min: {{ field.array.min }}{% endif %}{% if field.array.has_min and field.array.has_max %}, {% endif %}{% if field.array.has_max %}max: {{ field.array.max }}{% endif %} },
+{%- endif %}
+      spec: {{ spec(field.value) }},
+    },
+{%- endfor %}
+  ],
+  invariants: [
+{%- for invariant in schema.invariants %}{% if not invariant.form.is.opaque %}
+    {
+      any: {{ invariant.form.is.any | tojson }},
+      comparisons: [
+{%- for comparison in invariant.form.comparisons %}
+        { left: {{ operand(comparison.left) }}, operator: {{ comparison.operator | tojson }}, right: {{ operand(comparison.right) }} },
+{%- endfor %}
+      ],
+    },
+{%- endif %}{% endfor %}
+  ],
+};

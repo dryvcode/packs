@@ -76,6 +76,9 @@
 {%- endif %}
 {%- endif %}
 {%- if value.is.schema %}
+{%- if not field.optional %}
+  @IsDefined()
+{%- endif %}
   @ValidateNested({{ each(field) }})
   @Type(() => {{ symbol_for(value.schema) }})
 {%- elif value.is.property and value.is.primitive %}
@@ -213,6 +216,7 @@ import {
   Min,
   MinLength,
   IsDivisibleBy,
+  IsDefined,
   ValidateIf,
   ValidateNested,
 } from "class-validator";

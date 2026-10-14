@@ -1,0 +1,49 @@
+{#- This schema's own DTO class and example (members of this template). -#}
+{%- macro own(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == schema.id and dependency.template == template -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro own_path(template) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == schema.id and dependency.template == template -%}./{{ dependency.path.relative }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+import "reflect-metadata";
+
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
+import { describe, expect, it } from "vitest";
+
+import { buildExample, violations } from "../../common/dto/testing/examples.ts";
+import { {{ own('dto') }} } from "{{ own_path('dto') }}";
+import { {{ own('example') }} } from "{{ own_path('example') }}";
+
+/** Managed by Dryv: {{ own('dto') }} enforces exactly what the {{ schema.name.pascal }} contract says. */
+async function errorsFor(value: Record<string, unknown>): Promise<string[]> {
+  const errors = await validate(plainToInstance({{ own('dto') }}, value), {
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  });
+  return errors.map((error) => error.property);
+}
+
+const cases = violations({{ own('example') }}).map((item) => [item.field, item.reason, item.value] as const);
+
+describe("{{ own('dto') }} contract", () => {
+  it("accepts the contract example", async () => {
+    expect(await errorsFor(buildExample({{ own('example') }}))).toEqual([]);
+  });
+
+  it("rejects unknown properties", async () => {
+    expect(await errorsFor({ ...buildExample({{ own('example') }}), unexpectedField: 1 })).toContain(
+      "unexpectedField",
+    );
+  });
+
+  if (cases.length > 0) {
+    it.each(cases)("rejects %s when %s", async (field, _reason, value) => {
+      expect(await errorsFor(value)).toContain(field);
+    });
+  }
+});

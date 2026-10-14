@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: class-validator DTOs
-  version: 0.3.0
+  version: 0.4.0
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
   purpose: validation
   summary: class-validator DTO classes with field limits, formats and invariants.
@@ -40,11 +40,38 @@ templates:
       - $ref: '#/needs/property.types'
       - $ref: '#/templates/dto'
 
+  # <group>/dto/<name>.dto.example.ts: the contract shape of each schema, for generated tests.
+  example:
+    $ref: '#/selections/schemas'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.camel)Example
+    imports:
+      - $ref: '#/needs/property.enum.types'
+      - $ref: '#/templates/example'
+
+  # <group>/dto/<name>.dto.spec.ts (Vitest): the DTO accepts its example and rejects each violation.
+  spec:
+    $ref: '#/selections/schemas'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+    imports:
+      - $ref: '#/templates/dto'
+        members: true
+      - $ref: '#/templates/example'
+        members: true
+
 provides:
   schema.validation:
     $ref: '#/templates/dto'
   schema.types:
     $ref: '#/templates/dto'
+  schema.examples:
+    $ref: '#/templates/example'
 
 # shared:js-package-manager:start
 choose:
@@ -59,6 +86,8 @@ dependencies:
     reflect-metadata: ^0.2
   dev:
     prettier: "*"
+    randexp: ^0.5
+    vitest: ^3
 
 # shared:js-prettier-actions:start
 actions:
