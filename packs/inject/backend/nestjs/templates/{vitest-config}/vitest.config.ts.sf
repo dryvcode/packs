@@ -14,5 +14,5 @@ export default defineConfig({
     exclude: ["**/node_modules/**"],
     testTimeout: 30_000,
   },
-  plugins: [tsconfigPaths(), swc.vite({ module: { type: "es6" } })],
+  plugins: [tsconfigPaths({ projects: ["tsconfig.json"] }), swc.vite({ module: { type: "es6" } })],
 });
