@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.5.0
+  version: 0.6.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -57,7 +57,10 @@ templates:
       symbol: $(group.name.pascal)$(feature.name.pascal)Module
     imports:
       - $ref: '#/needs/schema.validation'
+      # Entities behind the feature's payloads (for example a response's read projection),
+      # so the module registers every entity its implementation can use.
       - $ref: '#/needs/schema.persistence'
+        transitive: true
       - $ref: '#/needs/operation.implementation'
       - $ref: '#/needs/operation.usecase'
 
@@ -108,6 +111,7 @@ templates:
         members: true
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
+        transitive: true
 
   # server/http.options.ts: the global validation options, shared by AppModule and the specs.
   http-options:
@@ -143,6 +147,7 @@ templates:
         members: true
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
+        transitive: true
 
   # vitest.config.ts: scaffolded once, then owned by the project.
   vitest-config:
