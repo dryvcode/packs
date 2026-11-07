@@ -23,12 +23,16 @@ jobs:
         credentials:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          # Development mode: no database, and any API key is accepted. This container is only for CI.
+          DRYV_API_INSECURE_NO_AUTH: "1"
         ports: ["8750:8750"]
         options: >-
-          --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8750/', timeout=4)\""
+          --health-cmd "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8750/health', timeout=4)\""
           --health-interval 5s --health-retries 24
     env:
       DRYV_API_URL: http://127.0.0.1:8750
+      DRYV_API_KEY: dryv_key_development.local
       DRYV_CLI: bun .dryv-source/source/apps/cli/bin/dryv.ts
     steps:
       - uses: actions/checkout@v4
