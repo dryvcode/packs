@@ -1,6 +1,6 @@
 # NestJS backend pack
 
-Injects NestJS modules into a project, following the NestJS module structure:
+Injects NestJS 12 modules into a project, following the NestJS module structure. The pack selects Bun for package-manager actions; Bun runs the generated application and supplies the Node compatibility APIs used by the Nest ecosystem.
 
 ```text
 <app slot>/app.module.ts                  managed: imports the group modules (and DatabaseModule)

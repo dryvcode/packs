@@ -1,6 +1,6 @@
 # NestJS application pack
 
-Generates the runnable shell of a NestJS application: `src/main.ts`, `package.json`, `tsconfig.json`, `nest-cli.json` and `test/app.e2e-spec.ts`.
+Generates the runnable shell of a NestJS 12 application: `src/main.ts`, `package.json`, `tsconfig.json`, `nest-cli.json` and `test/app.e2e-spec.ts`. The generated scripts use Bun for install, development, build, tests and the production runtime.
 
 `main.ts` and the e2e test import `./app.module.ts`, which `inject/backend/nestjs` generates. Map that pack's `app` output slot to this unit's `src/`:
 
