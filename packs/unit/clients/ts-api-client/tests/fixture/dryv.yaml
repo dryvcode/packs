@@ -18,3 +18,5 @@ packs:
     source: { $ref: "#/sources/packs/local", path: unit/clients/ts-api-client }
     destination:
       $ref: "#/destinations/out"
+    inputs:
+      package_name: "@fixture/api-client"
