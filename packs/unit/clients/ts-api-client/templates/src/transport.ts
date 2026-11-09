@@ -1,6 +1,7 @@
 /** How the client reaches the API. Call `configureApi` once at startup. */
 export interface ApiConfig {
   baseUrl: string;
+  credentials?: RequestCredentials;
   headers?: Record<string, string>;
   fetch?: typeof fetch;
 }
@@ -11,6 +12,7 @@ export type ApiResult<T> =
   | { ok: false; status: number; message: string; error?: unknown };
 
 export interface RequestOptions {
+  credentials?: RequestCredentials;
   headers?: Record<string, string>;
   signal?: AbortSignal;
 }
@@ -43,6 +45,7 @@ export async function request<T>(
   try {
     const response = await send(`${config.baseUrl}${path}${queryString(input.query)}`, {
       method,
+      credentials: options.credentials ?? config.credentials,
       headers: {
         accept: "application/json",
         ...(input.body === undefined ? {} : { "content-type": "application/json" }),

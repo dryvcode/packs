@@ -11,7 +11,9 @@ Generates a framework-free TypeScript client package: interfaces for every schem
 
 Each call takes the operation's single input, like props: a schema input is its model (`createUser({ displayName })`), named fields an object (`getUser({ id })`). The call places each field where HTTP binds it (path, query, body). Results never throw for HTTP errors: `{ ok: true, data }` or `{ ok: false, status, message }`.
 
-Configure once: `configureApi({ baseUrl: "https://api.example.com", headers })`.
+Configure once: `configureApi({ baseUrl: "https://api.example.com", headers, credentials: "include" })`.
+Credential mode is optional per client, and individual operations can override
+it through their `options` argument.
 
 The generated package exposes operation, model, and enum subpaths. This lets
 applications consume generated contracts even when their root entry point is

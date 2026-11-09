@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Allow callers to configure fetch credential mode for cookie-authenticated APIs.
+
 ## 0.1.2
 
 - Export generated operations, models, and enums through package subpaths.

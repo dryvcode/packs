@@ -52,3 +52,17 @@ test("generated operations and models resolve through package subpaths", async (
   const result = await listUsersBySubpath();
   expect(result.ok).toBe(true);
 });
+
+test("credential mode is configured for cookie-authenticated APIs", async () => {
+  let credentials: RequestCredentials | undefined;
+  configureApi({
+    baseUrl: "https://api.example.test",
+    credentials: "include",
+    fetch: (async (_url: string, init?: RequestInit) => {
+      credentials = init?.credentials;
+      return new Response("[]", { status: 200 });
+    }) as typeof fetch,
+  });
+  await listUsers();
+  expect(credentials).toBe("include");
+});

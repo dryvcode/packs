@@ -8,7 +8,7 @@ source: templates
 
 info:
   title: TypeScript API Client
-  version: 0.1.2
+  version: 0.1.3
   description: Generates a framework-free TypeScript client package — models, enums and one typed fetch call per HTTP operation.
   purpose: clients
   summary: A framework-free TypeScript API client over fetch, with typed models and one call per operation.
