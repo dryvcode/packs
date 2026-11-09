@@ -1,6 +1,17 @@
 import { afterEach, expect, test } from "bun:test";
 
 import { configureApi, createUser, getUser, listUsers, UserStatus } from "./out/src/index.ts";
+import { listUsers as listUsersBySubpath } from "@fixture/api-client/operations/core/list-users";
+import type { UserProfile } from "@fixture/api-client/models/user-profile";
+
+const typedUser: UserProfile = {
+  id: "u1",
+  displayName: "Ada",
+  externalCustomerId: "c1",
+  createdAt: "2026-01-01T00:00:00Z",
+  status: UserStatus.ACTIVE,
+};
+void typedUser;
 
 const calls: { url: string; method: string; body: unknown }[] = [];
 function serve(status: number, body: unknown): void {
@@ -34,4 +45,10 @@ test("errors resolve to a result instead of throwing", async () => {
   serve(404, { message: "not found" });
   const result = await listUsers();
   expect(result).toEqual({ ok: false, status: 404, message: "not found", error: { message: "not found" } });
+});
+
+test("generated operations and models resolve through package subpaths", async () => {
+  serve(200, [{ id: "u2", displayName: "Grace", status: "active" }]);
+  const result = await listUsersBySubpath();
+  expect(result.ok).toBe(true);
 });

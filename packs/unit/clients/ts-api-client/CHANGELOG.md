@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Export generated operations, models, and enums through package subpaths.
+
 ## 0.1.1
 
 - Use the configured `package_name` for the generated package manifest.

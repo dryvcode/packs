@@ -13,6 +13,15 @@ Each call takes the operation's single input, like props: a schema input is its 
 
 Configure once: `configureApi({ baseUrl: "https://api.example.com", headers })`.
 
+The generated package exposes operation, model, and enum subpaths. This lets
+applications consume generated contracts even when their root entry point is
+maintained separately:
+
+```ts
+import { listUsers } from "@fixture/api-client/operations/core/list-users";
+import type { UserProfile } from "@fixture/api-client/models/user-profile";
+```
+
 **Provides:** `operation.client` (the calls), `schema.types` (models), `property.enum.types` (enums).
 
 **Test:** `bun scripts/test-pack.ts unit/clients/ts-api-client` typechecks the package and exercises calls against a mocked `fetch`.
