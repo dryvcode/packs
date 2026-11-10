@@ -22,6 +22,13 @@
 {%- macro bound(binding) -%}
 {%- if binding.port.field is none %}input{% else %}input.{{ binding.port.field.camel }}{% endif -%}
 {%- endmacro -%}
+{%- macro binding_optional(operation, binding) -%}
+{%- if operation.input.kind != 'schema' and binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
 {%- set http = operation.facets.http %}
 import { type ApiResult, type RequestOptions, request } from "../../transport.ts";
 {%- for dependency in file.dependencies %}{% if dependency.symbol and dependency.template == 'model' %}
@@ -56,6 +63,22 @@ export function {{ file.symbol }}(
       body: {{ bound(binding) }},
 {%- endfor %}
     },
+{% if http.input_groups.header %}
+    {
+      ...options,
+      headers: {
+        ...options?.headers,
+{% for binding in http.input_groups.header %}
+{% if binding_optional(operation, binding) %}
+        ...({{ bound(binding) }} === undefined ? {} : { {{ binding.name | tojson }}: {{ bound(binding) }} }),
+{% else %}
+        {{ binding.name | tojson }}: {{ bound(binding) }},
+{% endif %}
+{% endfor %}
+      },
+    },
+{% else %}
     options,
+{% endif %}
   );
 }

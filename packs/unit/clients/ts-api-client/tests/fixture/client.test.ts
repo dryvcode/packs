@@ -14,12 +14,17 @@ const typedUser: UserProfile = {
 };
 void typedUser;
 
-const calls: { url: string; method: string; body: unknown }[] = [];
+const calls: { url: string; method: string; body: unknown; headers?: HeadersInit }[] = [];
 function serve(status: number, body: unknown): void {
   configureApi({
     baseUrl: "https://api.example.test",
     fetch: (async (url: string, init?: RequestInit) => {
-      calls.push({ url, method: init?.method ?? "GET", body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      calls.push({
+        url,
+        method: init?.method ?? "GET",
+        body: init?.body ? JSON.parse(String(init.body)) : undefined,
+        headers: init?.headers,
+      });
       return new Response(JSON.stringify(body), { status });
     }) as typeof fetch,
   });
@@ -38,8 +43,20 @@ test("a schema input is sent whole as the body", async () => {
 
 test("named input fields fill path parameters", async () => {
   serve(200, { id: "42" });
-  await getUser({ id: "4 2" });
+  await getUser({ id: "4 2", sessionToken: "fixture-session-token" });
   expect(calls[0]?.url).toBe("https://api.example.test/users/4%202");
+});
+
+test("contract-bound headers are sent and caller headers remain intact", async () => {
+  serve(200, { id: "42" });
+  await getUser(
+    { id: "42", sessionToken: "fixture-session-token" },
+    { headers: { "x-caller-header": "caller-value" } },
+  );
+  expect(calls[0]?.headers).toMatchObject({
+    "x-caller-header": "caller-value",
+    "x-session-token": "fixture-session-token",
+  });
 });
 
 test("errors resolve to a result instead of throwing", async () => {

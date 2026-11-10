@@ -46,6 +46,16 @@ properties:
       length:
         min: 1
         max: 120
+    SessionToken:
+      group:
+        $ref: '#/groups/core'
+      feature:
+        $ref: '#/features/core.UserManagement'
+      type: string
+      kind: text
+      length:
+        min: 1
+        max: 512
     Count:
       group:
         $ref: '#/groups/core'
@@ -748,6 +758,13 @@ operations:
             source:
               kind: path
               name: id
+          - port:
+              $ref: '#/operations/GetUser'
+              direction: input
+              field: sessionToken
+            source:
+              kind: header
+              name: x-session-token
         outputs:
           - port:
               $ref: '#/operations/GetUser'
@@ -766,6 +783,9 @@ operations:
         - name: id
           value:
             $ref: '#/properties/primitives/UserId'
+        - name: sessionToken
+          value:
+            $ref: '#/properties/primitives/SessionToken'
     output:
       value:
         $ref: '#/schemas/UserProfile'

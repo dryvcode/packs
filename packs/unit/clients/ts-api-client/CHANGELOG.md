@@ -15,6 +15,10 @@
 ## 0.1.0
 
 - First release: models, enums, one typed fetch call per HTTP operation, `configureApi`.
+# 0.1.5
+
+- Map contract-bound HTTP headers into operation requests while preserving caller options.
+
 # 0.1.4
 
 - Export a source wildcard so consumers can add typed helpers beside generated operations.

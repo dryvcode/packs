@@ -9,7 +9,7 @@ Generates a framework-free TypeScript client package: interfaces for every schem
 | HTTP operation | `src/operations/<group>/<operation>.ts`: `operation(input, options?)` → `Promise<ApiResult<T>>` |
 | — | `src/transport.ts` (`configureApi`, `request`, `requestBlob`), `src/index.ts`, `package.json`, `tsconfig.json` |
 
-Each call takes the operation's single input, like props: a schema input is its model (`createUser({ displayName })`), named fields an object (`getUser({ id })`). The call places each field where HTTP binds it (path, query, body). Results never throw for HTTP errors: `{ ok: true, data }` or `{ ok: false, status, message }`.
+Each call takes the operation's single input, like props: a schema input is its model (`createUser({ displayName })`), named fields an object (`getUser({ id })`). The call places each field where HTTP binds it (path, query, body or header). Caller-provided request options and headers are preserved, with contract-bound headers added for that operation. Results never throw for HTTP errors: `{ ok: true, data }` or `{ ok: false, status, message }`.
 
 Configure once: `configureApi({ baseUrl: "https://api.example.com", headers, credentials: "include" })`.
 Credential mode is optional per client, and individual operations can override
