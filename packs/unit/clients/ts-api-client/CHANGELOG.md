@@ -15,3 +15,8 @@
 ## 0.1.0
 
 - First release: models, enums, one typed fetch call per HTTP operation, `configureApi`.
+# 0.1.4
+
+- Export a source wildcard so consumers can add typed helpers beside generated operations.
+- Generate and export `requestBlob` for authenticated binary downloads.
+

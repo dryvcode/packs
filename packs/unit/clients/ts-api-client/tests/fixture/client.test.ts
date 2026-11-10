@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 
-import { configureApi, createUser, getUser, listUsers, UserStatus } from "./out/src/index.ts";
+import { configureApi, createUser, getUser, listUsers, requestBlob, UserStatus } from "./out/src/index.ts";
 import { listUsers as listUsersBySubpath } from "@fixture/api-client/operations/core/list-users";
 import type { UserProfile } from "@fixture/api-client/models/user-profile";
+import { requestBlob as requestBlobBySubpath } from "@fixture/api-client/transport";
 
 const typedUser: UserProfile = {
   id: "u1",
@@ -65,4 +66,24 @@ test("credential mode is configured for cookie-authenticated APIs", async () => 
   });
   await listUsers();
   expect(credentials).toBe("include");
+});
+
+test("binary downloads use the configured fetch and cookie credentials", async () => {
+  let requestInit: RequestInit | undefined;
+  configureApi({
+    baseUrl: "https://api.example.test",
+    fetch: (async (_url: string, init?: RequestInit) => {
+      requestInit = init;
+      return new Response(new Blob(["archive"]), { status: 200 });
+    }) as typeof fetch,
+  });
+  const result = await requestBlob("/projects/p1/archive");
+  expect(result.ok && await result.data.text()).toBe("archive");
+  expect(requestInit).toMatchObject({ method: "GET", credentials: "include" });
+});
+
+test("binary-download helpers resolve through the source wildcard", async () => {
+  serve(200, { id: "u2" });
+  expect(requestBlobBySubpath).toBe(requestBlob);
+  expect((await listUsersBySubpath()).ok).toBe(true);
 });

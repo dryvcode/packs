@@ -99,6 +99,30 @@ bun run test:packs
 
 See [pack testing](.docs/testing.md), [folder structure](.docs/folder-structure.md), and [the active repository plan](.docs/plan.md).
 
+## Publishing official releases
+
+Platform owns package metadata, immutable release records, access policy, and
+artifact storage. The Packs repository builds each archive from its committed
+source and submits it to Platform; it does not write release files to S3.
+
+Set `PLATFORM_API_URL` (or `DRYV_PLATFORM_URL`) to the Platform API origin.
+Publishing requires the dedicated `REGISTRY_PUBLISH_TOKEN`; listing releases for
+a dry run is public and does not require that token.
+
+```bash
+export PLATFORM_API_URL=https://api.example.org
+bun scripts/publish.ts --pack inject/backend/nestjs --dry-run
+read -rsp 'Registry publish token: ' REGISTRY_PUBLISH_TOKEN
+printf '\n'
+export REGISTRY_PUBLISH_TOKEN
+bun scripts/publish.ts --pack inject/backend/nestjs
+```
+
+Each package uses its manifest `info.version` as an immutable release version.
+Increment that version before publishing changed content. The official NestJS
+adapter is `@dryv/nestjs`; its runnable unit shell is `@dryv/nestjs-app`. The
+layout/purpose portion of a pack ID remains grouping metadata in the descriptor.
+
 ## Current work
 
 Current execution is intentionally narrow:

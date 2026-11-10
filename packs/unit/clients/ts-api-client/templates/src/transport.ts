@@ -67,3 +67,38 @@ export async function request<T>(
     return { ok: false, status: 0, message: error instanceof Error ? error.message : String(error), error };
   }
 }
+
+/** Downloads a binary response using the configured API and session cookies. */
+export async function requestBlob(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ApiResult<Blob>> {
+  const send = config.fetch ?? fetch;
+  try {
+    const response = await send(`${config.baseUrl}${path}`, {
+      method: "GET",
+      credentials: options.credentials ?? config.credentials ?? "include",
+      headers: {
+        accept: "application/zip",
+        ...config.headers,
+        ...options.headers,
+      },
+      signal: options.signal,
+    });
+    if (response.ok)
+      return { ok: true, status: response.status, data: await response.blob() };
+    const payload: unknown = await response.json().catch(() => null);
+    const message =
+      typeof payload === "object" && payload !== null && "message" in payload
+        ? String((payload as { message: unknown }).message)
+        : response.statusText || `HTTP ${response.status}`;
+    return { ok: false, status: response.status, message, error: payload };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      message: error instanceof Error ? error.message : String(error),
+      error,
+    };
+  }
+}
