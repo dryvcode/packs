@@ -28,4 +28,8 @@ import { requestBlob } from "@fixture/api-client/transport";
 
 **Provides:** `operation.client` (the calls), `schema.types` (models), `property.enum.types` (enums).
 
+The generated package manifest uses `package_name` for its package name and the
+optional `package_private` boolean to prevent publication of project-internal
+clients. It defaults to `false` for distributable client packages.
+
 **Test:** `bun scripts/test-pack.ts unit/clients/ts-api-client` typechecks the package and exercises JSON and binary calls against a mocked `fetch`.

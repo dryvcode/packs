@@ -22,3 +22,4 @@ packs:
       $ref: "#/destinations/out"
     inputs:
       package_name: "@fixture/api-client"
+      package_private: true

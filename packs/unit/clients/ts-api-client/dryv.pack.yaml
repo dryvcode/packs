@@ -22,6 +22,7 @@ plugins:
 
 inputs:
   package_name: { type: string, default: admin-console-api }
+  package_private: { type: boolean, default: false }
 
 selections:
   enums:
