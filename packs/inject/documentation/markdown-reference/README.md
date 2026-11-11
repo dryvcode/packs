@@ -17,4 +17,10 @@ This pack intentionally documents HTTP paths as **operation-local paths**. Dryv 
 
 Generated Markdown is a projection only. It never becomes semantic authority and is never read back into Dryv.
 
-Verification is deferred while the Dryv Engine is under maintenance.
+Verified against the shared Runtime IR fixture with the local Dryv CLI and Engine:
+
+```bash
+DRYV_API_KEY=local-development \
+  DRYV_CLI="bun ../dryv/source/apps/cli/bin/dryv.ts" \
+  bun scripts/test-pack.ts --keep inject/documentation/markdown-reference
+```
