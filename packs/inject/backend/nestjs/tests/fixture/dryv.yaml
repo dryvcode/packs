@@ -90,6 +90,7 @@ packs:
       schema.examples: { $ref: "#/packs/dtos" }
       operation.implementation: { $ref: "#/packs/implementation" }
       operation.usecase: { $ref: "#/packs/implementation" }
+      module.provider: { $ref: "#/packs/implementation" }
   server-zod:
     source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
     destination:
@@ -100,3 +101,4 @@ packs:
       schema.validation: { $ref: "#/packs/zod" }
       operation.implementation: { $ref: "#/packs/implementation" }
       operation.usecase: { $ref: "#/packs/implementation" }
+      module.provider: { $ref: "#/packs/implementation" }

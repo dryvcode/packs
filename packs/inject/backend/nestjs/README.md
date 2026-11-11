@@ -43,6 +43,7 @@ packs:
       schema.persistence: { $ref: '#/packs/entities' }  # optional
       operation.implementation: { $ref: '#/packs/use-cases' }
       operation.usecase: { $ref: '#/packs/use-cases' }
+      module.provider: { $ref: '#/packs/use-cases' }     # optional feature-level provider classes
 ```
 
 | Bound validation pack | Parameters and results | Validation |
@@ -63,6 +64,7 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows every activation a
 
 - needs `schema.validation`, `operation.implementation`, `operation.usecase` (required)
 - needs `schema.persistence` (optional)
+- needs `module.provider` (optional; registers provider classes used by the feature's operations)
 - provides `operation.server` (the feature module)
 
 ## Output slots

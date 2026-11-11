@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- Add the optional `module.provider` operation slot. Feature modules import and register provider artifacts only for operations belonging to that feature.
+- Extend the executable fixtures to inject an operation-scoped module provider through the complete generated application.
+
 ## 0.5.0
 
 - Generate Vitest specs: `<feature>.controller.e2e.spec.ts` (routing, input binding, validation, status codes and response passthrough per operation, with the implementation mocked) and `app.e2e.spec.ts` (the assembled AppModule serves every contract route).

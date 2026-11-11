@@ -11,7 +11,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 {%- macro own(dependency) -%}
 {%- for operation in operations -%}{%- if dependency.target.id == operation.id -%}x{%- endif -%}{%- endfor -%}
 {%- endmacro -%}
-{%- for dependency in file.dependencies %}{% if dependency.symbol and (dependency.slot == 'schema.persistence' or (dependency.slot in ['operation.implementation', 'operation.usecase'] and own(dependency) != '')) %}
+{%- for dependency in file.dependencies %}{% if dependency.symbol and (dependency.slot == 'schema.persistence' or (dependency.slot in ['operation.implementation', 'operation.usecase', 'module.provider'] and own(dependency) != '')) %}
 import { {{ dependency.symbol }} } from "{{ (dependency.path.prefixed or ('./' ~ dependency.path.relative)) }}";
 {%- endif %}{% endfor %}
 
@@ -38,6 +38,9 @@ import { {{ group.name.pascal }}{{ feature.name.pascal }}Service } from "./{{ fe
 {%- endif %}{% endfor %}
 {%- for usecase in file.dependencies %}{% if usecase.slot == 'operation.usecase' and own(usecase) != '' %}
     {{ usecase.symbol }},
+{%- endif %}{% endfor %}
+{%- for provider in file.dependencies %}{% if provider.slot == 'module.provider' and own(provider) != '' %}
+    {{ provider.symbol }},
 {%- endif %}{% endfor %}
   ],
   exports: [{{ group.name.pascal }}{{ feature.name.pascal }}Service],

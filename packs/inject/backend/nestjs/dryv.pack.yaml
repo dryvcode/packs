@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.6.0
+  version: 0.7.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -25,6 +25,8 @@ needs:
   # The project's implementation of each feature service and its per-operation use cases.
   operation.implementation: { required: true }
   operation.usecase: { required: true }
+  # Optional feature-level providers used by operation use cases (for example vault adapters).
+  module.provider: { required: false }
   # Valid payloads for the generated e2e specs (for example from inject/validation/class-validator).
   schema.examples: { required: false }
 
@@ -63,6 +65,7 @@ templates:
         transitive: true
       - $ref: '#/needs/operation.implementation'
       - $ref: '#/needs/operation.usecase'
+      - $ref: '#/needs/module.provider'
 
   feature-controller:
     $ref: '#/selections/features'

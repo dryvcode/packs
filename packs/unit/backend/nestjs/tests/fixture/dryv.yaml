@@ -58,3 +58,4 @@ packs:
       schema.validation: { $ref: "#/packs/dtos" }
       operation.implementation: { $ref: "#/packs/implementation" }
       operation.usecase: { $ref: "#/packs/implementation" }
+      module.provider: { $ref: "#/packs/implementation" }

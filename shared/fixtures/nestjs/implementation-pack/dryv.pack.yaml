@@ -36,8 +36,18 @@ templates:
         - $(group.name.kebab)
         - $(feature.name.kebab)
       symbol: $(subject.name.pascal)UseCase
+  module-provider:
+    $ref: '#/selections/operations'
+    output:
+      name: $(subject.name.kebab).provider
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(subject.name.pascal)ModuleProvider
 provides:
   operation.implementation:
     $ref: '#/templates/implementation'
   operation.usecase:
     $ref: '#/templates/usecase'
+  module.provider:
+    $ref: '#/templates/module-provider'
