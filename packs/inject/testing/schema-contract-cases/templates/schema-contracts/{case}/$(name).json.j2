@@ -1,0 +1,80 @@
+{%- macro semantic_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}schema
+{%- elif value.is.enum -%}enum
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}temporal
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}composite
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}generic
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+{
+  "kind": "dryv-schema-contract-case",
+  "semantic_schema_id": {{ schema.id | tojson }},
+  "schema_name": {{ schema.name.qualified | tojson }},
+  "role": {% if schema.role %}{{ schema.role | tojson }}{% else %}null{% endif %},
+  "abstract": {{ schema.abstract | lower }},
+  "fields": [
+{%- for field in schema.fields %}
+    {
+      "name": {{ field.name.raw | tojson }},
+      "semantic_type": {{ semantic_type(field.value) | trim | tojson }},
+      "optional": {{ field.optional | lower }},
+      "nullable": {{ field.nullable | lower }},
+      "array": {% if field.array is not none %}{
+        "min": {% if field.array.has_min %}{{ field.array.min }}{% else %}null{% endif %},
+        "max": {% if field.array.has_max %}{{ field.array.max }}{% else %}null{% endif %}
+      }{% else %}null{% endif %},
+      "mutation": {% if field.mutation %}{{ field.mutation | tojson }}{% else %}null{% endif %},
+      "sensitive": {{ field.sensitive | lower }},
+      "default": {% if field.default is not none %}{
+        "kind": {{ field.default.kind | tojson }},
+        "value": {% if field.default.kind == 'value' %}{{ field.default.value_json }}{% else %}null{% endif %},
+        "expression": {% if field.default.expression %}{{ field.default.expression.id | tojson }}{% else %}null{% endif %}
+      }{% else %}null{% endif %},
+      "enum_values": {% if field.value.is.enum %}[{% for item in field.value.property.enum.values %}{{ item.value_json }}{% if not loop.last %}, {% endif %}{% endfor %}]{% else %}null{% endif %},
+      "primitive": {% if field.value.is.primitive %}{
+        "type": {{ field.value.property.primitive.type | tojson }},
+        "kind": {% if field.value.property.primitive.kind %}{{ field.value.property.primitive.kind | tojson }}{% else %}null{% endif %},
+        "format": {% if field.value.property.primitive.format %}{{ field.value.property.primitive.format | tojson }}{% else %}null{% endif %},
+        "length": {% if field.value.property.primitive.constraints.length is not none %}{
+          "exact": {% if field.value.property.primitive.constraints.length.has_exact %}{{ field.value.property.primitive.constraints.length.exact }}{% else %}null{% endif %},
+          "min": {% if field.value.property.primitive.constraints.length.has_min %}{{ field.value.property.primitive.constraints.length.min }}{% else %}null{% endif %},
+          "max": {% if field.value.property.primitive.constraints.length.has_max %}{{ field.value.property.primitive.constraints.length.max }}{% else %}null{% endif %}
+        }{% else %}null{% endif %},
+        "range": {% if field.value.property.primitive.constraints.range is not none %}{
+          "min": {% if field.value.property.primitive.constraints.range.has_min %}{{ field.value.property.primitive.constraints.range.min }}{% else %}null{% endif %},
+          "max": {% if field.value.property.primitive.constraints.range.has_max %}{{ field.value.property.primitive.constraints.range.max }}{% else %}null{% endif %}
+        }{% else %}null{% endif %},
+        "patterns": {% if field.value.property.primitive.constraints.pattern is not none %}{{ field.value.property.primitive.constraints.pattern.match | tojson }}{% else %}[]{% endif %},
+        "multiple_of": {% if field.value.property.primitive.constraints.has_multiple_of %}{{ field.value.property.primitive.constraints.multiple_of }}{% else %}null{% endif %},
+        "precision": {% if field.value.property.primitive.constraints.has_precision %}{{ field.value.property.primitive.constraints.precision }}{% else %}null{% endif %},
+        "scale": {% if field.value.property.primitive.constraints.has_scale %}{{ field.value.property.primitive.constraints.scale }}{% else %}null{% endif %}
+      }{% else %}null{% endif %}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "invariants": [
+{%- for invariant in schema.invariants %}
+    {
+      "name": {{ invariant.name.raw | tojson }},
+      "form": {{ invariant.form.kind | tojson }},
+      "message": {% if invariant.message %}{{ invariant.message_json }}{% else %}null{% endif %},
+      "comparison_count": {{ invariant.form.comparisons | length }}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "authored_examples": {{ schema.examples | tojson }}
+}

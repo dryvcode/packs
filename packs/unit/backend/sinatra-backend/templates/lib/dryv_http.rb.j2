@@ -1,0 +1,85 @@
+# frozen_string_literal: true
+
+require "json"
+
+module {{ pack.inputs.module_name }}
+  module DryvHttp
+    module_function
+
+    def json_object(request)
+      body = request.body.read
+      return {} if body.nil? || body.empty?
+
+      value = JSON.parse(body)
+      raise ArgumentError, "expected a JSON object request body" unless value.is_a?(Hash)
+
+      value
+    end
+
+    def query_values(request, name)
+      normalize_values(request.GET[name])
+    end
+
+    def form_values(request, name)
+      normalize_values(request.POST[name])
+    end
+
+    def header(request, name)
+      request.env["HTTP_#{name.upcase.tr('-', '_')}"]
+    end
+
+    def decode(raw, kind, klass = nil)
+      return nil if raw.nil?
+
+      case kind
+      when "schema"
+        raise ArgumentError, "expected object value" unless raw.is_a?(Hash)
+        klass.from_h(raw)
+      when "enum"
+        klass.parse(raw)
+      when "bool"
+        return true if raw == true || raw.to_s == "true"
+        return false if raw == false || raw.to_s == "false"
+
+        raise ArgumentError, "expected boolean value"
+      when "int"
+        Integer(raw, 10)
+      when "float"
+        Float(raw)
+      when "string"
+        raw.to_s
+      else
+        raw
+      end
+    rescue ArgumentError, TypeError => error
+      raise ArgumentError, error.message
+    end
+
+    def decode_many(values, kind, klass = nil)
+      Array(values).map { |value| decode(value, kind, klass) }
+    end
+
+    def wire(value)
+      return nil if value.nil?
+      return value.to_wire if value.respond_to?(:to_wire)
+      return value.to_h if value.respond_to?(:to_h) && !value.is_a?(Hash)
+
+      case value
+      when Array
+        value.map { |item| wire(item) }
+      when Hash
+        value.transform_values { |item| wire(item) }
+      else
+        value
+      end
+    end
+
+    def normalize_values(value)
+      case value
+      when nil then []
+      when Array then value
+      else [value]
+      end
+    end
+  end
+end

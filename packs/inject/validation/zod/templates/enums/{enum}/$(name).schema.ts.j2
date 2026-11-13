@@ -1,0 +1,7 @@
+import { z } from "zod";
+
+/** {{ property.enum.description or property.enum.name.title }} */
+export const {{ file.symbol }} = z.enum([{% for item in property.enum.values %}{{ item.value | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}]);
+
+export type {{ property.enum.name.pascal }} = z.infer<typeof {{ file.symbol }}>;
+

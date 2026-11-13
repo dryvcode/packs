@@ -1,0 +1,213 @@
+{%- macro kotlin_ident(name) -%}
+{%- if name in ['as','break','class','continue','do','else','false','for','fun','if','in','interface','is','null','object','package','return','super','this','throw','true','try','typealias','typeof','val','var','when','while','by','catch','constructor','delegate','dynamic','field','file','finally','get','import','init','param','property','receiver','set','setparam','where','actual','abstract','annotation','companion','const','crossinline','data','enum','expect','external','final','infix','inline','inner','internal','lateinit','noinline','open','operator','out','override','private','protected','public','reified','sealed','suspend','tailrec','vararg','field','it'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] == 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro enum_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] != 'Validator' and dependency.symbol[-3:] != 'Dto' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro dto_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-3:] == 'Dto' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_regex(value) -%}
+{%- if value.is.uuid -%}^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+{%- elif value.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif value.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif value.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif value.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif value.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif value.is.hex -%}^[0-9a-fA-F]+$
+{%- elif value.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif value.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif value.is.country_code -%}^[A-Z]{2}$
+{%- elif value.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro string_checks(field, expr, path_expr, indent='        ') -%}
+{%- set primitive = field.value.property.primitive -%}
+{%- set length = primitive.constraints.length -%}
+{%- if length is not none and length.has_exact %}
+{{ indent }}if ({{ expr }}.length != {{ length.exact }}) errors += DryvValidationError({{ path_expr }}, "must have length {{ length.exact }}")
+{%- else %}
+{%- if length is not none and length.has_min %}
+{{ indent }}if ({{ expr }}.length < {{ length.min }}) errors += DryvValidationError({{ path_expr }}, "must have length >= {{ length.min }}")
+{%- endif %}
+{%- if length is not none and length.has_max %}
+{{ indent }}if ({{ expr }}.length > {{ length.max }}) errors += DryvValidationError({{ path_expr }}, "must have length <= {{ length.max }}")
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+{{ indent }}if (!Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches({{ expr }})) errors += DryvValidationError({{ path_expr }}, "must be a valid email")
+{%- elif primitive.is.url or primitive.is.uri %}
+{{ indent }}if (!runCatching { java.net.URI({{ expr }}).isAbsolute }.getOrDefault(false)) errors += DryvValidationError({{ path_expr }}, "must be a valid URL")
+{%- endif %}
+{%- if format_regex(field.value) %}
+{{ indent }}if (!Regex({{ format_regex(field.value) | tojson }}).matches({{ expr }})) errors += DryvValidationError({{ path_expr }}, "has invalid format")
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match %}
+{{ indent }}if (!Regex({{ expression | tojson }}).matches({{ expr }})) errors += DryvValidationError({{ path_expr }}, "does not match required pattern {{ loop.index }}")
+{%- endfor %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro numeric_checks(field, expr, path_expr, indent='        ') -%}
+{%- set range = field.value.property.primitive.constraints.range -%}
+{%- if field.value.is.decimal or field.value.is.money %}
+{{ indent }}val numeric = {{ expr }}.toBigDecimalOrNull()
+{{ indent }}if (numeric == null) {
+{{ indent }}    errors += DryvValidationError({{ path_expr }}, "must be a valid decimal")
+{{ indent }}} else {
+{%- if range is not none and range.has_min %}
+{{ indent }}    if (numeric < BigDecimal({{ range.min | string | tojson }})) errors += DryvValidationError({{ path_expr }}, "must be >= {{ range.min }}")
+{%- endif %}
+{%- if range is not none and range.has_max %}
+{{ indent }}    if (numeric > BigDecimal({{ range.max | string | tojson }})) errors += DryvValidationError({{ path_expr }}, "must be <= {{ range.max }}")
+{%- endif %}
+{{ indent }}}
+{%- else %}
+{%- if range is not none and range.has_min %}
+{{ indent }}if (BigDecimal({{ expr }}.toString()) < BigDecimal({{ range.min | string | tojson }})) errors += DryvValidationError({{ path_expr }}, "must be >= {{ range.min }}")
+{%- endif %}
+{%- if range is not none and range.has_max %}
+{{ indent }}if (BigDecimal({{ expr }}.toString()) > BigDecimal({{ range.max | string | tojson }})) errors += DryvValidationError({{ path_expr }}, "must be <= {{ range.max }}")
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_supported(name) -%}
+{%- set state = namespace(ok=false) -%}
+{%- for field in schema.fields -%}
+{%- if field.name.raw == name and not field.optional and not field.nullable and not field.value.is.schema and not field.value.is.enum and not field.value.is.record and not field.value.is.unknown and not field.value.is.dynamic and not field.value.is.generic and not field.value.is.composite and not field.value.is.union and not field.value.is.tuple and not field.value.is.literal -%}
+{%- set state.ok=true -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand_supported(operand) -%}
+{%- if operand.is.literal -%}x
+{%- elif operand.is.field and field_supported(operand.field.raw) -%}x
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic or not operand_supported(comparison.left) or not operand_supported(comparison.right) -%}
+{%- set state.ok=false -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro operand(value) -%}
+{%- if value.is.field -%}value.{{ kotlin_ident(value.field.camel) }}
+{%- elif value.is.literal -%}{% if value.value_json == 'null' %}null{% else %}{{ value.value_json }}{% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_predicate(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}
+DryvValidation.compare({{ operand(comparison.left) }}, {{ operand(comparison.right) }}, {{ comparison.operator | tojson }}){% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+package {{ pack.inputs.package_name }}.validators
+
+import java.math.BigDecimal
+import {{ pack.inputs.package_name }}.DryvValidation
+import {{ pack.inputs.package_name }}.DryvValidationError
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+{%- if dependency.symbol[-9:] == 'Validator' %}
+import {{ pack.inputs.package_name }}.validators.{{ dependency.symbol }}
+{%- else %}
+import {{ pack.inputs.package_name }}.models.{{ dependency.symbol }}
+{%- endif %}
+{%- endif %}{% endfor %}
+
+object {{ file.symbol }} {
+    fun validate(
+        value: {{ dto_for(schema) }},
+        path: String = "",
+    ): List<DryvValidationError> {
+        val errors = mutableListOf<DryvValidationError>()
+
+{%- for field in schema.fields %}
+        val path{{ field.name.pascal }} = DryvValidation.path(path, {{ field.name.raw | tojson }})
+{%- if field.array is not none %}
+{%- if field.optional or field.nullable %}
+        value.{{ kotlin_ident(field.name.camel) }}?.let { items ->
+{%- else %}
+        value.{{ kotlin_ident(field.name.camel) }}.let { items ->
+{%- endif %}
+{%- if field.array.has_min %}
+            if (items.size < {{ field.array.min }}) errors += DryvValidationError(path{{ field.name.pascal }}, "must contain at least {{ field.array.min }} item(s)")
+{%- endif %}
+{%- if field.array.has_max %}
+            if (items.size > {{ field.array.max }}) errors += DryvValidationError(path{{ field.name.pascal }}, "must contain at most {{ field.array.max }} item(s)")
+{%- endif %}
+            items.forEachIndexed { index, item ->
+                val itemPath = DryvValidation.index(path{{ field.name.pascal }}, index)
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+                errors += {{ validator_for(field.value.schema) }}.validate(item, itemPath)
+{%- elif field.value.is.enum and enum_for(field.value.property.enum) %}
+                if (item !in {{ enum_for(field.value.property.enum) }}.allValues) errors += DryvValidationError(itemPath, "contains an invalid enum value")
+{%- elif field.value.is.primitive and field.value.property.primitive.is.string %}
+{{ string_checks(field, 'item', 'itemPath', '                ') }}
+{%- elif field.value.is.primitive and field.value.property.primitive.is.number %}
+{{ numeric_checks(field, 'item', 'itemPath', '                ') }}
+{%- endif %}
+            }
+        }
+{%- else %}
+{%- if field.optional or field.nullable %}
+        value.{{ kotlin_ident(field.name.camel) }}?.let { fieldValue ->
+{%- set expr = 'fieldValue' %}
+{%- set indent = '            ' %}
+{%- else %}
+        run {
+            val fieldValue = value.{{ kotlin_ident(field.name.camel) }}
+{%- set expr = 'fieldValue' %}
+{%- set indent = '            ' %}
+{%- endif %}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+{{ indent }}errors += {{ validator_for(field.value.schema) }}.validate({{ expr }}, path{{ field.name.pascal }})
+{%- elif field.value.is.enum and enum_for(field.value.property.enum) %}
+{{ indent }}if ({{ expr }} !in {{ enum_for(field.value.property.enum) }}.allValues) errors += DryvValidationError(path{{ field.name.pascal }}, "has an invalid enum value")
+{%- elif field.value.is.primitive and field.value.property.primitive.is.string %}
+{{ string_checks(field, expr, 'path' ~ field.name.pascal, indent) }}
+{%- elif field.value.is.primitive and field.value.property.primitive.is.number %}
+{{ numeric_checks(field, expr, 'path' ~ field.name.pascal, indent) }}
+{%- endif %}
+        }
+{%- endif %}
+
+{%- endfor %}
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+        if (!({{ invariant_predicate(invariant) }})) {
+            errors += DryvValidationError(
+                path,
+                {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ (invariant.name.raw ~ ' failed') | tojson }}{% endif %},
+            )
+        }
+{%- endif %}
+{%- endfor %}
+        return errors
+    }
+}

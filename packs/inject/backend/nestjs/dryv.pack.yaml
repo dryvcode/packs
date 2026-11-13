@@ -1,0 +1,225 @@
+version: dryv.pack/v1alpha1
+key: inject.backend.nestjs
+layout: inject
+source: templates
+
+info:
+  title: NestJS Backend Adapter
+  version: 0.7.0
+  description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
+  purpose: backend
+  summary: NestJS feature controllers, services and modules for HTTP operations.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, rest, http, nestjs]
+
+plugins:
+  - name: handlebars
+    extensions: [.hbs]
+  - name: jinja
+    extensions: [.j2]
+
+needs:
+  schema.validation: { required: true }
+  schema.persistence: { required: false }
+  # The project's implementation of each feature service and its per-operation use cases.
+  operation.implementation: { required: true }
+  operation.usecase: { required: true }
+  # Optional feature-level providers used by operation use cases (for example vault adapters).
+  module.provider: { required: false }
+  # Valid payloads for the generated e2e specs (for example from inject/validation/class-validator).
+  schema.examples: { required: false }
+
+selections:
+  features:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+  groups:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.group
+  application:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: all
+
+templates:
+  # NestJS feature layout: <group>/<feature>/<feature>.{module,controller,service}.ts
+  feature:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Module
+    imports:
+      - $ref: '#/needs/schema.validation'
+      # Entities behind the feature's payloads (for example a response's read projection),
+      # so the module registers every entity its implementation can use.
+      - $ref: '#/needs/schema.persistence'
+        transitive: true
+      - $ref: '#/needs/operation.implementation'
+      - $ref: '#/needs/operation.usecase'
+      - $ref: '#/needs/module.provider'
+
+  feature-controller:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Controller
+    imports:
+      - $ref: '#/needs/schema.validation'
+
+  feature-service:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+      symbol: $(group.name.pascal)$(feature.name.pascal)Service
+    imports:
+      - $ref: '#/needs/schema.validation'
+
+  # <group>/<group>.module.ts imports the group's feature modules.
+  group-module:
+    $ref: '#/selections/groups'
+    output:
+      name: $(group.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(group.name.pascal)Module
+    imports:
+      - $ref: '#/templates/feature'
+        members: true
+
+  # app.module.ts imports every group module; it is written to the `app` output slot.
+  app-module:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+      symbol: AppModule
+    imports:
+      - $ref: '#/templates/group-module'
+        members: true
+      - $ref: '#/templates/http-options'
+        members: true
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
+        transitive: true
+
+  # server/http.options.ts: the global validation options, shared by AppModule and the specs.
+  http-options:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+      symbol: httpOptions
+
+  # <feature>.controller.e2e.spec.ts (Vitest): routing, binding, validation and status codes.
+  feature-e2e:
+    $ref: '#/selections/features'
+    output:
+      name: $(feature.name.kebab)
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+    imports:
+      - $ref: '#/templates/feature'
+        members: true
+      - $ref: '#/templates/feature-service'
+        members: true
+      - $ref: '#/templates/http-options'
+        members: true
+      - $ref: '#/needs/schema.examples'
+
+  # app.e2e.spec.ts (Vitest): the assembled AppModule serves every contract route.
+  app-e2e:
+    $ref: '#/selections/application'
+    output:
+      destination: app
+    imports:
+      - $ref: '#/templates/app-module'
+        members: true
+      - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/schema.persistence'
+        transitive: true
+
+  # vitest.config.ts: scaffolded once, then owned by the project.
+  vitest-config:
+    output:
+      destination: app
+
+  # src/database/database.module.ts: scaffolded once, then owned by the project.
+  database:
+    output:
+      destination: app
+
+  feature-index:
+    output:
+      path:
+        - $(group.name.kebab)
+        - $(feature.name.kebab)
+    barrel: each
+    exports:
+      - $ref: '#/templates/feature'
+      - $ref: '#/templates/feature-controller'
+      - $ref: '#/templates/feature-service'
+
+  root-index:
+    exports:
+      - $ref: '#/templates/feature-index'
+
+provides:
+  operation.server:
+    $ref: '#/templates/feature'
+
+# shared:js-package-manager:start
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
+
+dependencies:
+  runtime:
+    '@nestjs/common': ^12.4.0
+    class-transformer: ^0.5
+    class-validator: ^0.14
+    '@nestjs/core': ^12.4.0
+    '@nestjs/platform-express': ^12.4.0
+    '@nestjs/typeorm': ^12.0.2
+    reflect-metadata: ^0.2
+    rxjs: ^7
+  dev:
+    "@nestjs/testing": ^12.4.0
+    "@swc/core": ^1
+    prettier: "*"
+    unplugin-swc: ^1
+    vite-tsconfig-paths: ^5
+    vitest: ^3
+
+# shared:js-prettier-actions:start
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+        - { pinned: "$(name)@$(version)", any: "$(name)" }
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
+# shared:js-prettier-actions:end

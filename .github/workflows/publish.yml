@@ -1,0 +1,55 @@
+name: publish packs
+
+# Manual only: publishing is deliberate. Run it from main after the pack changes are merged.
+#   gh workflow run publish.yml                         # publish packs changed since their last publish
+#   gh workflow run publish.yml -f pack=inject/backend/nestjs
+#   gh workflow run publish.yml -f dry_run=true         # show what would be published
+on:
+  workflow_dispatch:
+    inputs:
+      pack:
+        description: "Pack id to publish (empty = every changed pack)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Only list what would be published"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-packs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+      S3_BUCKET: dryv
+      S3_PREFIX: public/
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+      DRYV_API_URL: ${{ vars.DRYV_API_URL }}
+      DRYV_API_KEY: ${{ secrets.DRYV_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun test scripts/registry.test.ts
+      - name: Publish
+        run: |
+          args=""
+          if [ -n "${{ inputs.pack }}" ]; then args="--pack ${{ inputs.pack }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then args="$args --dry-run"; fi
+          # Publish what is ready and report packs that are not (for example, a missing README).
+          if [ -z "${{ inputs.pack }}" ]; then args="$args --skip-invalid"; fi
+          bun scripts/publish.ts $args

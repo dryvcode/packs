@@ -1,0 +1,11 @@
+import { Inject, Injectable, NotImplementedException } from "@nestjs/common";
+
+@Injectable()
+export class {{ file.symbol }} {
+  constructor(@Inject("{{ operation.name.pascal }}ModuleProvider") private readonly provider: { available: true }) {}
+
+  async execute(_input?: unknown): Promise<never> {
+    if (!this.provider.available) throw new Error("module provider is unavailable");
+    throw new NotImplementedException("{{ operation.name.camel }}");
+  }
+}

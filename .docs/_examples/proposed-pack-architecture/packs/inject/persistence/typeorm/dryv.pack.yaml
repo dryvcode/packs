@@ -1,0 +1,48 @@
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
+version: dryv.pack/v1alpha1
+key: inject.persistence.typeorm
+layout: inject
+source: templates
+
+info:
+  title: TypeORM
+  version: 0.1.0
+  description: Generates TypeORM entity representations for entity-role schemas.
+  purpose: persistence
+  summary: TypeORM entities.
+  languages: [typescript]
+  frameworks: [typeorm]
+  tags: [persistence, orm, entity]
+
+inputs:
+  naming_strategy:
+    type: string
+    default: snake
+    description: Database column naming strategy.
+    allowed: [snake, camel]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - entities
+      symbol: "$(subject.name.pascal)Entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"
+
+dependencies:
+  runtime:
+    reflect-metadata: ^0.2
+    typeorm: ^0.3

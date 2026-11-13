@@ -1,0 +1,185 @@
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <nlohmann/json.hpp>
+
+#include "dryv_client/client.hpp"
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+#include "{{ dependency.path.relative | replace('include/', '') }}"
+{%- endif %}{% endfor %}
+
+namespace {{ pack.inputs.namespace }}::operations {
+
+{%- macro cpp_ident(name) -%}
+{%- if name in ['alignas','alignof','and','and_eq','asm','atomic_cancel','atomic_commit','atomic_noexcept','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','reflexpr','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','synchronized','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}nlohmann::json
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'nlohmann::json' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'nlohmann::json' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}std::int64_t
+{%- elif value.is.number -%}double
+{%- elif value.is.decimal or value.is.money -%}std::string
+{%- elif value.is.record -%}nlohmann::json
+{%- elif value.is.string or value.is.temporal -%}std::string
+{%- else -%}nlohmann::json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- set inner = ('std::vector<' ~ base_type(field.value) ~ '>') if field.array is not none else base_type(field.value) -%}
+{%- if field.optional or field.nullable -%}std::optional<{{ inner }}>{%- else -%}{{ inner }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_type(operation) -%}
+{%- if operation.input.kind == 'schema' -%}{{ base_type(operation.input.value) }}{%- else -%}{{ operation.name.pascal }}Input{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ cpp_ident(binding.port.field.snake) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+struct {{ operation.name.pascal }}Input {
+{%- for field in operation.input.fields %}
+    {{ field_type(field) }} {{ cpp_ident(field.name.snake) }}{};
+{%- endfor %}
+};
+
+{%- endif %}
+inline Result<{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}void{% endif %}> {{ cpp_ident(file.symbol | lower) }}(
+    const Client& client{% if operation.input %},
+    const {{ input_type(operation) }}& input{% endif %}
+) {
+{%- if http.input_groups.multipart %}
+    return Result<{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}void{% endif %}>::failure(ApiError{
+        0,
+        "multipart bindings require an explicit C++ semantic mapping",
+        nullptr,
+    });
+{%- else %}
+    try {
+        std::string path = {{ http.path.local | tojson }};
+{%- for binding in http.input_groups.path %}
+        {
+            const auto marker = std::string{"{"} + {{ (binding.name or binding.port.name.raw) | tojson }} + "}";
+            const auto position = path.find(marker);
+            if (position != std::string::npos) {
+                path.replace(
+                    position,
+                    marker.size(),
+                    percent_encode(required_wire_string({{ bound(binding) }}, {{ (binding.name or binding.port.name.raw) | tojson }}))
+                );
+            }
+        }
+{%- endfor %}
+
+        std::vector<std::pair<std::string, std::string>> query;
+{%- for binding in http.input_groups.query %}
+        append_wire_pair(query, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+        if (const auto object = optional_wire_json({{ bound(binding) }}); object.has_value() && object->is_object()) {
+            for (const auto& [name, value] : object->items()) {
+                if (value.is_array()) {
+                    for (const auto& item : value) {
+                        if (!item.is_null()) {
+                            query.emplace_back(name, wire_string(item));
+                        }
+                    }
+                } else if (!value.is_null()) {
+                    query.emplace_back(name, wire_string(value));
+                }
+            }
+        }
+{%- endfor %}
+
+        std::vector<std::pair<std::string, std::string>> headers;
+{%- for binding in http.input_groups.header %}
+        append_wire_pair(headers, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endfor %}
+
+        std::vector<std::pair<std::string, std::string>> cookies;
+{%- for binding in http.input_groups.cookie %}
+        append_wire_pair(cookies, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endfor %}
+
+        std::optional<nlohmann::json> json_body;
+{%- for binding in http.input_groups.body %}
+        json_body = optional_wire_json({{ bound(binding) }});
+{%- endfor %}
+
+        std::vector<std::pair<std::string, std::string>> form;
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+        if (const auto object = optional_wire_json({{ bound(binding) }}); object.has_value() && object->is_object()) {
+            for (const auto& [name, value] : object->items()) {
+                if (value.is_array()) {
+                    for (const auto& item : value) {
+                        if (!item.is_null()) {
+                            form.emplace_back(name, wire_string(item));
+                        }
+                    }
+                } else if (!value.is_null()) {
+                    form.emplace_back(name, wire_string(value));
+                }
+            }
+        }
+{%- else %}
+        append_wire_pair(form, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endif %}
+{%- endfor %}
+
+        auto raw = client.request(
+            {{ http.method | tojson }},
+            path,
+            query,
+            headers,
+            cookies,
+            json_body,
+            form
+        );
+
+        if (!raw.ok()) {
+            return Result<{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}void{% endif %}>::failure(*raw.error);
+        }
+
+{%- if operation.output %}
+        try {
+            return Result<{{ base_type(operation.output.value) }}>::success(raw.value->get<{{ base_type(operation.output.value) }}>());
+        } catch (const std::exception& error) {
+            return Result<{{ base_type(operation.output.value) }}>::failure(ApiError{
+                0,
+                std::string{"failed to decode response: "} + error.what(),
+                *raw.value,
+            });
+        }
+{%- else %}
+        return Result<void>::success();
+{%- endif %}
+    } catch (const std::exception& error) {
+        return Result<{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}void{% endif %}>::failure(ApiError{
+            0,
+            error.what(),
+            nullptr,
+        });
+    }
+{%- endif %}
+}
+
+} // namespace {{ pack.inputs.namespace }}::operations

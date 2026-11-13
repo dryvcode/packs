@@ -1,0 +1,16 @@
+{
+  "name": "typeorm-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "reflect-metadata": "^0.2",
+    "typeorm": "^0.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1",
+    "typescript": "^5.8",
+    "pg-mem": "^3",
+    "vitest": "^3",
+    "pg": "^8"
+  }
+}

@@ -1,0 +1,159 @@
+{%- macro parse_scalar(value, expression) -%}
+{%- if value.is.boolean -%}(http/parse-bool {{ expression }})
+{%- elif value.is.integer -%}(http/parse-int {{ expression }})
+{%- elif value.is.number or value.is.decimal or value.is.money -%}(http/parse-number {{ expression }})
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro parse_field(field, expression) -%}
+{%- if field.array is not none -%}(mapv (fn [item] {{ parse_scalar(field.value, 'item') }}) (http/values {{ expression }}))
+{%- else -%}{{ parse_scalar(field.value, expression) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro source_present(binding) -%}
+{%- if binding.is.path -%}(http/present? (:path-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query -%}(http/present? (:query-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}(contains? (:headers request) {{ (binding.name or binding.port.name.raw) | lower | tojson }})
+{%- elif binding.is.cookie -%}(some? (http/cookie-value request {{ (binding.name or binding.port.name.raw) | tojson }}))
+{%- elif binding.is.form -%}(http/present? (:form-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.body -%}(http/present? (:body-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- else -%}false
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro source_raw(binding) -%}
+{%- if binding.is.path -%}(http/map-value (:path-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.query -%}(http/map-value (:query-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.header -%}(get (:headers request) {{ (binding.name or binding.port.name.raw) | lower | tojson }})
+{%- elif binding.is.cookie -%}(http/cookie-value request {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.form -%}(http/map-value (:form-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- elif binding.is.body -%}(http/map-value (:body-params request) {{ (binding.name or binding.port.name.raw) | tojson }})
+{%- else -%}nil
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro whole_kind(http) -%}
+{%- for binding in http.inputs -%}
+{%- if binding.port.field is none and binding.is.body -%}body
+{%- elif binding.port.field is none and binding.is.query_object -%}query
+{%- elif binding.port.field is none and binding.is.form -%}form
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro whole_bag(kind) -%}
+{%- if kind == 'body' -%}(:body-params request)
+{%- elif kind == 'query' -%}(:query-params request)
+{%- elif kind == 'form' -%}(:form-params request)
+{%- else -%}{}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro direct_binding(operation, field) -%}
+{%- for binding in operation.facets.http.inputs -%}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw -%}{{ loop.index0 }}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro success_status(http) -%}
+{%- set result = namespace(code=200) -%}
+{%- for binding in http.outputs -%}{%- set result.code = binding.status -%}{%- endfor -%}
+{{- result.code -}}
+{%- endmacro -%}
+
+(ns dryv.generated.backend.routes.{{ group.name.snake }}.{{ feature.name.snake }}
+  (:require [dryv.generated.backend.http :as http]))
+
+{%- for operation in operations %}
+{%- set httpfacet = operation.facets.http %}
+(defn- handle-{{ operation.name.snake }}
+  [service request]
+{%- if httpfacet.input_groups.multipart %}
+  (http/not-implemented "Multipart bindings require an explicit Clojure semantic mapping.")
+{%- else %}
+  (let [bound
+        (try
+{%- if operation.input %}
+{%- set kind = whole_kind(httpfacet) | trim %}
+          {:input
+           (cond-> {}
+{%- for field in operation.input.fields %}
+{%- if kind %}
+{%- set bag = whole_bag(kind) | trim %}
+{%- if field.optional %}
+             (http/present? {{ bag }} {{ field.name.raw | tojson }})
+             (assoc (keyword {{ field.name.raw | tojson }})
+                    {{ parse_field(field, '(http/map-value ' ~ bag ~ ' ' ~ (field.name.raw | tojson) ~ ')') }})
+{%- else %}
+             true
+             (assoc (keyword {{ field.name.raw | tojson }})
+                    {{ parse_field(field, '(http/required-value (http/present? ' ~ bag ~ ' ' ~ (field.name.raw | tojson) ~ ') (http/map-value ' ~ bag ~ ' ' ~ (field.name.raw | tojson) ~ ') ' ~ (field.name.raw | tojson) ~ ')') }})
+{%- endif %}
+{%- else %}
+{%- set state = namespace(found=false, idx=0) %}
+{%- for binding in httpfacet.inputs %}
+{%- if binding.port.field is not none and binding.port.field.raw == field.name.raw %}
+{%- set state.found=true %}
+{%- if field.optional %}
+             {{ source_present(binding) }}
+             (assoc (keyword {{ field.name.raw | tojson }})
+                    {{ parse_field(field, source_raw(binding)) }})
+{%- else %}
+             true
+             (assoc (keyword {{ field.name.raw | tojson }})
+                    {{ parse_field(field, '(http/required-value ' ~ source_present(binding) ~ ' ' ~ source_raw(binding) ~ ' ' ~ (field.name.raw | tojson) ~ ')') }})
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- if not state.found and not field.optional %}
+             true
+             (assoc (keyword {{ field.name.raw | tojson }})
+                    (http/required-value false nil {{ ('HTTP binding for ' ~ field.name.raw) | tojson }}))
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+             )}
+{%- else %}
+          {:input nil}
+{%- endif %}
+          (catch IllegalArgumentException error
+            {:error (http/bad-request (.getMessage error))}))]
+    (if-let [error (:error bound)]
+      error
+      (let [service-fn (get service :{{ operation.name.snake }})]
+        (when-not service-fn
+          (throw (ex-info "Missing generated feature service function"
+                          {:operation :{{ operation.name.snake }}})))
+{%- if operation.output %}
+        (http/response {{ success_status(httpfacet) }}
+                       {% if operation.input %}(service-fn (:input bound)){% else %}(service-fn){% endif %})
+{%- else %}
+        {% if operation.input %}(service-fn (:input bound)){% else %}(service-fn){% endif %}
+        (http/response {{ success_status(httpfacet) }})
+{%- endif %}
+        )))
+{%- endif %})
+
+{%- endfor %}
+(defn {{ file.symbol }}
+  [service]
+  [
+{%- set seen = namespace(paths=[]) %}
+{%- for operation in operations %}
+{%- set path = operation.facets.http.path.local %}
+{%- if path not in seen.paths %}
+{%- set seen.paths = seen.paths + [path] %}
+   [{{ path | tojson }}
+    {
+{%- for candidate in operations %}
+{%- if candidate.facets.http.path.local == path %}
+     :{{ candidate.facets.http.method | lower }} {:handler #(handle-{{ candidate.name.snake }} service %)}
+{%- endif %}
+{%- endfor %}
+     }]
+{%- endif %}
+{%- endfor %}
+   ])

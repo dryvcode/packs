@@ -1,0 +1,31 @@
+# Policy Catalogue
+
+{% for policy in policies %}
+## {{ policy.name.title }}
+
+{% if policy.description %}{{ policy.description }}
+
+{% endif %}- **ID:** `{{ policy.id }}`
+- **Qualified name:** `{{ policy.name.qualified }}`
+- **Group:** {% if policy.group %}`{{ policy.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if policy.feature %}`{{ policy.feature.name.qualified }}`{% else %}—{% endif %}
+{% if policy.tags %}- **Tags:** {% for tag in policy.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+### Context
+
+{% if policy.context.requires %}**Requires**
+{% for item in policy.context.requires %}- `{{ item.name.raw }}` → `{{ item.value.name.qualified }}`
+{% endfor %}
+{% else %}No required context.
+{% endif %}
+
+{% if policy.context.provides %}**Provides**
+{% for item in policy.context.provides %}- `{{ item.name.raw }}` → `{{ item.value.name.qualified }}`
+{% endfor %}
+{% else %}No provided context.
+{% endif %}
+
+**Rule:** {% if policy.rule %}`{{ policy.rule.name.qualified }}`{% else %}—{% endif %}
+
+---
+{% endfor %}

@@ -1,0 +1,44 @@
+version: dryv.pack/v1alpha1
+key: unit.persistence.fluent-models
+layout: unit
+package:
+  name: DryvPersistence
+
+source: templates
+
+info:
+  title: Fluent Models
+  version: 0.1.0
+  description: Generates Swift 6.4 Vapor Fluent models and migrations from persistent Dryv schemas.
+
+  purpose: persistence
+  summary: Vapor Fluent models and migrations with keys, unique constraints and foreign keys.
+  languages: [swift]
+  frameworks: [vapor-fluent]
+  tags: [entities, database, orm, swift]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  entities:
+    subject: schema
+    filter:
+      all: { role: entity }
+    scope: each
+
+templates:
+  entity:
+    $ref: "#/selections/entities"
+    output:
+      name: $(group.name.pascal)$(subject.name.pascal)
+      symbols:
+        entity: $(group.name.pascal)$(subject.name.pascal)Entity
+        migration: Create$(group.name.pascal)$(subject.name.pascal)
+    imports:
+      - $ref: "#/templates/entity"
+
+provides:
+  schema.persistence:
+    $ref: "#/templates/entity"

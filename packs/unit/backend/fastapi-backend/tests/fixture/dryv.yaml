@@ -1,0 +1,20 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  generated:
+    path: app/gen
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  api:
+    source: { $ref: "#/sources/packs/local", path: unit/backend/fastapi-backend }
+    destination:
+      $ref: "#/destinations/generated"

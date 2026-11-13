@@ -1,0 +1,5 @@
+import Joi from "joi";
+
+/** {{ property.enum.description or property.enum.name.title }} */
+export const {{ file.symbol }} = Joi.any().valid({% for item in property.enum.values %}{{ item.value | tojson }}{% if not loop.last %}, {% endif %}{% endfor %});
+

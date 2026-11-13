@@ -1,0 +1,12 @@
+package {{ pack.inputs.root_package }}
+
+import {{ pack.inputs.root_package }}.tables.*
+
+trait {{ file.symbol }} extends DryvProfile
+{%- set state = namespace(seen=[]) %}
+{%- for dependency in file.dependencies %}
+{%- if dependency.symbols.support and dependency.symbols.support not in state.seen %}
+{%- set state.seen = state.seen + [dependency.symbols.support] %}
+  with {{ dependency.symbols.support }}
+{%- endif %}
+{%- endfor %}

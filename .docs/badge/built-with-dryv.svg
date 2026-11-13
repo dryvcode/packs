@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="22" viewBox="0 0 150 22" role="img" aria-label="built with dryv">
+<title>built with dryv</title>
+<clipPath id="r"><rect width="150" height="22" rx="6"/></clipPath>
+<g clip-path="url(#r)">
+  <rect width="105" height="22" fill="#1B120E"/>
+  <rect x="105" width="45" height="22" fill="#D18A52"/>
+</g>
+<!-- 14 px small logo (no ~) -->
+<svg x="8" y="4" width="14" height="14" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#1B120E"/>
+  <g transform="translate(32 32) scale(1.15) translate(-32 -34)">
+    <rect x="18" y="14.75" width="28" height="8.5" rx="4.25" fill="#D18A52"/>
+    <path d="M19 29H45L40 50H24Z" fill="#F7F1E7" stroke="#F7F1E7" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>
+<g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700">
+  <text x="28" y="15" fill="#F7F1E7">built with</text>
+  <text x="127.5" y="15" fill="#1B120E" text-anchor="middle">dryv</text>
+</g>
+</svg>

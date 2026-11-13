@@ -1,0 +1,180 @@
+{%- macro cs_ident(name) -%}
+{%- if name in ['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','false','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','null','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','true','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','virtual','void','volatile','while','record','required','file','scoped'] -%}@{{ name }}{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] == 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro enum_nullable(field) -%}{% if field.optional or field.nullable %}x{% endif %}{%- endmacro -%}
+{%- macro string_rules(field, expr) -%}
+{%- set primitive = field.value.property.primitive -%}
+{%- set length = primitive.constraints.length -%}
+{%- if length is not none and length.has_exact %}
+        {{ expr }}.Length({{ length.exact }});
+{%- else %}
+{%- if length is not none and length.has_min %}
+        {{ expr }}.MinimumLength({{ length.min }});
+{%- endif %}
+{%- if length is not none and length.has_max %}
+        {{ expr }}.MaximumLength({{ length.max }});
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+        {{ expr }}.EmailAddress();
+{%- elif primitive.is.url or primitive.is.uri %}
+        {{ expr }}.Must(value => value is null || Uri.TryCreate(value, UriKind.Absolute, out _))
+            .WithMessage("{{ field.name.raw }} must be a valid URL");
+{%- endif %}
+{%- if primitive.is.uuid %}
+        {{ expr }}.Matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+{%- elif primitive.is.ulid %}
+        {{ expr }}.Matches("^[0-9A-HJKMNP-TV-Z]{26}$");
+{%- elif primitive.is.e164 %}
+        {{ expr }}.Matches("^\\+[1-9][0-9]{1,14}$");
+{%- elif primitive.is.phone %}
+        {{ expr }}.Matches("^\\+?[0-9 ().-]{7,20}$");
+{%- elif primitive.is.slug %}
+        {{ expr }}.Matches("^[a-z0-9]+(?:-[a-z0-9]+)*$");
+{%- elif primitive.is.hex_color %}
+        {{ expr }}.Matches("^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$");
+{%- elif primitive.is.hex %}
+        {{ expr }}.Matches("^[0-9a-fA-F]+$");
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match_json %}
+        {{ expr }}.Matches({{ expression }});
+{%- endfor %}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro numeric_rules(field, expr) -%}
+{%- set range = field.value.property.primitive.constraints.range -%}
+{%- if range is not none and range.has_min %}
+        {{ expr }}.GreaterThanOrEqualTo({{ range.min }});
+{%- endif %}
+{%- if range is not none and range.has_max %}
+        {{ expr }}.LessThanOrEqualTo({{ range.max }});
+{%- endif -%}
+{%- endmacro -%}
+{%- macro operand(value) -%}
+{%- if value.is.field -%}value.{{ cs_ident(value.field.pascal) }}
+{%- elif value.is.literal -%}{{ value.value_json }}
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic -%}{%- set state.ok=false -%}{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro predicate(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}
+Compare({{ operand(comparison.left) }}, {{ operand(comparison.right) }}, "{{ comparison.operator }}"){% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}
+{%- endfor -%}
+{%- endmacro -%}
+using System.Globalization;
+using FluentValidation;
+using {{ pack.inputs.root_namespace }}.Models;
+
+namespace {{ pack.inputs.root_namespace }}.Validators;
+
+public sealed class {{ file.symbol }} : AbstractValidator<{{ file.symbol | replace('Validator', 'Dto') }}>
+{
+    public {{ file.symbol }}()
+    {
+{%- for field in schema.fields %}
+{%- set property = 'RuleFor(value => value.' ~ cs_ident(field.name.pascal) ~ ')' %}
+{%- if not field.optional and not field.nullable and (field.array is not none or field.value.is.string or field.value.is.schema or field.value.is.record) %}
+        {{ property }}.NotNull();
+{%- endif %}
+{%- if field.array is not none %}
+{%- if field.array.has_min %}
+        {{ property }}.Must(value => value is null || value.Count >= {{ field.array.min }})
+            .WithMessage("{{ field.name.raw }} must contain at least {{ field.array.min }} item(s)");
+{%- endif %}
+{%- if field.array.has_max %}
+        {{ property }}.Must(value => value is null || value.Count <= {{ field.array.max }})
+            .WithMessage("{{ field.name.raw }} must contain at most {{ field.array.max }} item(s)");
+{%- endif %}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+        RuleForEach(value => value.{{ cs_ident(field.name.pascal) }})
+            .SetValidator(new {{ validator_for(field.value.schema) }}())
+            .When(value => value.{{ cs_ident(field.name.pascal) }} is not null);
+{%- elif field.value.is.enum %}
+        RuleForEach(value => value.{{ cs_ident(field.name.pascal) }})
+            .Must(item => item.IsValid)
+            .When(value => value.{{ cs_ident(field.name.pascal) }} is not null);
+{%- elif field.value.is.primitive and field.value.property.primitive.is.string %}
+{{ string_rules(field, 'RuleForEach(value => value.' ~ cs_ident(field.name.pascal) ~ ')') }}
+{%- elif field.value.is.primitive and field.value.property.primitive.is.number %}
+{{ numeric_rules(field, 'RuleForEach(value => value.' ~ cs_ident(field.name.pascal) ~ ')') }}
+{%- endif %}
+{%- else %}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+        {{ property }}.SetValidator(new {{ validator_for(field.value.schema) }}()!)
+            .When(value => value.{{ cs_ident(field.name.pascal) }} is not null);
+{%- elif field.value.is.enum %}
+{%- if enum_nullable(field) %}
+        {{ property }}.Must(value => value is null || value.Value.IsValid);
+{%- else %}
+        {{ property }}.Must(value => value.IsValid);
+{%- endif %}
+{%- elif field.value.is.primitive and field.value.property.primitive.is.string %}
+{{ string_rules(field, property) }}
+{%- elif field.value.is.primitive and field.value.property.primitive.is.number %}
+{{ numeric_rules(field, property) }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+        RuleFor(value => value)
+            .Must(value => {{ predicate(invariant) }})
+            .WithMessage({% if invariant.message_json %}{{ invariant.message_json }}{% else %}"{{ invariant.name.raw }} failed"{% endif %});
+{%- endif %}
+{%- endfor %}
+    }
+
+    private static bool Compare(object? left, object? right, string operation)
+    {
+        if (operation == "equal") return Equals(left, right);
+        if (operation == "not-equal") return !Equals(left, right);
+        if (left is null || right is null) return true;
+
+        int comparison;
+        if (left is IConvertible && right is IConvertible)
+        {
+            try
+            {
+                comparison = Convert.ToDecimal(left, CultureInfo.InvariantCulture)
+                    .CompareTo(Convert.ToDecimal(right, CultureInfo.InvariantCulture));
+            }
+            catch
+            {
+                if (left is not IComparable comparable || left.GetType() != right.GetType()) return false;
+                comparison = comparable.CompareTo(right);
+            }
+        }
+        else if (left is IComparable comparable && left.GetType() == right.GetType())
+        {
+            comparison = comparable.CompareTo(right);
+        }
+        else
+        {
+            return false;
+        }
+
+        return operation switch
+        {
+            "less-than" => comparison < 0,
+            "less-than-or-equal" => comparison <= 0,
+            "greater-than" => comparison > 0,
+            "greater-than-or-equal" => comparison >= 0,
+            _ => false,
+        };
+    }
+}

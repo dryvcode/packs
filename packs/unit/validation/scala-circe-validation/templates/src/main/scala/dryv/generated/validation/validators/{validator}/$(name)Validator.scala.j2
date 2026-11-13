@@ -1,0 +1,166 @@
+package {{ pack.inputs.root_package }}.validators
+
+import scala.collection.mutable.ListBuffer
+
+import {{ pack.inputs.root_package }}.{DryvValidation, ValidationError}
+import {{ pack.inputs.root_package }}.models.*
+
+{%- macro scala_ident(name) -%}
+{%- if name in ['abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','forSome','given','if','implicit','import','lazy','match','new','null','object','opaque','open','override','package','private','protected','return','sealed','super','then','this','throw','trait','transparent','true','try','type','using','val','var','while','with','yield','end','extension','inline','infix','derives'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro validator_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-9:] == 'Validator' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_pattern(primitive) -%}
+{%- if primitive.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif primitive.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif primitive.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif primitive.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif primitive.is.hex -%}^[0-9a-fA-F]+$
+{%- elif primitive.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif primitive.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif primitive.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif primitive.is.country_code -%}^[A-Z]{2}$
+{%- elif primitive.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro primitive_checks(field, expr, path) -%}
+{%- if field.value.is.primitive %}
+{%- set primitive = field.value.property.primitive %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %}
+      if {{ expr }}.length != {{ constraints.length.exact }} then
+        errors += ValidationError({{ path }}, "must have length {{ constraints.length.exact }}")
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %}
+      if {{ expr }}.length < {{ constraints.length.min }} then
+        errors += ValidationError({{ path }}, "must have length at least {{ constraints.length.min }}")
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %}
+      if {{ expr }}.length > {{ constraints.length.max }} then
+        errors += ValidationError({{ path }}, "must have length at most {{ constraints.length.max }}")
+{%- endif %}
+{%- endif %}
+{%- if primitive.is.email %}
+      if !DryvValidation.isEmail({{ expr }}) then
+        errors += ValidationError({{ path }}, "must be a valid email")
+{%- elif primitive.is.url or primitive.is.uri %}
+      if !DryvValidation.isUrl({{ expr }}) then
+        errors += ValidationError({{ path }}, "must be a valid URL")
+{%- elif format_pattern(primitive) %}
+      if !DryvValidation.matches({{ format_pattern(primitive) | tojson }}, {{ expr }}) then
+        errors += ValidationError({{ path }}, "has invalid {{ primitive.format }} format")
+{%- endif %}
+{%- if constraints.pattern is not none %}
+{%- for expression in constraints.pattern.match %}
+      if !DryvValidation.matches({{ expression | tojson }}, {{ expr }}) then
+        errors += ValidationError({{ path }}, "does not match pattern {{ loop.index }}")
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %}
+      if DryvValidation.compare({{ expr }}, {{ constraints.range.min }}, "less-than") then
+        errors += ValidationError({{ path }}, "must be at least {{ constraints.range.min }}")
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %}
+      if DryvValidation.compare({{ expr }}, {{ constraints.range.max }}, "greater-than") then
+        errors += ValidationError({{ path }}, "must be at most {{ constraints.range.max }}")
+{%- endif %}
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro nested_checks(field, expr, path) -%}
+{%- if field.value.is.schema and validator_for(field.value.schema) %}
+      errors ++= DryvValidation.prefix({{ path }}, {{ validator_for(field.value.schema) }}.validate({{ expr }}))
+{%- else %}
+{{ primitive_checks(field, expr, path) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro json_literal(operand) -%}
+DryvValidation.jsonLiteral({{ operand.value_json | tojson }})
+{%- endmacro -%}
+
+{%- macro invariant_operand(operand) -%}
+{%- if operand.is.field -%}value.{{ scala_ident(operand.field.camel) }}
+{%- elif operand.is.literal -%}{{ json_literal(operand) }}
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_supported(invariant) -%}
+{%- if not invariant.form.is.opaque -%}
+{%- set state = namespace(ok=true) -%}
+{%- for comparison in invariant.form.comparisons -%}
+{%- if comparison.left.is.arithmetic or comparison.right.is.arithmetic -%}{%- set state.ok=false -%}{%- endif -%}
+{%- endfor -%}
+{%- if state.ok -%}x{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro invariant_expression(invariant) -%}
+{%- for comparison in invariant.form.comparisons -%}
+DryvValidation.compare({{ invariant_operand(comparison.left) }}, {{ invariant_operand(comparison.right) }}, {{ comparison.operator | tojson }}){% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}
+{%- endfor -%}
+{%- endmacro -%}
+
+object {{ file.symbol }}:
+  def validate(value: {{ group.name.pascal }}{{ schema.name.pascal }}): List[ValidationError] =
+    val errors = ListBuffer.empty[ValidationError]
+
+{%- for field in schema.fields %}
+{%- set access = 'value.' ~ scala_ident(field.name.camel) %}
+{%- set path = field.name.raw | tojson %}
+{%- if field.array is not none %}
+{%- if field.optional or field.nullable %}
+    {{ access }}.foreach { items =>
+{%- else %}
+    locally {
+      val items = {{ access }}
+{%- endif %}
+{%- if field.array.has_min %}
+      if items.size < {{ field.array.min }} then
+        errors += ValidationError({{ path }}, "must contain at least {{ field.array.min }} item(s)")
+{%- endif %}
+{%- if field.array.has_max %}
+      if items.size > {{ field.array.max }} then
+        errors += ValidationError({{ path }}, "must contain at most {{ field.array.max }} item(s)")
+{%- endif %}
+      items.zipWithIndex.foreach { (item, index) =>
+{{ nested_checks(field, 'item', path ~ ' + "[" + index + "]"') }}
+      }
+    }
+{%- else %}
+{%- if field.optional or field.nullable %}
+    {{ access }}.foreach { item =>
+{{ nested_checks(field, 'item', path) }}
+    }
+{%- else %}
+    locally {
+      val item = {{ access }}
+{{ nested_checks(field, 'item', path) }}
+    }
+{%- endif %}
+{%- endif %}
+
+{%- endfor %}
+{%- for invariant in schema.invariants %}
+{%- if invariant_supported(invariant) %}
+    if !({{ invariant_expression(invariant) }}) then
+      errors += ValidationError(
+        "",
+        {% if invariant.message_json %}{{ invariant.message_json }}{% else %}{{ invariant.name.title | tojson }}{% endif %},
+      )
+{%- else %}
+    // Invariant "{{ invariant.name.raw }}" needs opaque/arithmetic lowering and is intentionally not approximated.
+{%- endif %}
+{%- endfor %}
+
+    errors.toList

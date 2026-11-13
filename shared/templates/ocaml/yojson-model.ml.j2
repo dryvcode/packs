@@ -1,0 +1,149 @@
+{%- macro module_name(symbol) -%}{{ symbol[0] | upper }}{{ symbol[1:] }}{%- endmacro -%}
+{%- macro dep_module(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self -%}{{ module_name(dependency.symbol) }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.record -%}Yojson.Safe.t
+{%- elif value.is.schema -%}{{ dep_module(value.schema) or 'Yojson.Safe.t' }}.t
+{%- elif value.is.enum -%}{{ dep_module(value.property.enum) or 'Yojson.Safe.t' }}.t
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.decimal or value.is.money -%}string
+{%- elif value.is.string or value.is.temporal or value.is.uuid -%}string
+{%- else -%}Yojson.Safe.t
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}{{ base_type(field.value) }} list{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- if field.optional or field.nullable -%} option{%- endif -%}
+{%- endmacro -%}
+{%- macro decode_base(value, expression) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.record -%}Ok {{ expression }}
+{%- elif value.is.schema -%}{{ dep_module(value.schema) }}.of_yojson {{ expression }}
+{%- elif value.is.enum -%}{{ dep_module(value.property.enum) }}.of_yojson {{ expression }}
+{%- elif value.is.boolean -%}(match {{ expression }} with `Bool value -> Ok value | _ -> Error "expected boolean")
+{%- elif value.is.integer -%}(match {{ expression }} with `Int value -> Ok value | _ -> Error "expected integer")
+{%- elif value.is.number -%}(match {{ expression }} with `Float value -> Ok value | `Int value -> Ok (float_of_int value) | _ -> Error "expected number")
+{%- elif value.is.decimal or value.is.money -%}(match {{ expression }} with `String value -> Ok value | _ -> Error "expected decimal string")
+{%- elif value.is.string or value.is.temporal or value.is.uuid -%}(match {{ expression }} with `String value -> Ok value | _ -> Error "expected string")
+{%- else -%}Ok {{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro decode_value(field, expression) -%}
+{%- if field.array is not none -%}
+(match {{ expression }} with
+ | `List values -> decode_list (fun item -> {{ decode_base(field.value, 'item') }}) values
+ | _ -> Error "expected array")
+{%- else -%}
+{{ decode_base(field.value, expression) }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro encode_base(value, expression) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.record -%}{{ expression }}
+{%- elif value.is.schema -%}{{ dep_module(value.schema) }}.to_yojson {{ expression }}
+{%- elif value.is.enum -%}{{ dep_module(value.property.enum) }}.to_yojson {{ expression }}
+{%- elif value.is.boolean -%}`Bool {{ expression }}
+{%- elif value.is.integer -%}`Int {{ expression }}
+{%- elif value.is.number -%}`Float {{ expression }}
+{%- elif value.is.decimal or value.is.money -%}`String {{ expression }}
+{%- elif value.is.string or value.is.temporal or value.is.uuid -%}`String {{ expression }}
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro encode_value(field, expression) -%}
+{%- if field.array is not none -%}`List (List.map (fun item -> {{ encode_base(field.value, 'item') }}) {{ expression }})
+{%- else -%}{{ encode_base(field.value, expression) }}
+{%- endif -%}
+{%- endmacro -%}
+
+type t =
+  {
+{%- for field in schema.fields %}
+    {{ field.name.snake }} : {{ field_type(field) }}{% if not loop.last %};{% endif %}
+{%- endfor %}
+  }
+
+let ( let* ) = Result.bind
+
+let rec decode_list decode values =
+  match values with
+  | [] -> Ok []
+  | value :: rest ->
+      let* decoded = decode value in
+      let* decoded_rest = decode_list decode rest in
+      Ok (decoded :: decoded_rest)
+
+let required fields name decode =
+  match List.assoc_opt name fields with
+  | None -> Error ("missing required field " ^ name)
+  | Some `Null -> Error ("field " ^ name ^ " may not be null")
+  | Some value -> decode value
+
+let required_nullable fields name decode =
+  match List.assoc_opt name fields with
+  | None -> Error ("missing required field " ^ name)
+  | Some `Null -> Ok None
+  | Some value ->
+      let* decoded = decode value in
+      Ok (Some decoded)
+
+let optional fields name decode =
+  match List.assoc_opt name fields with
+  | None -> Ok None
+  | Some `Null -> Error ("field " ^ name ^ " may not be null")
+  | Some value ->
+      let* decoded = decode value in
+      Ok (Some decoded)
+
+let optional_nullable fields name decode =
+  match List.assoc_opt name fields with
+  | None | Some `Null -> Ok None
+  | Some value ->
+      let* decoded = decode value in
+      Ok (Some decoded)
+
+let of_yojson = function
+  | `Assoc fields ->
+{%- for field in schema.fields %}
+      let* {{ field.name.snake }} =
+        {% if field.optional and field.nullable %}optional_nullable{% elif field.optional %}optional{% elif field.nullable %}required_nullable{% else %}required{% endif %}
+          fields
+          {{ field.name.raw | tojson }}
+          (fun value -> {{ decode_value(field, 'value') }})
+      in
+{%- endfor %}
+      Ok
+        {
+{%- for field in schema.fields %}
+          {{ field.name.snake }}{% if not loop.last %};{% endif %}
+{%- endfor %}
+        }
+  | _ -> Error "expected object"
+
+let to_yojson value =
+  let fields =
+    []
+{%- for field in schema.fields %}
+{%- if field.optional %}
+    |> fun fields ->
+      (match value.{{ field.name.snake }} with
+       | None -> fields
+       | Some item ->
+           ({{ field.name.raw | tojson }}, {{ encode_value(field, 'item') }}) :: fields)
+{%- elif field.nullable %}
+    |> fun fields ->
+      ( {{ field.name.raw | tojson }}
+      , match value.{{ field.name.snake }} with
+        | None -> `Null
+        | Some item -> {{ encode_value(field, 'item') }} )
+      :: fields
+{%- else %}
+    |> fun fields ->
+      ({{ field.name.raw | tojson }}, {{ encode_value(field, 'value.' ~ field.name.snake) }}) :: fields
+{%- endif %}
+{%- endfor %}
+  in
+  `Assoc (List.rev fields)

@@ -1,0 +1,104 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+    # Test-only stand-in for a project's implementation and use-case scaffolds.
+    fixture:
+      path: fixture-packs
+destinations:
+  types:
+    path: out/types
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  dtos:
+    path: out/dtos
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  entities:
+    path: out/entities
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  zod:
+    path: out/zod
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  implementation:
+    path: out/implementation
+    imports: { path: out, prefix: "#/" }
+  # No alias here, so the server's own static imports exercise the relative fallback.
+  server:
+    path: out/server
+    choose: { js.package_manager: bun }
+  app:
+    path: out/app
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  server_zod:
+    path: out/server-zod
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+  app_zod:
+    path: out/app-zod
+    imports: { path: out, prefix: "#/" }
+    choose: { js.package_manager: bun }
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  types:
+    source: { $ref: "#/sources/packs/local", path: inject/types/typescript }
+    destination:
+      $ref: "#/destinations/types"
+  dtos:
+    source: { $ref: "#/sources/packs/local", path: inject/validation/class-validator }
+    destination:
+      $ref: "#/destinations/dtos"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }
+  entities:
+    source: { $ref: "#/sources/packs/local", path: inject/persistence/typeorm }
+    destination:
+      $ref: "#/destinations/entities"
+    bind:
+      property.enum.types: { $ref: "#/packs/types" }
+      property.types: { $ref: "#/packs/types" }
+  zod:
+    source: { $ref: "#/sources/packs/local", path: inject/validation/zod }
+    destination:
+      $ref: "#/destinations/zod"
+  implementation:
+    source: { $ref: "#/sources/packs/fixture", path: implementation }
+    # A pack-specific alias overrides the destination's #/.
+    imports: { path: out, prefix: "@gen/" }
+    destination:
+      $ref: "#/destinations/implementation"
+  server:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/server"
+    destinations:
+      app: { $ref: "#/destinations/app" }
+    bind:
+      schema.validation: { $ref: "#/packs/dtos" }
+      schema.persistence: { $ref: "#/packs/entities" }
+      schema.examples: { $ref: "#/packs/dtos" }
+      operation.implementation: { $ref: "#/packs/implementation" }
+      operation.usecase: { $ref: "#/packs/implementation" }
+      module.provider: { $ref: "#/packs/implementation" }
+  server-zod:
+    source: { $ref: "#/sources/packs/local", path: inject/backend/nestjs }
+    destination:
+      $ref: "#/destinations/server_zod"
+    destinations:
+      app: { $ref: "#/destinations/app_zod" }
+    bind:
+      schema.validation: { $ref: "#/packs/zod" }
+      operation.implementation: { $ref: "#/packs/implementation" }
+      operation.usecase: { $ref: "#/packs/implementation" }
+      module.provider: { $ref: "#/packs/implementation" }

@@ -1,0 +1,38 @@
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
+version: dryv.pack/v1alpha1
+key: inject.validation.zod
+layout: inject
+source: templates
+
+info:
+  title: Zod
+  version: 0.1.0
+  description: Generates Zod validation schemas for canonical Dryv schemas.
+  purpose: validation
+  summary: Zod validation schemas.
+  languages: [typescript]
+  frameworks: [zod]
+  tags: [validation, schema]
+
+selections:
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  schema:
+    $ref: "#/selections/schemas"
+    output:
+      name: "$(subject.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - dto
+      symbol: "$(subject.name.pascal)Schema"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/schema"
+
+dependencies:
+  runtime:
+    zod: ^3.24

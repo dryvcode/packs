@@ -1,0 +1,119 @@
+{%- macro module_name(symbol) -%}{{ symbol[0] | upper }}{{ symbol[1:] }}{%- endmacro -%}
+{%- macro dep_module(link, suffix) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self and dependency.symbol[-(suffix|length):] == suffix -%}{{ module_name(dependency.symbol) }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro enum_module(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self and dependency.symbol[-11:] != '_validation' -%}{{ module_name(dependency.symbol) }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro format_regex(value) -%}
+{%- if value.is.email -%}^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$
+{%- elif value.is.url or value.is.uri -%}^[A-Za-z][A-Za-z0-9+.-]*://[^[:space:]]+$
+{%- elif value.is.uuid -%}^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+{%- elif value.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif value.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif value.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif value.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif value.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif value.is.hex -%}^[0-9a-fA-F]+$
+{%- elif value.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif value.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif value.is.country_code -%}^[A-Z]{2}$
+{%- elif value.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+{%- macro scalar_checks(field, expression, indent) -%}
+{%- set value = field.value -%}
+{%- if value.is.enum and enum_module(value.property.enum) %}
+{{ indent }}if not ({{ enum_module(value.property.enum) }}.is_valid {{ expression }}) then
+{{ indent }}  add {{ (field.name.raw ~ ' has an invalid enum value') | tojson }};
+{%- endif %}
+{%- if value.is.string %}
+{%- set constraints = value.property.primitive.constraints -%}
+{%- set length = constraints.length -%}
+{%- if length is not none and length.has_exact %}
+{{ indent }}if utf8_length {{ expression }} <> {{ length.exact }} then
+{{ indent }}  add {{ (field.name.raw ~ ' must contain exactly ' ~ length.exact ~ ' characters') | tojson }};
+{%- endif %}
+{%- if length is not none and length.has_min %}
+{{ indent }}if utf8_length {{ expression }} < {{ length.min }} then
+{{ indent }}  add {{ (field.name.raw ~ ' is too short') | tojson }};
+{%- endif %}
+{%- if length is not none and length.has_max %}
+{{ indent }}if utf8_length {{ expression }} > {{ length.max }} then
+{{ indent }}  add {{ (field.name.raw ~ ' is too long') | tojson }};
+{%- endif %}
+{%- if format_regex(value) %}
+{{ indent }}if not (matches {{ format_regex(value) | tojson }} {{ expression }}) then
+{{ indent }}  add {{ (field.name.raw ~ ' has invalid format') | tojson }};
+{%- endif %}
+{%- if constraints.pattern is not none %}
+{%- for pattern in constraints.pattern.match %}
+{{ indent }}if not (matches {{ pattern | tojson }} {{ expression }}) then
+{{ indent }}  add {{ (field.name.raw ~ ' does not match required pattern') | tojson }};
+{%- endfor %}
+{%- endif %}
+{%- elif value.is.integer or value.is.number %}
+{%- set range = value.property.primitive.constraints.range -%}
+{%- if range is not none and range.has_min %}
+{{ indent }}if {{ expression }} < {{ range.min }} then
+{{ indent }}  add {{ (field.name.raw ~ ' is below minimum') | tojson }};
+{%- endif %}
+{%- if range is not none and range.has_max %}
+{{ indent }}if {{ expression }} > {{ range.max }} then
+{{ indent }}  add {{ (field.name.raw ~ ' is above maximum') | tojson }};
+{%- endif %}
+{%- endif %}
+{%- if value.is.schema and dep_module(value.schema, '_validation') %}
+{{ indent }}{{ dep_module(value.schema, '_validation') }}.validate {{ expression }}
+{{ indent }}|> List.iter (fun error -> add ({{ (field.name.raw ~ ': ') | tojson }} ^ error));
+{%- endif -%}
+{%- endmacro -%}
+{%- macro value_checks(field, expression, indent) -%}
+{%- if field.array is not none %}
+{{ indent }}let count = List.length {{ expression }} in
+{%- if field.array.has_min %}
+{{ indent }}if count < {{ field.array.min }} then add {{ (field.name.raw ~ ' has too few items') | tojson }};
+{%- endif %}
+{%- if field.array.has_max %}
+{{ indent }}if count > {{ field.array.max }} then add {{ (field.name.raw ~ ' has too many items') | tojson }};
+{%- endif %}
+{{ indent }}List.iter
+{{ indent }}  (fun item ->
+{{ scalar_checks(field, 'item', indent ~ '    ') }}
+{{ indent }}  )
+{{ indent }}  {{ expression }};
+{%- else %}
+{{ scalar_checks(field, expression, indent) }}
+{%- endif -%}
+{%- endmacro -%}
+
+let utf8_length value =
+  let count = ref 0 in
+  String.iter
+    (fun byte ->
+      if Char.code byte land 0xC0 <> 0x80 then incr count)
+    value;
+  !count
+
+let matches pattern value =
+  Re.execp (Re.Perl.compile_pat pattern) value
+
+let validate (value : {{ module_name(file.symbol[:-11]) }}.t) =
+  let errors = ref [] in
+  let add error = errors := error :: !errors in
+{%- for field in schema.fields %}
+{%- if field.optional or field.nullable %}
+  (match value.{{ field.name.snake }} with
+   | None -> ()
+   | Some item ->
+{{ value_checks(field, 'item', '      ') }}
+  );
+{%- else %}
+{{ value_checks(field, 'value.' ~ field.name.snake, '  ') }}
+{%- endif %}
+{%- endfor %}
+  List.rev !errors

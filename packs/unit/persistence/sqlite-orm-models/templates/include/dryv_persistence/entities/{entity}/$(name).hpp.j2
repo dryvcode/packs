@@ -1,0 +1,39 @@
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <string>
+
+namespace {{ pack.inputs.namespace }} {
+
+{%- macro cpp_ident(name) -%}
+{%- if name in ['alignas','alignof','and','and_eq','asm','atomic_cancel','atomic_commit','atomic_noexcept','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','reflexpr','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','synchronized','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro base_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}std::string
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}std::int64_t
+{%- elif value.is.number -%}double
+{%- elif value.is.decimal or value.is.money -%}std::string
+{%- elif value.is.string or value.is.temporal -%}std::string
+{%- else -%}std::string
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable -%}std::optional<{{ base_type(field) }}>{%- else -%}{{ base_type(field) }}{%- endif -%}
+{%- endmacro -%}
+
+// {{ file.symbol }} is the sqlite_orm persistence representation of {{ schema.name.title }}.
+// JSON/enum/decimal/temporal wire values that lack a portable SQLite native mapping are stored as text.
+struct {{ file.symbol }} {
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    {{ field_type(field) }} {{ cpp_ident(field.name.snake) }}{};
+{%- endif %}
+{%- endfor %}
+};
+
+} // namespace {{ pack.inputs.namespace }}

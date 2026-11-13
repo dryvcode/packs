@@ -1,0 +1,41 @@
+{%- macro cs_ident(name) -%}
+{%- if name in ['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','false','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','null','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','true','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','virtual','void','volatile','while','record','required','file','scoped'] -%}@{{ name }}{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value) -%}
+{%- if value is none -%}JsonElement
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'JsonElement' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'JsonElement' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}long
+{%- elif value.is.decimal or value.is.money -%}decimal
+{%- elif value.is.number -%}double
+{%- elif value.is.temporal and value.is.date -%}DateOnly
+{%- elif value.is.temporal and value.is.time -%}TimeOnly
+{%- elif value.is.temporal and value.is.date_time -%}DateTime
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}DateTimeOffset
+{%- elif value.is.temporal and value.is.duration -%}TimeSpan
+{%- elif value.is.record -%}Dictionary<string, JsonElement>
+{%- elif value.is.string -%}string
+{%- else -%}JsonElement
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}{%- if field.optional or field.nullable -%}?{%- endif -%}
+{%- endmacro -%}
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace {{ pack.inputs.root_namespace }}.Models;
+
+public sealed class {{ file.symbol }}
+{
+{%- for field in schema.fields %}
+    [JsonPropertyName("{{ field.name.raw }}")]
+    public {{ field_type(field) }} {{ cs_ident(field.name.pascal) }} { get; set; }
+{%- endfor %}
+}

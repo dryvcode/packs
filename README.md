@@ -1,36 +1,141 @@
 # Dryv packs
 
-[![built with dryv](https://dryv.alidantech.org/badge/built-with-dryv.svg)](https://dryv.alidantech.org)
+<p align="left">
+  <a href="https://dryv.alidantech.org"><img src=".docs/badge/built-with-dryv.svg" alt="built with dryv"></a>
+</p>
 
-Global packs for [Dryv](https://dryv.alidantech.org): reusable templates that turn your Dryv project's meaning into real code for well-known packages and frameworks such as TypeORM, NestJS and zod.
+Official packs for [Dryv](https://dryv.alidantech.org): portable generation packs that turn Canonical Runtime IR into framework-native source code, configuration, documentation, tests and complete generated units.
 
 > **Status:** being set up. No packs are published yet.
 
-Packs live at `packs/<language>/<template-language>/<name>`, for example `packs/typescript/jinja/typeorm-entities` ([folder structure](.docs/folder-structure.md)).
+## Repository model
 
-## Global or local?
+Packs live at:
 
-- **Global packs (this repo):** use these for any well-known package or framework, instead of writing your own.
-- **Local packs (your project's `dryv/packs/`):** only for designs your project invented.
+```text
+packs/<layout>/<purpose>/<name>
+```
+
+with the target two-layout model:
+
+```text
+inject
+  contributes implementation artifacts into a unit
+
+unit
+  establishes and owns a generated unit root
+```
+
+Every manifest declares `layout: inject | unit` and a layout-aware key (`<layout>.<purpose>.<name>`). The repository is still shortening older verbose terminal names to the smallest stable technology/variant names. See [pack modernization](.docs/tasks/pack-modernization/README.md).
+
+## Pack philosophy
+
+Dryv's Runtime IR stays framework-neutral.
+
+Packs are expected to be framework-native.
+
+That means NestJS, Flutter, Spring, Next.js and other ecosystems may intentionally generate very different file/folder structures, tests and assembly patterns.
+
+Dryv consistency means consistent contracts, not identical generated architecture.
+
+## Official, local or private
+
+Projects choose packs explicitly.
+
+Official packs from this repository, local packs and private Git packs use the same contracts. Dryv does not implicitly activate a provider.
 
 ## Using a pack
 
-Each pack is released on its own, with a tag made of its path and version, such as `typescript/jinja/typeorm-entities/v0.1.0`. Reference it from your project's `dryv.yaml`, pinned to that tag:
+A project declares a pack source and activates a pack explicitly:
 
 ```yaml
-packs:
-  entities:
-    source:
-      type: git
+version: dryv/v1alpha1
+
+sources:
+  authoring:
+    ir: { type: ir, path: dryv.ir.yaml }
+
+  packs:
+    official:
       repository: https://github.com/dryvcode/packs
-      revision: typescript/jinja/typeorm-entities/v0.1.0
-      path: packs/typescript/jinja/typeorm-entities
+      ref: develop
+      root: packs
+
+destinations:
+  docs:
+    path: generated/docs
+
+authoring:
+  source:
+    $ref: "#/sources/authoring/ir"
+
+packs:
+  reference:
+    source:
+      $ref: "#/sources/packs/official"
+      path: inject/documentation/markdown-reference
+
+    destination:
+      $ref: "#/destinations/docs"
 ```
 
-## Contributing
+## Repository maintenance
 
-The plan and the design decisions are in [.docs/](.docs/plan.md).
+The repository avoids parallel sources of truth:
+
+- catalogue metadata is derived from each `dryv.pack.yaml`;
+- every pack test uses the shared `shared/fixtures/dryv.ir.yaml`;
+- reusable fixture inputs live under `shared/fixtures/`;
+- exact portable reusable assets/fragments have canonical sources under `shared/`;
+- discovery, IDs and release refs are centralized in repository tooling.
+
+Useful checks:
+
+```bash
+bun run shared:check
+bun run catalog:check
+bun run test:packs
+```
+
+See [pack testing](.docs/testing.md), [folder structure](.docs/folder-structure.md), and [the active repository plan](.docs/plan.md).
+
+## Publishing official releases
+
+Platform owns package metadata, immutable release records, access policy, and
+artifact storage. The Packs repository builds each archive from its committed
+source and submits it to Platform; it does not write release files to S3.
+
+Set `PLATFORM_API_URL` (or `DRYV_PLATFORM_URL`) to the Platform API origin.
+Publishing requires the dedicated `REGISTRY_PUBLISH_TOKEN`; listing releases for
+a dry run is public and does not require that token.
+
+```bash
+export PLATFORM_API_URL=https://api.example.org
+bun scripts/publish.ts --pack inject/backend/nestjs --dry-run
+read -rsp 'Registry publish token: ' REGISTRY_PUBLISH_TOKEN
+printf '\n'
+export REGISTRY_PUBLISH_TOKEN
+bun scripts/publish.ts --pack inject/backend/nestjs
+```
+
+Each package uses its manifest `info.version` as an immutable release version.
+Increment that version before publishing changed content. The official NestJS
+adapter is `@dryv/nestjs`; its runnable unit shell is `@dryv/nestjs-app`. The
+layout/purpose portion of a pack ID remains grouping metadata in the descriptor.
+
+## Current work
+
+Current execution is intentionally narrow:
+
+1. `inject/backend/nestjs` and `unit/backend/nestjs` are the first reference-quality framework pair, proven with the native NestJS/TypeScript toolchain (done);
+2. finish repository pack identity/name normalization for the remaining packs (in progress);
+3. only then begin another framework-quality pass.
+
+Track this work in [.docs/tasks/pack-modernization/](.docs/tasks/pack-modernization/README.md).
 
 ## License
 
-GNU General Public License v3.0. See [LICENSE](LICENSE).
+- Repository, pack definitions, tooling and tests: [Apache License 2.0](LICENSE).
+- Code-emitting template material under `packs/*/*/*/templates/`: [0BSD](LICENSE-0BSD).
+
+Generated code belongs to the consuming project under that project's chosen license.

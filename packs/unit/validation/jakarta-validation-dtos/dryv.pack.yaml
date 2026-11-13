@@ -1,0 +1,73 @@
+version: dryv.pack/v1alpha1
+key: unit.validation.jakarta-validation-dtos
+layout: unit
+package:
+  name: { $ref: "#/inputs/artifact_id" }
+
+source: templates
+
+info:
+  title: Jakarta Validation DTOs
+  version: 0.1.0
+  description: Generates Java DTO classes and enums with portable Jakarta Validation constraints.
+
+  purpose: validation
+  summary: Portable Java DTO classes and enums using Jakarta Validation.
+  languages: [java]
+  frameworks: [jakarta-validation]
+  tags: [dto, validation, java, jakarta]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+inputs:
+  group_id:
+    type: string
+    default: org.dryv.generated
+    description: Maven groupId for the generated package.
+  artifact_id:
+    type: string
+    default: dryv-validation
+    description: Maven artifactId and Dryv package identity.
+  java_package:
+    type: string
+    default: org.dryv.generated.validation
+    description: Base Java package for generated DTO and enum types.
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+
+  schemas:
+    subject: schema
+    scope: each
+
+templates:
+  enum:
+    $ref: "#/selections/enums"
+    output:
+      name: $(subject.name.pascal)
+      path:
+        - group_$(group.name.snake)
+      symbol: $(subject.name.pascal)
+
+  dto:
+    $ref: "#/selections/schemas"
+    output:
+      name: $(subject.name.pascal)
+      path:
+        - group_$(group.name.snake)
+      symbol: $(subject.name.pascal)Dto
+    imports:
+      - $ref: "#/templates/enum"
+      - $ref: "#/templates/dto"
+
+provides:
+  schema.validation:
+    $ref: "#/templates/dto"
+  schema.types:
+    $ref: "#/templates/dto"
+  property.enum.types:
+    $ref: "#/templates/enum"

@@ -1,0 +1,64 @@
+{%- macro value_type(value) -%}
+{%- if value is none -%}unknown
+{%- elif value.is.schema -%}{{ value.schema.name.qualified }}
+{%- elif value.is.enum -%}{{ value.property.enum.name.qualified }}
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}{{ value.property.temporal.kind }}
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}object
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}{{ value.property.generic.name.qualified }}
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+# Workflow Catalogue
+
+{% for workflow in workflows %}
+## {{ workflow.name.title }}
+
+{% if workflow.description %}{{ workflow.description }}
+
+{% endif %}- **ID:** `{{ workflow.id }}`
+- **Qualified name:** `{{ workflow.name.qualified }}`
+- **Group:** {% if workflow.group %}`{{ workflow.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if workflow.feature %}`{{ workflow.feature.name.qualified }}`{% else %}—{% endif %}
+- **Start step:** `{{ workflow.start.name.raw }}`
+{% if workflow.tags %}- **Tags:** {% for tag in workflow.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% if workflow.inputs %}
+### Inputs
+
+| Port | Type |
+| --- | --- |
+{% for port in workflow.inputs %}| `{{ port.name.raw }}` | `{{ value_type(port.value) }}` |
+{% endfor %}
+{% endif %}
+{% if workflow.outputs %}
+### Outputs
+
+| Port | Type |
+| --- | --- |
+{% for port in workflow.outputs %}| `{{ port.name.raw }}` | `{{ value_type(port.value) }}` |
+{% endfor %}
+{% endif %}
+### Steps
+
+| Step | Kind | Target | Timeout |
+| --- | --- | --- | --- |
+{% for step in workflow.steps %}| `{{ step.name.raw }}` | `{{ step.kind }}` | {% if step.operation %}`{{ step.operation.name.qualified }}`{% elif step.workflow %}`{{ step.workflow.name.qualified }}`{% elif step.event %}`{{ step.event.name.qualified }}`{% else %}—{% endif %} | {% if step.timeout.seconds is not none %}`{{ step.timeout.seconds }}s`{% else %}—{% endif %} |
+{% endfor %}
+
+- **Transitions:** `{{ workflow.transitions | length }}`
+- **Output bindings:** `{{ workflow.output_bindings | length }}`
+
+---
+{% endfor %}

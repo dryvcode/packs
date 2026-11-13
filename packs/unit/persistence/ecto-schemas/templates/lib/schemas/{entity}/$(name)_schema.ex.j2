@@ -1,0 +1,66 @@
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ecto_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.enum or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}{{ pack.inputs.module_prefix }}.DryvJSON
+{%- elif value.is.boolean -%}:boolean
+{%- elif value.is.integer -%}{% if field.storage is not none and field.storage.primary_key and field.mutation == 'system' %}:id{% else %}:integer{% endif %}
+{%- elif value.is.decimal or value.is.money -%}:decimal
+{%- elif value.is.number -%}:float
+{%- elif value.is.uuid -%}Ecto.UUID
+{%- elif value.is.temporal and value.is.date -%}:date
+{%- elif value.is.temporal and value.is.time -%}:time
+{%- elif value.is.temporal and value.is.date_time -%}:naive_datetime_usec
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}:utc_datetime_usec
+{%- else -%}:string
+{%- endif -%}
+{%- endmacro -%}
+
+defmodule {{ pack.inputs.module_prefix }}.Schemas.{{ file.symbol }} do
+  @moduledoc false
+
+  use Ecto.Schema
+
+  @primary_key false
+{%- if schema.facets.storage and schema.facets.storage.namespace %}
+  @schema_prefix {{ schema.facets.storage.namespace | tojson }}
+{%- endif %}
+
+  schema "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}" do
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    field :"{{ field.name.snake }}", {{ ecto_type(field) }}{% if field.storage is not none and field.storage.primary_key %}, primary_key: true{% if field.mutation == 'system' and (field.value.is.integer or field.value.is.uuid) %}, autogenerate: true{% endif %}{% endif %}
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
+    belongs_to :"{{ field.name.snake }}_relation",
+      {{ pack.inputs.module_prefix }}.Schemas.{{ symbol_for(field.relation.target.schema) }},
+      foreign_key: :"{{ field.name.snake }}",
+      references: :"{{ field.relation.target.field.snake }}",
+      define_field: false
+{%- if field.relation.on_delete is not none or field.relation.on_update is not none %}
+    # Dryv FK lifecycle belongs to migration/database constraints; Ecto association options are not equivalent.
+{%- endif %}
+{%- endif %}
+{%- elif field.related is not none and symbol_for(field.related.via.schema) and field.related.inverse is not none %}
+{%- if field.related.cardinality == 'one-to-many' %}
+    has_many :"{{ field.name.snake }}",
+      {{ pack.inputs.module_prefix }}.Schemas.{{ symbol_for(field.related.via.schema) }},
+      foreign_key: :"{{ field.related.via.field.snake }}",
+      references: :"{{ field.related.inverse.field.snake }}"
+{%- elif field.related.cardinality == 'one-to-one' %}
+    has_one :"{{ field.name.snake }}",
+      {{ pack.inputs.module_prefix }}.Schemas.{{ symbol_for(field.related.via.schema) }},
+      foreign_key: :"{{ field.related.via.field.snake }}",
+      references: :"{{ field.related.inverse.field.snake }}"
+{%- else %}
+    # Related field "{{ field.name.raw }}" requires an explicit junction/many-to-many mapping.
+{%- endif %}
+{%- elif field.related is not none %}
+    # Related field "{{ field.name.raw }}" has no explicit inverse key; navigation is not guessed.
+{%- endif %}
+{%- endfor %}
+  end
+end

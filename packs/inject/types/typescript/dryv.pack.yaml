@@ -1,0 +1,233 @@
+version: dryv.pack/v1alpha1
+key: inject.types.typescript
+layout: inject
+source: templates
+
+info:
+  title: TypeScript types
+  version: 0.1.0
+  description: Generates framework-free TypeScript declarations once per IR property and schema, so DTO, entity and server packs import them instead of duplicating them.
+  purpose: types
+  summary: Shared TypeScript enums, type aliases and schema interfaces for other packs to import.
+  languages: [typescript]
+  frameworks: []
+  tags: [types, enums, unions, generics, interfaces]
+
+plugins:
+  - name: jinja
+    extensions: [.j2]
+
+selections:
+  enums:
+    subject: property.enum
+    scope: each
+  primitives:
+    subject: property.primitive
+    scope: each
+  temporals:
+    subject: property.temporal
+    scope: each
+  literals:
+    subject: property.literal
+    scope: each
+  composites:
+    subject: property.composite
+    scope: each
+  unions:
+    subject: property.union
+    scope: each
+  records:
+    subject: property.record
+    scope: each
+  tuples:
+    subject: property.tuple
+    scope: each
+  generics:
+    subject: property.generic
+    scope: each
+  schemas:
+    subject: schema
+    scope: each
+
+# Every declaration lives under its IR group, so groups may reuse a short name.
+templates:
+  enum:
+    $ref: '#/selections/enums'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+  primitive:
+    $ref: '#/selections/primitives'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+  temporal:
+    $ref: '#/selections/temporals'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+  literal:
+    $ref: '#/selections/literals'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+  composite:
+    $ref: '#/selections/composites'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+  union:
+    $ref: '#/selections/unions'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+  record:
+    $ref: '#/selections/records'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+  tuple:
+    $ref: '#/selections/tuples'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+  generic:
+    $ref: '#/selections/generics'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+  schema:
+    $ref: '#/selections/schemas'
+    output:
+      name: $(subject.name.kebab)
+      path:
+        - $(group.name.kebab)
+      symbol: $(subject.name.pascal)
+    imports:
+      - $ref: '#/templates/enum'
+      - $ref: '#/templates/primitive'
+      - $ref: '#/templates/temporal'
+      - $ref: '#/templates/literal'
+      - $ref: '#/templates/composite'
+      - $ref: '#/templates/union'
+      - $ref: '#/templates/record'
+      - $ref: '#/templates/tuple'
+      - $ref: '#/templates/generic'
+      - $ref: '#/templates/schema'
+
+provides:
+  property.enum.types:
+    $ref: '#/templates/enum'
+  property.types:
+    - $ref: '#/templates/primitive'
+    - $ref: '#/templates/temporal'
+    - $ref: '#/templates/literal'
+    - $ref: '#/templates/composite'
+    - $ref: '#/templates/union'
+    - $ref: '#/templates/record'
+    - $ref: '#/templates/tuple'
+    - $ref: '#/templates/generic'
+  schema.types:
+    $ref: '#/templates/schema'
+
+# shared:js-package-manager:start
+choose:
+  js.package_manager: { options: [pnpm, npm, bun, yarn] }
+# shared:js-package-manager:end
+
+dependencies:
+  dev:
+    prettier: "*"
+
+# shared:js-prettier-actions:start
+actions:
+  format:
+    stage: files
+    extensions: [.ts]
+    commands:
+      - run: [(pnpm|yarn), dlx, prettier@3.9.9, --write, $(files)]
+      - run: [npm, exec, --yes, --package, prettier@3.9.9, --, prettier, --write, $(files)]
+      - run: [bun, x, prettier@3.9.9, --write, $(files)]
+  install:
+    stage: final
+    dependencies:
+      args:
+        - dev: { (pnpm|yarn): [-D], bun: [--dev], npm: [--save-dev] }
+        - { pinned: "$(name)@$(version)", any: "$(name)" }
+    commands:
+      - run: [(pnpm|bun|yarn), add]
+      - run: [npm, install]
+# shared:js-prettier-actions:end

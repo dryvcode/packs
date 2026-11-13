@@ -1,0 +1,161 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
+
+module {{ file.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }}
+  ( {{ file.symbol }}
+{%- if operation.input and operation.input.kind != 'schema' %}
+  , {{ operation.name.pascal }}Input(..)
+{%- endif %}
+  ) where
+
+import Control.Exception (throwIO)
+import Data.Aeson (ToJSON(..), Value, object, (.=))
+import Data.Int (Int64)
+import Data.Scientific (Scientific)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Dryv.Client
+{%- for dependency in file.dependencies %}
+{%- if dependency.symbol and not dependency.is_self %}
+import qualified {{ dependency.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }} as Dep{{ loop.index }}
+{%- endif %}
+{%- endfor %}
+
+{%- macro hs_ident(name) -%}
+{%- if name in ['case','class','data','default','deriving','do','else','foreign','if','import','in','infix','infixl','infixr','instance','let','module','newtype','of','then','type','where','qualified','as','hiding','forall','mdo','family','role','pattern','static','group','by','using','stock','anyclass','via'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro dep_symbol(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and not dependency.is_self -%}Dep{{ loop.index }}.{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro hs_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.record -%}Value
+{%- elif value.is.schema -%}{{ dep_symbol(value.schema) or 'Value' }}
+{%- elif value.is.enum -%}{{ dep_symbol(value.property.enum) or 'Value' }}
+{%- elif value.is.boolean -%}Bool
+{%- elif value.is.integer -%}Int64
+{%- elif value.is.number or value.is.decimal or value.is.money -%}Scientific
+{%- elif value.is.string or value.is.temporal or value.is.uuid -%}Text
+{%- else -%}Value
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_field_type(field) -%}
+{%- if field.optional -%}Maybe ({% endif -%}{{ hs_type(field.value) }}{%- if field.optional -%}){%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}{{ hs_ident(binding.port.field.camel) }} input{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_optional(operation, binding) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+data {{ operation.name.pascal }}Input = {{ operation.name.pascal }}Input
+  {
+{%- for field in operation.input.fields %}
+    {{ hs_ident(field.name.camel) }} :: {{ input_field_type(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  }
+  deriving (Eq, Show)
+
+instance ToJSON {{ operation.name.pascal }}Input where
+  toJSON value =
+    object
+      [
+{%- for field in operation.input.fields %}
+        "{{ field.name.raw }}" .= {{ hs_ident(field.name.camel) }} value{% if not loop.last %},{% endif %}
+{%- endfor %}
+      ]
+
+{%- endif %}
+{{ file.symbol }}
+  :: DryvClient
+{%- if operation.input %}
+  -> {% if operation.input.kind == 'schema' %}{{ hs_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %}
+{%- endif %}
+  -> IO {% if operation.output %}({{ hs_type(operation.output.value) }}){% else %}(){% endif %}
+{{ file.symbol }} client{% if operation.input %} input{% endif %} = do
+{%- if http.input_groups.multipart %}
+  throwIO ApiError
+    { apiStatus = 501
+    , apiMessage = "multipart bindings require an explicit Haskell semantic mapping"
+    , apiPayload = Nothing
+    }
+{%- else %}
+{%- for binding in http.input_groups.path %}
+{%- if binding_optional(operation, binding) %}
+  pathValue{{ loop.index }} <-
+    case {{ bound(binding) }} of
+      Just value -> pure value
+      Nothing ->
+        throwIO ApiError
+          { apiStatus = 400
+          , apiMessage = "missing path parameter {{ binding.name or binding.port.name.raw }}"
+          , apiPayload = Nothing
+          }
+{%- endif %}
+{%- endfor %}
+  let path0 = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+      path{{ loop.index }} =
+        T.replace
+          {{ ('{' ~ (binding.name or binding.port.name.raw) ~ '}') | tojson }}
+          (encodePathPart {% if binding_optional(operation, binding) %}pathValue{{ loop.index }}{% else %}({{ bound(binding) }}){% endif %})
+          path{{ loop.index0 }}
+{%- endfor %}
+      requestPath = {% if http.input_groups.path %}path{{ http.input_groups.path | length }}{% else %}path0{% endif %}
+      query0 = []
+{%- for binding in http.input_groups.query %}
+      query{{ loop.index }} = appendWire query{{ loop.index0 }} {{ (binding.name or binding.port.name.raw) | tojson }} ({{ bound(binding) }})
+{%- endfor %}
+{%- set query_count = http.input_groups.query | length %}
+{%- for binding in http.input_groups.query_object %}
+      queryObject{{ loop.index }} = appendObject {% if loop.first %}query{{ query_count }}{% else %}queryObject{{ loop.index0 }}{% endif %} ({{ bound(binding) }})
+{%- endfor %}
+      queryValues = {% if http.input_groups.query_object %}queryObject{{ http.input_groups.query_object | length }}{% else %}query{{ query_count }}{% endif %}
+      header0 = []
+{%- for binding in http.input_groups.header %}
+      header{{ loop.index }} = appendWire header{{ loop.index0 }} {{ (binding.name or binding.port.name.raw) | tojson }} ({{ bound(binding) }})
+{%- endfor %}
+      headerValues = header{{ http.input_groups.header | length }}
+      cookie0 = []
+{%- for binding in http.input_groups.cookie %}
+      cookie{{ loop.index }} = appendWire cookie{{ loop.index0 }} {{ (binding.name or binding.port.name.raw) | tojson }} ({{ bound(binding) }})
+{%- endfor %}
+      cookieValues = cookie{{ http.input_groups.cookie | length }}
+{%- if http.input_groups.body %}
+      jsonBody = Just (toJSON ({{ bound(http.input_groups.body[0]) }}))
+{%- else %}
+      jsonBody = Nothing
+{%- endif %}
+{%- if http.input_groups.form %}
+      form0 = []
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+      form{{ loop.index }} = appendObject form{{ loop.index0 }} ({{ bound(binding) }})
+{%- else %}
+      form{{ loop.index }} = appendWire form{{ loop.index0 }} {{ (binding.name or binding.port.name.raw) | tojson }} ({{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+      formBody = Just form{{ http.input_groups.form | length }}
+{%- else %}
+      formBody = Nothing
+{%- endif %}
+
+{%- if operation.output %}
+  sendJson client {{ http.method | tojson }} requestPath queryValues headerValues cookieValues jsonBody formBody
+{%- else %}
+  sendEmpty client {{ http.method | tojson }} requestPath queryValues headerValues cookieValues jsonBody formBody
+{%- endif %}
+{%- endif %}

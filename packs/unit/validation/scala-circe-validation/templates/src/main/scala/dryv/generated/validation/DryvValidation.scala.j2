@@ -1,0 +1,105 @@
+package {{ pack.inputs.root_package }}
+
+import java.net.URI
+
+import scala.util.Try
+import scala.util.matching.Regex
+
+import io.circe.{Json, parser}
+
+final case class ValidationError(path: String, message: String)
+
+object DryvValidation:
+  def matches(pattern: String, value: String): Boolean =
+    Try(pattern.r.findFirstIn(value).nonEmpty).getOrElse(false)
+
+  def isEmail(value: String): Boolean =
+    matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", value)
+
+  def isUrl(value: String): Boolean =
+    Try(URI.create(value)).toOption.exists(uri =>
+      Option(uri.getScheme).exists(_.nonEmpty)
+    )
+
+  def prefix(path: String, errors: List[ValidationError]): List[ValidationError] =
+    errors.map { error =>
+      val child =
+        if error.path.isEmpty then path
+        else path + "." + error.path
+      error.copy(path = child)
+    }
+
+  def jsonLiteral(raw: String): Any =
+    parser.parse(raw).fold(
+      error => throw new IllegalArgumentException("Invalid generated invariant literal: " + error),
+      jsonToAny,
+    )
+
+  def compare(left: Any, right: Any, operator: String): Boolean =
+    val resolvedLeft = unwrap(left)
+    val resolvedRight = unwrap(right)
+
+    (resolvedLeft, resolvedRight) match
+      case (None, None) =>
+        operator match
+          case "equal" => true
+          case "not-equal" => false
+          case _ => true
+      case (None, _) | (_, None) =>
+        operator match
+          case "equal" => false
+          case "not-equal" => true
+          case _ => true
+      case (Some(a), Some(b)) =>
+        operator match
+          case "equal" => a == b
+          case "not-equal" => a != b
+          case _ =>
+            val comparison =
+              (numeric(a), numeric(b)) match
+                case (Some(x), Some(y)) => Some(x.compare(y))
+                case _ =>
+                  (a, b) match
+                    case (x: String, y: String) => Some(x.compareTo(y))
+                    case _ => None
+
+            comparison.exists { result =>
+              operator match
+                case "less-than" => result < 0
+                case "less-than-or-equal" => result <= 0
+                case "greater-than" => result > 0
+                case "greater-than-or-equal" => result >= 0
+                case _ => false
+            }
+
+  private def unwrap(value: Any): Option[Any] =
+    value match
+      case null => None
+      case None => None
+      case Some(inner) => unwrap(inner)
+      case other => Some(other)
+
+  private def numeric(value: Any): Option[BigDecimal] =
+    value match
+      case value: Byte => Some(BigDecimal(value))
+      case value: Short => Some(BigDecimal(value))
+      case value: Int => Some(BigDecimal(value))
+      case value: Long => Some(BigDecimal(value))
+      case value: Float => Some(BigDecimal.decimal(value))
+      case value: Double => Some(BigDecimal(value))
+      case value: BigDecimal => Some(value)
+      case value: java.math.BigDecimal => Some(BigDecimal(value))
+      case _ => None
+
+  private def jsonToAny(value: Json): Any =
+    value.fold(
+      jsonNull = null,
+      jsonBoolean = identity,
+      jsonNumber = number =>
+        number.toBigDecimal
+          .orElse(number.toLong.map(BigDecimal(_)))
+          .getOrElse(BigDecimal(number.toString)),
+      jsonString = identity,
+      jsonArray = values => values.map(jsonToAny).toList,
+      jsonObject = obj => obj.toMap.view.mapValues(jsonToAny).toMap,
+    )

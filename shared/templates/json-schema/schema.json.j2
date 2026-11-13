@@ -1,0 +1,328 @@
+{%- macro ref_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}
+{%- if dependency.is_self -%}#{%- else -%}{{ dependency.path.relative }}{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro dryv_string_pattern(primitive) -%}
+{%- if primitive.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif primitive.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif primitive.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif primitive.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif primitive.is.hex -%}^[0-9a-fA-F]+$
+{%- elif primitive.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif primitive.is.jwt -%}^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+{%- elif primitive.is.semver -%}^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+{%- elif primitive.is.country_code -%}^[A-Z]{2}$
+{%- elif primitive.is.currency_code -%}^[A-Z]{3}$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro standard_string_format(primitive) -%}
+{%- if primitive.is.uuid -%}uuid
+{%- elif primitive.is.email -%}email
+{%- elif primitive.is.url or primitive.is.uri -%}uri
+{%- elif primitive.is.hostname -%}hostname
+{%- elif primitive.is.ipv4 -%}ipv4
+{%- elif primitive.is.ipv6 -%}ipv6
+{%- elif primitive.is.regex -%}regex
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro primitive_schema(primitive) -%}
+{
+{%- if primitive.is.integer %}
+  "type": "integer"
+{%- elif primitive.is.number %}
+  "type": "number"
+{%- elif primitive.is.boolean %}
+  "type": "boolean"
+{%- else %}
+  "type": "string"
+{%- endif %}
+{%- set constraints = primitive.constraints %}
+{%- if primitive.is.string %}
+{%- if constraints.length is not none and constraints.length.has_exact %},
+  "minLength": {{ constraints.length.exact }},
+  "maxLength": {{ constraints.length.exact }}
+{%- else %}
+{%- if constraints.length is not none and constraints.length.has_min %},
+  "minLength": {{ constraints.length.min }}
+{%- endif %}
+{%- if constraints.length is not none and constraints.length.has_max %},
+  "maxLength": {{ constraints.length.max }}
+{%- endif %}
+{%- endif %}
+{%- set format = standard_string_format(primitive) | trim %}
+{%- if format %},
+  "format": {{ format | tojson }}
+{%- endif %}
+{%- set dryv_pattern = dryv_string_pattern(primitive) | trim %}
+{%- if dryv_pattern %},
+  "pattern": {{ dryv_pattern | tojson }}
+{%- endif %}
+{%- if constraints.pattern is not none and constraints.pattern.match %},
+  "allOf": [
+{%- for expression in constraints.pattern.match %}
+    {"pattern": {{ expression | tojson }}}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- if constraints.range is not none and constraints.range.has_min %},
+  "minimum": {{ constraints.range.min }}
+{%- endif %}
+{%- if constraints.range is not none and constraints.range.has_max %},
+  "maximum": {{ constraints.range.max }}
+{%- endif %}
+{%- if constraints.has_multiple_of %},
+  "multipleOf": {{ constraints.multiple_of }}
+{%- endif %}
+{%- endif %}
+}
+{%- endmacro -%}
+
+{%- macro temporal_schema(temporal) -%}
+{
+  "type": "string"
+{%- if temporal.is.date %},
+  "format": "date"
+{%- elif temporal.is.time %},
+  "format": "time"
+{%- elif temporal.is.date_time or temporal.is.instant or temporal.is.zoned_date_time %},
+  "format": "date-time"
+{%- elif temporal.is.duration %},
+  "format": "duration"
+{%- endif %}
+}
+{%- endmacro -%}
+
+{%- macro type_schema(type) -%}
+{%- if type.kind == 'primitive' -%}
+{"type": {{ type.name | tojson }}}
+{%- elif type.kind == 'reference' -%}
+{%- set ref = ref_for(type.target) | trim -%}
+{%- if ref -%}{"$ref": {{ ref | tojson }}}{%- else -%}{}{%- endif -%}
+{%- elif type.kind == 'literal' -%}
+{"const": {{ type.value | tojson }}}
+{%- elif type.kind == 'array' -%}
+{
+  "type": "array",
+  "items": {{ type_schema(type.items) }}
+{%- if type.length is not none and type.length.has_exact %},
+  "minItems": {{ type.length.exact }},
+  "maxItems": {{ type.length.exact }}
+{%- else %}
+{%- if type.length is not none and type.length.has_min %},
+  "minItems": {{ type.length.min }}
+{%- endif %}
+{%- if type.length is not none and type.length.has_max %},
+  "maxItems": {{ type.length.max }}
+{%- endif %}
+{%- endif %}
+}
+{%- elif type.kind == 'tuple' -%}
+{
+  "type": "array",
+  "prefixItems": [
+{%- for item in type.items %}
+    {{ type_schema(item) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "items": false,
+  "minItems": {{ type.items | length }},
+  "maxItems": {{ type.items | length }}
+}
+{%- elif type.kind == 'record' -%}
+{
+  "type": "object",
+  "additionalProperties": {{ type_schema(type.values) }}
+}
+{%- elif type.kind == 'object' -%}
+{
+  "type": "object",
+  "properties": {
+{%- for field in type.fields %}
+    {{ field.name.raw | tojson }}: {{ type_schema(field.type) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  },
+  "required": [
+{%- set required = namespace(first=true) %}
+{%- for field in type.fields %}
+{%- if field.required %}
+    {% if not required.first %},{% endif %}{{ field.name.raw | tojson }}{% set required.first=false %}
+{%- endif %}
+{%- endfor %}
+  ],
+  "additionalProperties": false
+}
+{%- elif type.kind == 'union' -%}
+{
+  "anyOf": [
+{%- for member in type.members %}
+    {{ type_schema(member) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}
+{%- elif type.kind == 'nullable' -%}
+{
+  "anyOf": [
+    {{ type_schema(type.value) }},
+    {"type": "null"}
+  ]
+}
+{%- else -%}
+{}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro composite_schema(composite) -%}
+{
+  "type": "object",
+  "properties": {
+{%- for field in composite.fields %}
+    {{ field.name.raw | tojson }}: {{ field_schema(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  },
+  "required": [
+{%- set required = namespace(first=true) %}
+{%- for field in composite.fields %}
+{%- if not field.optional %}
+    {% if not required.first %},{% endif %}{{ field.name.raw | tojson }}{% set required.first=false %}
+{%- endif %}
+{%- endfor %}
+  ],
+  "additionalProperties": false
+}
+{%- endmacro -%}
+
+{%- macro value_schema(value) -%}
+{%- if value.is.schema -%}
+{%- set ref = ref_for(value.schema) | trim -%}
+{%- if ref -%}{"$ref": {{ ref | tojson }}}{%- else -%}{}{%- endif -%}
+{%- elif value.is.primitive -%}
+{{ primitive_schema(value.property.primitive) }}
+{%- elif value.is.enum -%}
+{
+  "enum": [
+{%- for item in value.property.enum.values %}
+    {{ item.value_json }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}
+{%- elif value.is.literal -%}
+{"const": {{ value.property.literal.value.value | tojson }}}
+{%- elif value.is.temporal -%}
+{{ temporal_schema(value.property.temporal) }}
+{%- elif value.is.composite -%}
+{{ composite_schema(value.property.composite) }}
+{%- elif value.is.record -%}
+{
+  "type": "object",
+  "additionalProperties": {{ type_schema(value.property.record.values) }}
+}
+{%- elif value.is.tuple -%}
+{
+  "type": "array",
+  "prefixItems": [
+{%- for item in value.property.tuple.items %}
+    {{ type_schema(item.type) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "items": false,
+  "minItems": {{ value.property.tuple.items | length }},
+  "maxItems": {{ value.property.tuple.items | length }}
+}
+{%- elif value.is.union -%}
+{
+  "anyOf": [
+{%- for member in value.property.union.members %}
+    {{ type_schema(member.type) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}
+{%- elif value.is.generic and value.property.generic.kind == 'definition' and value.property.generic.value is not none -%}
+{{ type_schema(value.property.generic.value) }}
+{%- else -%}
+{}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro array_schema(field) -%}
+{
+  "type": "array",
+  "items": {{ value_schema(field.value) }}
+{%- if field.array.has_min %},
+  "minItems": {{ field.array.min }}
+{%- endif %}
+{%- if field.array.has_max %},
+  "maxItems": {{ field.array.max }}
+{%- endif %}
+}
+{%- endmacro -%}
+
+{%- macro core_field_schema(field) -%}
+{%- if field.array is not none -%}
+{{ array_schema(field) }}
+{%- else -%}
+{{ value_schema(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_schema(field) -%}
+{%- set has_default = field.default is not none and field.default.kind == 'value' -%}
+{%- if has_default %}
+{
+  "allOf": [
+{%- if field.nullable %}
+    {
+      "anyOf": [
+        {{ core_field_schema(field) }},
+        {"type": "null"}
+      ]
+    }
+{%- else %}
+    {{ core_field_schema(field) }}
+{%- endif %}
+  ],
+  "default": {{ field.default.value_json }}
+}
+{%- elif field.nullable %}
+{
+  "anyOf": [
+    {{ core_field_schema(field) }},
+    {"type": "null"}
+  ]
+}
+{%- else %}
+{{ core_field_schema(field) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": {{ schema.name.title | tojson }}
+{%- if schema.description is not none %},
+  "description": {{ schema.description | tojson }}
+{%- endif %},
+  "type": "object",
+  "properties": {
+{%- for field in schema.fields %}
+    {{ field.name.raw | tojson }}: {{ field_schema(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  },
+  "required": [
+{%- set required = namespace(first=true) %}
+{%- for field in schema.fields %}
+{%- if not field.optional %}
+    {% if not required.first %},{% endif %}{{ field.name.raw | tojson }}{% set required.first=false %}
+{%- endif %}
+{%- endfor %}
+  ],
+  "additionalProperties": false
+{%- if schema.examples %},
+  "examples": {{ schema.examples | tojson }}
+{%- endif %}
+}

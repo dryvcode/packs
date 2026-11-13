@@ -1,0 +1,81 @@
+use std::{fmt::Display, str::FromStr};
+
+use axum::http::{HeaderMap, header::COOKIE};
+
+use crate::ApiError;
+
+pub fn required_header<T>(headers: &HeaderMap, name: &str) -> Result<T, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    let raw = headers
+        .get(name)
+        .ok_or_else(|| ApiError::bad_request(format!("missing required header {name}")))?
+        .to_str()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))?;
+
+    raw.parse::<T>()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))
+}
+
+pub fn optional_header<T>(headers: &HeaderMap, name: &str) -> Result<Option<T>, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    let Some(value) = headers.get(name) else {
+        return Ok(None);
+    };
+    let raw = value
+        .to_str()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))?;
+    raw.parse::<T>()
+        .map(Some)
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))
+}
+
+pub fn required_cookie<T>(headers: &HeaderMap, name: &str) -> Result<T, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    cookie_value(headers, name)?
+        .ok_or_else(|| ApiError::bad_request(format!("missing required cookie {name}")))?
+        .parse::<T>()
+        .map_err(|error| ApiError::bad_request(format!("invalid cookie {name}: {error}")))
+}
+
+pub fn optional_cookie<T>(headers: &HeaderMap, name: &str) -> Result<Option<T>, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    cookie_value(headers, name)?
+        .map(|value| {
+            value
+                .parse::<T>()
+                .map_err(|error| ApiError::bad_request(format!("invalid cookie {name}: {error}")))
+        })
+        .transpose()
+}
+
+fn cookie_value(headers: &HeaderMap, name: &str) -> Result<Option<String>, ApiError> {
+    let Some(header) = headers.get(COOKIE) else {
+        return Ok(None);
+    };
+    let raw = header
+        .to_str()
+        .map_err(|error| ApiError::bad_request(format!("invalid Cookie header: {error}")))?;
+
+    for part in raw.split(';') {
+        let Some((key, value)) = part.trim().split_once('=') else {
+            continue;
+        };
+        if key == name {
+            return Ok(Some(value.to_owned()));
+        }
+    }
+
+    Ok(None)
+}

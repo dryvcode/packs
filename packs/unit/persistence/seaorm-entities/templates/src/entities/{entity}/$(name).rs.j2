@@ -1,0 +1,112 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
+{%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro module_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.path.relative | replace('.rs', '') | replace('./', '') }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro scalar_type(value) -%}
+{%- if value is none -%}Json
+{%- elif value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}Json
+{%- elif value.is.enum -%}String
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}i64
+{%- elif value.is.decimal or value.is.money -%}Decimal
+{%- elif value.is.number -%}f64
+{%- elif value.is.uuid -%}Uuid
+{%- elif value.is.temporal and value.is.date -%}Date
+{%- elif value.is.temporal and value.is.time -%}Time
+{%- elif value.is.temporal and value.is.date_time -%}DateTime
+{%- elif value.is.temporal and (value.is.instant or value.is.zoned_date_time) -%}DateTimeWithTimeZone
+{%- elif value.is.temporal -%}String
+{%- elif value.is.string -%}String
+{%- else -%}Json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}{% set base = 'Json' %}
+{%- else -%}{% set base = scalar_type(field.value) %}
+{%- endif -%}
+{%- if field.optional or field.nullable -%}Option<{{ base }}>{%- else -%}{{ base }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro custom_column_type(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}Json
+{%- elif value.is.enum -%}Text
+{%- elif value.is.string and not value.is.uuid -%}Text
+{%- elif value.is.decimal or value.is.money -%}
+{%- set constraints = value.property.primitive.constraints -%}
+{%- if constraints.has_precision and constraints.has_scale -%}Decimal(Some(({{ constraints.precision }}, {{ constraints.scale }}))){%- else -%}Decimal(None){%- endif -%}
+{%- elif value.is.temporal and (value.is.duration or value.is.interval or value.is.year_month or value.is.month_day) -%}Text
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro action(value) -%}
+{%- if value == 'cascade' -%}Cascade
+{%- elif value == 'restrict' -%}Restrict
+{%- elif value == 'detach' -%}SetNull
+{%- elif value == 'reset' -%}SetDefault
+{%- else -%}NoAction
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro column(field) -%}
+{%- set custom = custom_column_type(field) -%}
+    #[sea_orm(column_name = "{{ field.name.snake }}"{% if field.storage is not none and field.storage.primary_key %}, primary_key{% if not (field.value.is.integer and field.mutation == 'system') %}, auto_increment = false{% endif %}{% endif %}{% if custom %}, column_type = "{{ custom }}"{% endif %}{% if field.optional or field.nullable %}, nullable{% endif %}{% if field.relation is not none and field.relation.is.one_to_one %}, unique{% endif %})]
+    pub {{ rust_ident(field.name.snake) }}: {{ field_type(field) }},
+{%- endmacro -%}
+
+{%- macro owning_relation(field) -%}
+{%- if field.relation is not none and module_for(field.relation.target.schema) %}
+    #[sea_orm(
+        belongs_to,
+        from = "{{ field.name.snake }}",
+        to = "{{ field.relation.target.field.snake }}"{% if field.relation.on_update is not none %},
+        on_update = "{{ action(field.relation.on_update) }}"{% endif %}{% if field.relation.on_delete is not none %},
+        on_delete = "{{ action(field.relation.on_delete) }}"{% endif %}
+    )]
+    pub {{ rust_ident(field.name.snake ~ '_relation') }}: BelongsTo<{% if field.optional or field.nullable %}Option<{% endif %}super::{{ module_for(field.relation.target.schema) }}::Entity{% if field.optional or field.nullable %}>{% endif %}>,
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro inverse_relation(field) -%}
+{%- if field.related is not none and module_for(field.related.via.schema) %}
+{%- if field.related.cardinality == 'one-to-one' %}
+    #[sea_orm(has_one)]
+    pub {{ rust_ident(field.name.snake) }}: HasOne<super::{{ module_for(field.related.via.schema) }}::Entity>,
+{%- elif field.related.cardinality == 'one-to-many' %}
+    #[sea_orm(has_many)]
+    pub {{ rust_ident(field.name.snake) }}: HasMany<super::{{ module_for(field.related.via.schema) }}::Entity>,
+{%- else %}
+    // Relation "{{ field.name.raw }}" requires an explicit junction/inverse mapping and is not approximated here.
+{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+use sea_orm::entity::prelude::*;
+
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm(table_name = "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"{% if schema.facets.storage and schema.facets.storage.namespace %}, schema_name = "{{ schema.facets.storage.namespace }}"{% endif %})]
+pub struct Model {
+{%- for field in schema.fields %}
+{%- if field.related is not none %}
+{{ inverse_relation(field) }}
+{%- else %}
+{{ column(field) }}
+{{ owning_relation(field) }}
+{%- endif %}
+{%- endfor %}
+}
+
+impl ActiveModelBehavior for ActiveModel {}
+
+pub type {{ file.symbol }} = Entity;

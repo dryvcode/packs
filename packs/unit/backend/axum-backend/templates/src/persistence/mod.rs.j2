@@ -1,0 +1,180 @@
+mod database;
+mod plan;
+mod read;
+mod validation;
+mod wire;
+mod write;
+
+use crate::ApiError;
+pub use plan::Failure;
+use sea_orm::sea_query::{Alias, Expr, ExprTrait, SelectStatement};
+use sea_orm::{DatabaseConnection, IsolationLevel, TransactionTrait};
+use std::sync::Arc;
+pub use wire::{Row, Trusted, Wire};
+
+/// Installed by authentication middleware; values never come from request data.
+#[derive(Clone, Debug)]
+pub struct Caller {
+    pub subject: String,
+}
+
+pub use crate::policies::PolicyEvaluator;
+
+#[derive(Clone)]
+pub struct DatabaseService<P> {
+    pub database: DatabaseConnection,
+    pub policies: Arc<P>,
+}
+impl<P: PolicyEvaluator> DatabaseService<P> {
+    pub fn new(database: DatabaseConnection, policies: P) -> Self {
+        Self {
+            database,
+            policies: Arc::new(policies),
+        }
+    }
+
+    pub async fn execute<I: serde::Serialize, O: serde::de::DeserializeOwned>(
+        &self,
+        document: &str,
+        input: I,
+        caller: Option<Caller>,
+    ) -> Result<O, ApiError> {
+        let plan: plan::Plan = serde_json::from_str(document).map_err(|_| ApiError::internal())?;
+        if plan.authenticated && caller.is_none() {
+            return Err(ApiError::denied());
+        }
+        let mut trusted = Trusted::new();
+        for policy in &plan.policies {
+            trusted.insert(
+                policy.clone(),
+                crate::policies::evaluate(self.policies.as_ref(), policy, caller.as_ref()).await?,
+            );
+        }
+        let mut input: Row =
+            serde_json::from_value(serde_json::to_value(input).map_err(|_| ApiError::internal())?)
+                .map_err(|_| ApiError::internal())?;
+        // Read defaults fill omitted arguments. Writes preserve omission for patch semantics.
+        if plan.read.is_some() {
+            for field in &plan.input_fields {
+                if !field.default.is_null() {
+                    input
+                        .entry(field.name.clone())
+                        .or_insert_with(|| field.default.clone());
+                }
+            }
+        }
+        validation::validate_fields(&plan, &plan.input_fields, &input, "", false)?;
+        if let Some(id) = &plan.input {
+            validation::checks(
+                &plan.schema(id)?.checks,
+                &Row::from([("value".into(), Wire::Object(input.clone()))]),
+            )?;
+        }
+        let mut contexts = input.clone();
+        contexts.insert("input".into(), Wire::Object(input.clone()));
+        validation::checks(&plan.checks, &contexts)?;
+        let transaction = self
+            .database
+            .begin_with_config(Some(IsolationLevel::RepeatableRead), None)
+            .await
+            .map_err(|error| database::error_for(&plan, error))?;
+        let result = if let Some(read) = &plan.read {
+            read::execute(&transaction, &plan, read, &input, &trusted).await
+        } else if let Some(write) = &plan.write {
+            write::execute(&transaction, &plan, write, &input, &trusted).await
+        } else {
+            Err(ApiError::internal())
+        };
+        match result {
+            Ok(value) => {
+                // Decode before commit too: a mismatched result contract rolls the write back.
+                let output = serde_json::from_value(
+                    serde_json::to_value(value).map_err(|_| ApiError::internal())?,
+                )
+                .map_err(|_| ApiError::internal())?;
+                transaction
+                    .commit()
+                    .await
+                    .map_err(|error| database::error_for(&plan, error))?;
+                Ok(output)
+            }
+            Err(error) => {
+                transaction
+                    .rollback()
+                    .await
+                    .map_err(|error| database::error_for(&plan, error))?;
+                Err(error)
+            }
+        }
+    }
+}
+
+fn trusted_value<'a>(trusted: &'a Trusted, policy: &str, name: &str) -> Result<&'a Wire, ApiError> {
+    trusted
+        .get(policy)
+        .and_then(|values| values.get(name))
+        .filter(|value| !value.is_null())
+        .ok_or_else(ApiError::denied)
+}
+fn source(value: &plan::Source, input: &Row, trusted: &Trusted) -> Result<Option<Wire>, ApiError> {
+    Ok(match value.kind.as_str() {
+        "input" => input.get(&value.name).cloned(),
+        "policy" => Some(trusted_value(trusted, &value.policy, &value.name)?.clone()),
+        "literal" => Some(value.value.clone()),
+        "uuid" => Some(Wire::Text(uuid::Uuid::new_v4().to_string())),
+        "now" => Some(Wire::Text(
+            time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)
+                .map_err(|_| ApiError::internal())?,
+        )),
+        "default" => None,
+        _ => return Err(ApiError::internal()),
+    })
+}
+fn scope(
+    plan: &plan::Plan,
+    schema: &plan::Schema,
+    query: &mut SelectStatement,
+    trusted: &Trusted,
+) -> Result<(), ApiError> {
+    for binding in &plan.scope {
+        let value = trusted_value(trusted, &binding.policy, &binding.name)?;
+        let field = schema.field(&binding.field)?;
+        query.and_where(
+            Expr::col((Alias::new("t0"), Alias::new(&field.column))).eq(value.sql(field)?),
+        );
+    }
+    Ok(())
+}
+
+/// Validate the original JSON tree before serde can erase omitted/null distinctions.
+pub struct JsonRequest<T> {
+    raw: Wire,
+    marker: std::marker::PhantomData<T>,
+}
+impl<S: Send + Sync, T: Send> axum::extract::FromRequest<S> for JsonRequest<T> {
+    type Rejection = ApiError;
+    async fn from_request(
+        request: axum::extract::Request,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let axum::Json(raw) = axum::Json::<Wire>::from_request(request, state)
+            .await
+            .map_err(|_| ApiError::bad_request("The request body must be valid JSON."))?;
+        Ok(Self {
+            raw,
+            marker: std::marker::PhantomData,
+        })
+    }
+}
+impl<T: serde::de::DeserializeOwned> JsonRequest<T> {
+    pub fn decode(self, document: &str) -> Result<T, ApiError> {
+        let plan: plan::Plan = serde_json::from_str(document).map_err(|_| ApiError::internal())?;
+        let Wire::Object(row) = &self.raw else {
+            return Err(ApiError::validation("", "Expected an object."));
+        };
+        validation::validate_fields(&plan, &plan.input_fields, row, "", false)?;
+        serde_json::from_value(serde_json::to_value(self.raw).map_err(|_| ApiError::internal())?)
+            .map_err(|_| ApiError::validation("", "The request has an invalid value."))
+    }
+}

@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ],
+    "paths": {
+      "#/*": [
+        "./out/*"
+      ],
+      "@/*": [
+        "./out/*"
+      ],
+      "@gen/*": [
+        "./out/*"
+      ]
+    }
+  },
+  "include": [
+    "out/**/*.ts",
+    "server.test.ts"
+  ]
+}

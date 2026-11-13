@@ -1,0 +1,158 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'record', 'sealed', 'permits', 'yield', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro java_type(value) -%}
+{%- if value is none -%}Object
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}ZonedDateTime
+{%- elif value.is.temporal and value.is.duration -%}Duration
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay
+{%- elif value.is.record -%}Map<String, Object>
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+{%- macro class_literal(value) -%}
+{%- if value is none -%}Object.class
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}.class
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}.class
+{%- elif value.is.boolean -%}Boolean.class
+{%- elif value.is.integer -%}Long.class
+{%- elif value.is.decimal or value.is.money -%}BigDecimal.class
+{%- elif value.is.number -%}Double.class
+{%- elif value.is.temporal and value.is.date -%}LocalDate.class
+{%- elif value.is.temporal and value.is.time -%}LocalTime.class
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime.class
+{%- elif value.is.temporal and value.is.instant -%}Instant.class
+{%- elif value.is.temporal and value.is.zoned_date_time -%}ZonedDateTime.class
+{%- elif value.is.temporal and value.is.duration -%}Duration.class
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth.class
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay.class
+{%- elif value.is.string -%}String.class
+{%- else -%}Object.class
+{%- endif -%}
+{%- endmacro -%}
+{%- macro input_type(field) -%}{{ java_type(field.value) }}{%- endmacro -%}
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ java_ident(binding.port.field.camel) }}{%- endif -%}
+{%- endmacro -%}
+{%- set http = operation.facets.http -%}
+package {{ pack.inputs.java_package }}.operations;
+
+import {{ pack.inputs.java_package }}.DryvClient;
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.java_package }}.models.{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+import java.math.BigDecimal;
+import java.net.http.HttpRequest;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.YearMonth;
+import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class {{ file.symbol }} {
+    private {{ file.symbol }}() {}
+
+{%- if operation.input and operation.input.kind != 'schema' %}
+    public static final class Input {
+{%- for field in operation.input.fields %}
+        public {{ input_type(field) }} {{ java_ident(field.name.camel) }};
+{%- endfor %}
+    }
+
+{%- endif %}
+    public static {% if operation.output %}{{ java_type(operation.output.value) }}{% else %}void{% endif %} execute(
+            DryvClient client{% if operation.input %},
+            {% if operation.input.kind == 'schema' %}{{ java_type(operation.input.value) }}{% else %}Input{% endif %} input{% endif %}
+    ) {
+{%- if http.input_groups.multipart %}
+        throw new UnsupportedOperationException(
+                "multipart bindings require an explicit Java semantic mapping"
+        );
+{%- else %}
+        String path = "{{ http.path.local }}";
+{%- for binding in http.input_groups.path %}
+        path = DryvClient.replacePath(path, "{{ binding.name or binding.port.name.raw }}", {{ bound(binding) }});
+{%- endfor %}
+{%- if http.input_groups.query %}
+        Map<String, Object> query = new LinkedHashMap<>();
+{%- for binding in http.input_groups.query %}
+        query.put("{{ binding.name or binding.port.name.raw }}", {{ bound(binding) }});
+{%- endfor %}
+        path = client.appendQuery(path, query);
+{%- endif %}
+{%- for binding in http.input_groups.query_object %}
+        path = client.appendQueryObject(path, {{ bound(binding) }});
+{%- endfor %}
+
+        HttpRequest.Builder request = client.request(path);
+{%- for binding in http.input_groups.header %}
+        if ({{ bound(binding) }} != null) {
+            request.header("{{ binding.name or binding.port.name.raw }}", String.valueOf({{ bound(binding) }}));
+        }
+{%- endfor %}
+{%- if http.input_groups.cookie %}
+        StringBuilder cookies = new StringBuilder();
+{%- for binding in http.input_groups.cookie %}
+        if ({{ bound(binding) }} != null) {
+            if (cookies.length() > 0) {
+                cookies.append("; ");
+            }
+            cookies.append("{{ binding.name or binding.port.name.raw }}=")
+                    .append({{ bound(binding) }});
+        }
+{%- endfor %}
+        if (cookies.length() > 0) {
+            request.header("Cookie", cookies.toString());
+        }
+{%- endif %}
+
+        HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.noBody();
+{%- for binding in http.input_groups.body %}
+        request.header("Content-Type", "application/json");
+        body = HttpRequest.BodyPublishers.ofString(client.json({{ bound(binding) }}));
+{%- endfor %}
+{%- if http.input_groups.form %}
+        Map<String, Object> form = new LinkedHashMap<>();
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+        form.putAll(client.objectMapper().convertValue({{ bound(binding) }}, Map.class));
+{%- else %}
+        form.put("{{ binding.name or binding.port.name.raw }}", {{ bound(binding) }});
+{%- endif %}
+{%- endfor %}
+        request.header("Content-Type", "application/x-www-form-urlencoded");
+        body = HttpRequest.BodyPublishers.ofString(client.form(form));
+{%- endif %}
+        request.method("{{ http.method }}", body);
+
+{%- if operation.output %}
+        return client.send(request.build(), {{ class_literal(operation.output.value) }});
+{%- else %}
+        client.sendEmpty(request.build());
+{%- endif %}
+{%- endif %}
+    }
+}

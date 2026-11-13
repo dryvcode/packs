@@ -1,0 +1,35 @@
+{% if pack.inputs.repositories %}
+{%- macro symbol_for(link) -%}{%- for dependency in file.dependencies -%}{%- if dependency.target.id == link.id -%}crate::models::{{ dependency.symbol }}{%- endif -%}{%- endfor -%}{%- endmacro -%}
+{%- macro rust_type(value) -%}
+{%- if value.is.schema -%}{{ symbol_for(value.schema) or 'serde_json::Value' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}i64
+{%- elif value.is.number -%}f64
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'serde_json::Value' }}
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}serde_json::Value{%- endif -%}
+{%- endmacro -%}
+use crate::{ApiError, persistence::{Caller, Row}};
+
+{% for policy in policies %}
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct {{ policy.group.name.pascal }}{{ policy.name.pascal }}Context {
+{% for provided in policy.context.provides %}    #[serde(rename = "{{ provided.name.raw }}")]
+    pub {% if provided.name.snake in ['self', 'super', 'crate'] %}{{ provided.name.snake }}_{% else %}r#{{ provided.name.snake }}{% endif %}: {{ rust_type(provided.resolved) }},
+{% endfor %}}
+{% endfor %}
+#[async_trait::async_trait]
+pub trait PolicyEvaluator: Send + Sync + 'static {
+{% for policy in policies %}    async fn {{ policy.group.name.snake }}_{{ policy.name.snake }}(&self, caller: Option<&Caller>) -> Result<{{ policy.group.name.pascal }}{{ policy.name.pascal }}Context, ApiError>;
+{% endfor %}}
+
+pub(crate) async fn evaluate<P: PolicyEvaluator>(evaluator: &P, policy: &str, caller: Option<&Caller>) -> Result<Row, ApiError> {
+    match policy {
+{% for policy in policies %}        "{{ policy.id }}" => {
+            let values = evaluator.{{ policy.group.name.snake }}_{{ policy.name.snake }}(caller).await?;
+            serde_json::from_value(serde_json::to_value(values).map_err(|_| ApiError::internal())?).map_err(|_| ApiError::internal())
+        },
+{% endfor %}        _ => { let _ = (evaluator, caller); Err(ApiError::denied()) },
+    }
+}
+{% endif %}

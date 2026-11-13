@@ -1,0 +1,23 @@
+# {{ application.name.title }} — Dryv Reference
+
+{% if application.description %}{{ application.description }}
+
+{% endif %}Generated from Canonical Dryv Runtime IR. This documentation is a projection; Runtime IR remains the semantic authority.
+
+## Reference
+
+- [Schemas](schemas.md)
+- [Operations](operations.md)
+- [Relationships](relationships.md)
+- [Policies](policies.md)
+- [Failures](failures.md)
+- [Events](events.md)
+- [Workflows](workflows.md)
+
+## HTTP scope
+
+{% if application.facets.http.root %}Application HTTP root: `{{ application.facets.http.root }}`.
+{% else %}No application-level HTTP root is declared.
+{% endif %}
+
+Operation documentation reports each operation's **local** HTTP path separately. Dryv does not yet expose one canonical effective path after composing the application and group hierarchy.
