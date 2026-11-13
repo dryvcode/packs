@@ -50,9 +50,19 @@ impl<P: PolicyEvaluator> DatabaseService<P> {
                 crate::policies::evaluate(self.policies.as_ref(), policy, caller.as_ref()).await?,
             );
         }
-        let input: Row =
+        let mut input: Row =
             serde_json::from_value(serde_json::to_value(input).map_err(|_| ApiError::internal())?)
                 .map_err(|_| ApiError::internal())?;
+        // Read defaults fill omitted arguments. Writes preserve omission for patch semantics.
+        if plan.read.is_some() {
+            for field in &plan.input_fields {
+                if !field.default.is_null() {
+                    input
+                        .entry(field.name.clone())
+                        .or_insert_with(|| field.default.clone());
+                }
+            }
+        }
         validation::validate_fields(&plan, &plan.input_fields, &input, "", false)?;
         if let Some(id) = &plan.input {
             validation::checks(
