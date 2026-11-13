@@ -13,10 +13,16 @@ Generates TypeORM entities from schemas with the `entity` role.
 | enums | `type: "enum"` with the generated enum |
 | temporal | `date`, `time`, `interval` or `timestamptz` |
 | records, composites, unknown, embedded schemas | `jsonb` |
-| `relation` (many-to-one / one-to-one) | the FK column plus `@ManyToOne`/`@OneToOne` + `@JoinColumn`, with `onDelete` |
+| `relation` (many-to-one / one-to-one) | the FK column plus `@ManyToOne`/`@OneToOne` + `@JoinColumn`, with `onDelete`, when the target entity is generated; otherwise the scalar column remains and a source comment says the FK/navigation was omitted |
 | `related` | `@OneToMany(() => Other, (item) => item.<thisSchema>)` |
 
 Column names follow the `naming_strategy` input (`snake`, the default, or `camel`). Descriptions on primitive properties become column comments.
+
+This pack only creates TypeORM relations when it can resolve a generated target entity in the same
+pack plan. A semantically valid Dryv relation may target a Schema outside the selected entity output;
+in that case the generated field stays scalar and the emitted source comment makes the missing ORM
+relationship visible. Include the target Schema in the persistence selection when the database FK is
+required.
 
 **Provides:** `schema.persistence` (entities) and `property.enum.types` (enums).
 

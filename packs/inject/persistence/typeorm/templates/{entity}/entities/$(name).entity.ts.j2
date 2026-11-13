@@ -113,6 +113,9 @@
 
   {% if primary and field.mutation == 'system' and field.value.is.property and field.value.is.primitive and field.value.property.primitive.is.uuid %}@PrimaryGeneratedColumn("uuid", { name: "{{ column(field.name) }}" }){% elif primary %}@PrimaryColumn({ name: "{{ column(field.name) }}", {{ column_options(field) }} }){% else %}@Column({ name: "{{ column(field.name) }}", {{ column_options(field) }}{% if field.optional or field.nullable %}, nullable: true{% endif %}{% if field.default is not none and field.default.kind == 'value' %}, default: {{ field.default.value | tojson }}{% endif %}{{ comment(field) }} }){% endif %}
   {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) == '' %}
+  // Relation target {{ field.relation.target.schema.id }} has no generated entity here; TypeORM FK and navigation are omitted.
+{%- endif %}
 {%- if field.relation is not none and symbol_for(field.relation.target.schema) %}
 
   @{% if field.relation.is.one_to_one %}OneToOne{% else %}ManyToOne{% endif %}(() => {{ symbol_for(field.relation.target.schema) }}{% if field.relation.on_delete is not none %}, { onDelete: "{{ on_delete(field.relation.on_delete) }}" }{% endif %})
