@@ -2,7 +2,8 @@ version: dryv.pack/v1alpha1
 key: unit.clients.python-client-sdk
 layout: unit
 package:
-  name: dryv-client
+  name: { $ref: "#/inputs/package_name" }
+  import_root: src/dryv_client
 
 source: templates
 
@@ -21,7 +22,16 @@ plugins:
   - name: jinja
     extensions: [.j2]
 
+inputs:
+  package_name:
+    type: string
+    default: dryv-client
+    description: Distribution name for the generated Python SDK.
+
 selections:
+  failures:
+    subject: failure
+    scope: all
   enums:
     subject: property.enum
     scope: each
@@ -41,6 +51,10 @@ selections:
     scope: each
 
 templates:
+  failures:
+    $ref: "#/selections/failures"
+    imports:
+      - $ref: "#/templates/model"
   enum:
     $ref: "#/selections/enums"
     output:

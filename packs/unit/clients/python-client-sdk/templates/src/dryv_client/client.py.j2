@@ -7,21 +7,17 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, JsonValue
 
 
-class ApiError(RuntimeError):
-    def __init__(self, status: int, message: str, payload: Any = None) -> None:
-        super().__init__(message)
-        self.status = status
-        self.payload = payload
+from dryv_client.errors import ApiError, ERROR_TYPES
 
 
 def to_wire(value: Any) -> Any:
     if value is None:
         return None
     if isinstance(value, BaseModel):
-        return value.model_dump(mode="json", exclude_none=True)
+        return value.model_dump(mode="json", by_alias=True, exclude_unset=True)
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, (UUID, Decimal)):
@@ -93,15 +89,18 @@ class DryvClient:
 
         response = await self.http.request(method, self.base_url + path, **kwargs)
         if not response.is_success:
-            payload: Any = None
+            payload: JsonValue = None
             message = response.text.strip()
             try:
                 payload = response.json()
-                if isinstance(payload, dict) and isinstance(payload.get("message"), str):
-                    message = payload["message"]
+                message_value = payload.get("message") if isinstance(payload, dict) else None
+                if isinstance(message_value, str):
+                    message = message_value
             except ValueError:
                 pass
-            raise ApiError(response.status_code, message, payload)
+            code = payload.get("code") if isinstance(payload, dict) else None
+            error_type = ERROR_TYPES.get(code, ApiError) if isinstance(code, str) else ApiError
+            raise error_type(response.status_code, message, payload)
 
         if output_type is None or response.status_code == 204 or not response.content:
             return None

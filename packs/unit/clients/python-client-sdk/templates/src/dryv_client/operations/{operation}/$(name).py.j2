@@ -54,9 +54,9 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from ..client import DryvClient, append_param, to_wire
+from dryv_client.client import DryvClient, append_param, to_wire
 {%- for dependency in file.dependencies %}{% if dependency.symbol %}
-from ..models import {{ dependency.symbol }}
+from dryv_client.models import {{ dependency.symbol }}
 {%- endif %}{% endfor %}
 
 {%- if operation.input and operation.input.kind != 'schema' %}
@@ -69,11 +69,11 @@ class {{ operation.name.pascal }}Input(BaseModel):
 async def {{ file.symbol }}(
     client: DryvClient{% if operation.input %},
     input: {{ input_type(operation) }}{% endif %}
-) -> {% if operation.output %}{{ value_type(operation.output.value) }}{% else %}None{% endif %}:
+) -> {% if operation.output %}{% if operation.output.array is not none %}list[{% endif %}{{ value_type(operation.output.value) }}{% if operation.output.array is not none %}]{% endif %}{% else %}None{% endif %}:
 {%- if http.input_groups.multipart %}
     raise NotImplementedError("Multipart bindings require an explicit Python semantic mapping.")
 {%- else %}
-    path = {{ http.path.local | tojson }}
+    path = {{ http.path.effective | tojson }}
 {%- for binding in http.input_groups.path %}
     path = path.replace(
         "{" + {{ (binding.name or binding.port.name.raw) | tojson }} + "}",
@@ -126,10 +126,10 @@ async def {{ file.symbol }}(
 {%- endfor %}
 {%- endif %}
 
-    return await client.send(
+    result: {% if operation.output %}{% if operation.output.array is not none %}list[{% endif %}{{ value_type(operation.output.value) }}{% if operation.output.array is not none %}]{% endif %}{% else %}None{% endif %} = await client.send(
         {{ http.method | tojson }},
         path,
-        output_type={% if operation.output %}{{ value_type(operation.output.value) }}{% else %}None{% endif %},
+        output_type={% if operation.output %}{% if operation.output.array is not none %}list[{% endif %}{{ value_type(operation.output.value) }}{% if operation.output.array is not none %}]{% endif %}{% else %}None{% endif %},
         params=params,
         headers=headers,
         cookies=cookies,
@@ -137,4 +137,5 @@ async def {{ file.symbol }}(
         has_json_body=has_json_body,
         form=form,
     )
+    return result
 {%- endif %}

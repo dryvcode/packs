@@ -1,0 +1,191 @@
+use super::{
+    plan::{Column, Plan, Predicate, Schema},
+    wire::Row,
+};
+use crate::ApiError;
+use sea_orm::sea_query::{
+    Alias, Expr, ExprTrait, Func, IntoTableRef, JoinType, Query, SelectStatement, TableRef,
+};
+use sea_orm::{ConnectionTrait, DbErr, QueryResult};
+
+pub fn table(schema: &Schema) -> Result<TableRef, ApiError> {
+    let name = Alias::new(schema.table.as_deref().ok_or_else(ApiError::internal)?);
+    Ok(match &schema.namespace {
+        Some(namespace) => (Alias::new(namespace), name).into_table_ref(),
+        None => name.into_table_ref(),
+    })
+}
+pub fn json_row(schema: &Schema, alias: Option<&str>) -> Expr {
+    let args: Vec<Expr> = schema
+        .fields
+        .iter()
+        .flat_map(|field| {
+            [
+                Expr::val(field.name.clone()),
+                match alias {
+                    Some(alias) => Expr::col((Alias::new(alias), Alias::new(&field.column))),
+                    None => Expr::col(Alias::new(&field.column)),
+                },
+            ]
+        })
+        .collect();
+    Func::cust(Alias::new("jsonb_build_object"))
+        .args(args)
+        .into()
+}
+pub fn select(schema: &Schema) -> Result<SelectStatement, ApiError> {
+    let mut query = Query::select();
+    query
+        .from_as(table(schema)?, Alias::new("t0"))
+        .expr_as(json_row(schema, Some("t0")), Alias::new("data"));
+    Ok(query)
+}
+pub fn column(
+    plan: &Plan,
+    root: &str,
+    query: &mut SelectStatement,
+    column: &Column,
+    sequence: &mut usize,
+) -> Result<(Expr, super::plan::Field), ApiError> {
+    let mut alias = "t0".to_owned();
+    let mut entity = root;
+    for step in &column.path {
+        let source = plan.schema(&step.source)?;
+        let target = plan.schema(&step.target)?;
+        *sequence += 1;
+        let next = format!("j{sequence}");
+        query.join_as(
+            JoinType::LeftJoin,
+            table(target)?,
+            Alias::new(&next),
+            Expr::col((
+                Alias::new(&alias),
+                Alias::new(&source.field(&step.source_field)?.column),
+            ))
+            .equals((
+                Alias::new(&next),
+                Alias::new(&target.field(&step.target_field)?.column),
+            )),
+        );
+        alias = next;
+        entity = &step.target;
+    }
+    let field = plan.schema(entity)?.field(&column.field)?.clone();
+    Ok((
+        Expr::col((Alias::new(alias), Alias::new(&field.column))),
+        field,
+    ))
+}
+pub fn filters(
+    plan: &Plan,
+    root: &str,
+    query: &mut SelectStatement,
+    predicates: &[Predicate],
+    params: &Row,
+    sequence: &mut usize,
+) -> Result<(), ApiError> {
+    for predicate in predicates {
+        let value = predicate.parameter.as_ref().and_then(|key| params.get(key));
+        if predicate.operator != "null" && value.is_none() {
+            continue;
+        }
+        let (column, field) = column(plan, root, query, &predicate.column, sequence)?;
+        let condition = if predicate.operator == "null" {
+            if predicate.is_null {
+                column.is_null()
+            } else {
+                column.is_not_null()
+            }
+        } else {
+            let value = value.ok_or_else(ApiError::internal)?;
+            match predicate.operator.as_str() {
+                "equal" => column.eq(value.sql(&field)?),
+                "less-than" => column.lt(value.sql(&field)?),
+                "less-than-or-equal" => column.lte(value.sql(&field)?),
+                "greater-than" => column.gt(value.sql(&field)?),
+                "greater-than-or-equal" => column.gte(value.sql(&field)?),
+                "prefix" => {
+                    let escaped = value
+                        .text()
+                        .ok_or_else(ApiError::internal)?
+                        .replace('\\', "\\\\")
+                        .replace('%', "\\%")
+                        .replace('_', "\\_");
+                    column.like(format!("{escaped}%"))
+                }
+                _ => return Err(ApiError::internal()),
+            }
+        };
+        query.and_where(condition);
+    }
+    Ok(())
+}
+pub fn decode(row: QueryResult) -> Result<Row, ApiError> {
+    let json: serde_json::Value = row.try_get("", "data").map_err(|_| ApiError::internal())?;
+    serde_json::from_value(json).map_err(|_| ApiError::internal())
+}
+pub async fn fetch<C: ConnectionTrait>(
+    conn: &C,
+    query: &SelectStatement,
+    plan: &Plan,
+) -> Result<Vec<Row>, ApiError> {
+    conn.query_all(query)
+        .await
+        .map_err(|error| error_for(plan, error))?
+        .into_iter()
+        .map(decode)
+        .collect()
+}
+pub fn error_for(plan: &Plan, error: DbErr) -> ApiError {
+    use sea_orm::{sqlx::Error, RuntimeErr};
+    if let DbErr::Query(RuntimeErr::SqlxError(source))
+    | DbErr::Exec(RuntimeErr::SqlxError(source)) = &error
+    {
+        if let Error::Database(database) = source.as_ref() {
+            let code = database.code();
+            let kind = match code.as_deref() {
+                Some("23502") => "not-null",
+                Some("23503")
+                    if plan
+                        .write
+                        .as_ref()
+                        .is_some_and(|write| write.kind == "delete") =>
+                {
+                    "referenced"
+                }
+                Some("23503") => "foreign-key",
+                Some("23505") => "unique",
+                Some("23514") => "check",
+                Some("23P01") => "exclusion",
+                _ => "unknown",
+            };
+            if let Some(mapping) = plan.failures.iter().find(|mapping| {
+                mapping.kind == kind
+                    && mapping
+                        .constraint
+                        .as_ref()
+                        .is_none_or(|name| database.constraint() == Some(name.as_str()))
+                    && mapping.field.as_ref().is_none_or(|name| {
+                        let column = plan
+                            .schemas
+                            .iter()
+                            .flat_map(|schema| &schema.fields)
+                            .find(|field| &field.name == name)
+                            .map(|field| field.column.as_str());
+                        database
+                            .try_downcast_ref::<sea_orm::sqlx::postgres::PgDatabaseError>()
+                            .and_then(|error| error.column())
+                            == column
+                    })
+            }) {
+                let mut failure = ApiError::failure(&mapping.failure);
+                if let Some(field) = &mapping.field {
+                    failure.issue(field, &mapping.failure.message);
+                }
+                return failure;
+            }
+        }
+    }
+    tracing::error!(operation = %plan.operation, error = %error, "Database operation failed");
+    ApiError::internal()
+}

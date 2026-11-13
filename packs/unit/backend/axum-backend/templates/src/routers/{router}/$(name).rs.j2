@@ -1,3 +1,9 @@
+{%- macro plan_for(operation) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == operation.id -%}include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/", {{ rust_string(dependency.path.pack) }})){%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro rust_string(value) -%}"{{ value | replace('\\', '\\\\') | replace('"', '\\"') | replace('\n', '\\n') | replace('\r', '\\r') | replace('\t', '\\t') }}"{%- endmacro -%}
 {%- macro rust_ident(name) -%}
 {%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
 {%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
@@ -7,7 +13,7 @@
 
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
-{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- if dependency.target.id == link.id -%}crate::models::{{ dependency.symbol }}{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 
@@ -63,6 +69,7 @@
 {%- endmacro -%}
 
 {%- macro service_params(operation) -%}
+{%- if pack.inputs.repositories and operation.persistence is not none -%}, caller: Option<crate::persistence::Caller>{%- endif -%}
 {%- if operation.input -%}
 {%- if operation.input.kind == 'schema' -%}, input: {{ rust_type(operation.input.value) }}
 {%- else -%}
@@ -73,7 +80,7 @@
 {%- endmacro -%}
 
 {%- macro service_result(operation) -%}
-Result<{% if operation.output %}{{ rust_type(operation.output.value) }}{% else %}(){% endif %}, ApiError>
+Result<{% if operation.output %}{% if operation.output.array is not none %}Vec<{% endif %}{{ rust_type(operation.output.value) }}{% if operation.output.array is not none %}>{% endif %}{% else %}(){% endif %}, ApiError>
 {%- endmacro -%}
 
 {%- macro service_args(operation, http) -%}
@@ -104,21 +111,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::{
-    Form, Json, Router,
-    extract::{Multipart, Path, Query, State},
-    http::{HeaderMap, StatusCode},
+    Router,
+    extract::State,
+    http::StatusCode,
     response::{IntoResponse, Response},
     routing::{MethodFilter, on},
 };
-use serde::Deserialize;
-
-use crate::{
-    ApiError,
-    http::{optional_cookie, optional_header, required_cookie, required_header},
-};
-{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
-use crate::models::{{ dependency.symbol }};
-{%- endif %}{% endfor %}
+use crate::ApiError;
 
 #[async_trait]
 pub trait {{ file.symbols.service }}: Send + Sync + 'static {
@@ -131,7 +130,7 @@ pub trait {{ file.symbols.service }}: Send + Sync + 'static {
 {%- set http = operation.facets.http %}
 {%- if http.input_groups.path %}
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 struct {{ operation.name.pascal }}Path {
 {%- for binding in http.input_groups.path %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
@@ -141,7 +140,7 @@ struct {{ operation.name.pascal }}Path {
 {%- endif %}
 {%- if http.input_groups.query %}
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 struct {{ operation.name.pascal }}Query {
 {%- for binding in http.input_groups.query %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
@@ -151,7 +150,7 @@ struct {{ operation.name.pascal }}Query {
 {%- endif %}
 {%- if http.input_groups.form and not binds_whole(http) %}
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 struct {{ operation.name.pascal }}Form {
 {%- for binding in http.input_groups.form %}
     #[serde(rename = "{{ binding.name or binding.port.name.raw }}")]
@@ -165,7 +164,7 @@ pub fn {{ file.symbols.router }}(service: Arc<dyn {{ file.symbols.service }}>) -
     Router::new()
 {%- for operation in operations %}
         .route(
-            "{{ operation.facets.http.path.effective }}",
+            {{ rust_string(operation.facets.http.path.effective) }},
             on(MethodFilter::{{ operation.facets.http.method }}, {{ rust_ident(operation.name.snake) }}),
         )
 {%- endfor %}
@@ -177,34 +176,44 @@ pub fn {{ file.symbols.router }}(service: Arc<dyn {{ file.symbols.service }}>) -
 
 async fn {{ rust_ident(operation.name.snake) }}(
     State(service): State<Arc<dyn {{ file.symbols.service }}>>,
+{%- if pack.inputs.repositories and operation.persistence is not none %}
+    caller: Option<axum::Extension<crate::persistence::Caller>>,
+{%- endif %}
 {%- if http.input_groups.path %}
-    Path(path): Path<{{ operation.name.pascal }}Path>,
+    axum::extract::Path(path): axum::extract::Path<{{ operation.name.pascal }}Path>,
 {%- endif %}
 {%- if http.input_groups.query %}
-    Query(query): Query<{{ operation.name.pascal }}Query>,
+    axum::extract::Query(query): axum::extract::Query<{{ operation.name.pascal }}Query>,
 {%- endif %}
 {%- for binding in http.input_groups.query_object %}
-    Query({{ body_var(binding, 'query_object') }}): Query<{{ rust_type(binding.port.value) }}>,
+    axum::extract::Query({{ body_var(binding, 'query_object') }}): axum::extract::Query<{{ rust_type(binding.port.value) }}>,
 {%- endfor %}
 {%- if http.input_groups.header or http.input_groups.cookie %}
-    headers: HeaderMap,
+    headers: axum::http::HeaderMap,
 {%- endif %}
 {%- if http.input_groups.form %}
 {%- if binds_whole(http) %}
 {%- for binding in http.input_groups.form %}{% if binding.port.field is none %}
-    Form(input): Form<{{ rust_type(binding.port.value) }}>,
+    axum::Form(input): axum::Form<{{ rust_type(binding.port.value) }}>,
 {%- endif %}{% endfor %}
 {%- else %}
-    Form(form): Form<{{ operation.name.pascal }}Form>,
+    axum::Form(form): axum::Form<{{ operation.name.pascal }}Form>,
 {%- endif %}
 {%- endif %}
 {%- for binding in http.input_groups.body %}
-    Json({{ body_var(binding, 'body') }}): Json<{{ rust_type(binding.port.value) }}>,
+{% if pack.inputs.repositories and operation.persistence is not none and binding.port.field is none %}
+    {{ body_var(binding, 'body') }}: crate::persistence::JsonRequest<{{ rust_type(binding.port.value) }}>,
+{% else %}    axum::Json({{ body_var(binding, 'body') }}): axum::Json<{{ rust_type(binding.port.value) }}>,
+{% endif %}
 {%- endfor %}
 {%- if http.input_groups.multipart %}
-    multipart: Multipart,
+    multipart: axum::extract::Multipart,
 {%- endif %}
 ) -> Result<Response, ApiError> {
+{% if pack.inputs.repositories and operation.persistence is not none %}
+{% for binding in http.input_groups.body %}{% if binding.port.field is none %}
+    let input = input.decode({{ plan_for(operation) }})?;
+{% endif %}{% endfor %}{% endif %}
 {%- if http.input_groups.multipart %}
     let _ = multipart;
     Err(ApiError::not_implemented(
@@ -213,28 +222,57 @@ async fn {{ rust_ident(operation.name.snake) }}(
 {%- else %}
 {%- for binding in http.input_groups.header %}
     let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
-        {% if binding_optional(operation, binding) %}optional_header{% else %}required_header{% endif %}::<{{ rust_type(binding.port.value) }}>(
+        crate::http::{% if binding_optional(operation, binding) %}optional_header{% else %}required_header{% endif %}::<{{ rust_type(binding.port.value) }}>(
             &headers,
             "{{ binding.name or binding.port.name.raw }}",
         )?;
 {%- endfor %}
 {%- for binding in http.input_groups.cookie %}
     let {{ rust_ident(binding.port.name.snake) }}: {{ bound_type(operation, binding) }} =
-        {% if binding_optional(operation, binding) %}optional_cookie{% else %}required_cookie{% endif %}::<{{ rust_type(binding.port.value) }}>(
+        crate::http::{% if binding_optional(operation, binding) %}optional_cookie{% else %}required_cookie{% endif %}::<{{ rust_type(binding.port.value) }}>(
             &headers,
             "{{ binding.name or binding.port.name.raw }}",
         )?;
 {%- endfor %}
 
-    let output = service.{{ rust_ident(operation.name.snake) }}({{ service_args(operation, http) }}).await?;
+    {% if operation.output %}let output = {% endif %}service.{{ rust_ident(operation.name.snake) }}({% if pack.inputs.repositories and operation.persistence is not none %}caller.map(|axum::Extension(caller)| caller){% if operation.input %}, {% endif %}{% endif %}{{ service_args(operation, http) }}).await?;
     let status = StatusCode::from_u16({{ success_status(http) }})
         .expect("Dryv validates HTTP status codes");
 {%- if operation.output %}
-    Ok((status, Json(output)).into_response())
+    Ok((status, axum::Json(output)).into_response())
 {%- else %}
-    let _ = output;
     Ok(status.into_response())
 {%- endif %}
 {%- endif %}
 }
 {%- endfor %}
+
+{% if pack.inputs.repositories %}
+#[async_trait]
+impl<P: crate::persistence::PolicyEvaluator> {{ file.symbols.service }} for crate::persistence::DatabaseService<P> {
+{% for operation in operations %}
+    async fn {{ rust_ident(operation.name.snake) }}(&self{{ service_params(operation) }}) -> {{ service_result(operation) }} {
+{% if operation.persistence is not none %}
+        const PLAN: &str = {{ plan_for(operation) }};
+{% if operation.input and operation.input.kind == 'schema' %}
+        self.execute(PLAN, input, caller).await
+{% else %}
+        let {% if operation.input %}mut {% endif %}input = crate::persistence::Row::new();
+{% if operation.input %}{% for field in operation.input.fields %}
+{% if field.optional %}        if let Some(value) = {{ rust_ident(field.name.snake) }} {
+            input.insert({{ rust_string(field.name.raw) }}.into(), serde_json::from_value(serde_json::to_value(value).map_err(|_| ApiError::internal())?).map_err(|_| ApiError::internal())?);
+        }
+{% else %}        input.insert({{ rust_string(field.name.raw) }}.into(), serde_json::from_value(serde_json::to_value({{ rust_ident(field.name.snake) }}).map_err(|_| ApiError::internal())?).map_err(|_| ApiError::internal())?);
+{% endif %}{% endfor %}{% endif %}
+        self.execute(PLAN, input, caller).await
+{% endif %}
+{% else %}
+{% if operation.input %}{% if operation.input.kind == 'schema' %}        let _ = input;
+{% else %}{% for field in operation.input.fields %}        let _ = {{ rust_ident(field.name.snake) }};
+{% endfor %}{% endif %}{% endif %}
+        Err(ApiError::not_implemented("This operation needs a service implementation."))
+{% endif %}
+    }
+{% endfor %}
+}
+{% endif %}

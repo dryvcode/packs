@@ -1,0 +1,149 @@
+use super::{
+    database,
+    plan::{Plan, Write},
+    wire::{Row, Trusted, Wire},
+};
+use crate::ApiError;
+use sea_orm::sea_query::{Alias, Condition, Expr, ExprTrait, Query, Returning};
+use sea_orm::{ConnectionTrait, DatabaseTransaction};
+
+pub async fn execute(
+    conn: &DatabaseTransaction,
+    plan: &Plan,
+    write: &Write,
+    input: &Row,
+    trusted: &Trusted,
+) -> Result<Wire, ApiError> {
+    let schema = plan.schema(&write.root)?;
+    let mut assignments = Row::new();
+    for item in &write.set {
+        if let Some(value) = super::source(&item.source, input, trusted)? {
+            assignments.insert(item.field.clone(), value);
+        }
+    }
+    let mut condition = Condition::all();
+    for item in &write.select {
+        let value = super::source(&item.source, input, trusted)?.ok_or_else(ApiError::denied)?;
+        condition = condition.add(
+            Expr::col(Alias::new(&schema.field(&item.field)?.column))
+                .eq(value.sql(schema.field(&item.field)?)?),
+        );
+    }
+    for binding in &plan.scope {
+        let value = super::trusted_value(trusted, &binding.policy, &binding.name)?;
+        if write.kind == "create" {
+            if assignments
+                .get(&binding.field)
+                .is_some_and(|supplied| supplied != value)
+            {
+                return Err(ApiError::denied());
+            }
+            assignments.insert(binding.field.clone(), value.clone());
+        } else {
+            condition = condition.add(
+                Expr::col(Alias::new(&schema.field(&binding.field)?.column))
+                    .eq(value.sql(schema.field(&binding.field)?)?),
+            );
+            if assignments
+                .get(&binding.field)
+                .is_some_and(|supplied| supplied != value)
+            {
+                return Err(ApiError::denied());
+            }
+        }
+    }
+    let returning = Returning::new().expr(database::json_row(schema, None));
+    let row = match write.kind.as_str() {
+        "create" => {
+            let mut query = Query::insert();
+            query.into_table(database::table(schema)?);
+            query.columns(
+                assignments
+                    .keys()
+                    .map(|name| schema.field(name).map(|field| Alias::new(&field.column)))
+                    .collect::<Result<Vec<_>, _>>()?,
+            );
+            let values = assignments
+                .iter()
+                .map(|(name, value)| Ok(Expr::val(value.sql(schema.field(name)?)?)))
+                .collect::<Result<Vec<_>, ApiError>>()?;
+            query
+                .values(values)
+                .map_err(|_| ApiError::internal())?
+                .returning(returning);
+            conn.query_one(&query).await
+        }
+        "update" | "soft-delete"
+            if !assignments.is_empty()
+                || write.set.iter().any(|item| item.source.kind == "default") =>
+        {
+            let mut query = Query::update();
+            query
+                .table(database::table(schema)?)
+                .cond_where(condition)
+                .returning(returning);
+            for item in &write.set {
+                if item.source.kind == "default" {
+                    query.value(
+                        Alias::new(&schema.field(&item.field)?.column),
+                        Expr::keyword_default(),
+                    );
+                }
+            }
+            for (name, value) in &assignments {
+                query.value(
+                    Alias::new(&schema.field(name)?.column),
+                    value.sql(schema.field(name)?)?,
+                );
+            }
+            conn.query_one(&query).await
+        }
+        "delete" => {
+            let mut query = Query::delete();
+            query
+                .from_table(database::table(schema)?)
+                .cond_where(condition)
+                .returning(returning);
+            conn.query_one(&query).await
+        }
+        "update" => {
+            let mut query = Query::select();
+            query
+                .from(database::table(schema)?)
+                .expr(database::json_row(schema, None))
+                .cond_where(condition);
+            conn.query_one(&query).await
+        }
+        _ => return Err(ApiError::internal()),
+    }
+    .map_err(|error| database::error_for(plan, error))?
+    .ok_or_else(|| {
+        write
+            .missing
+            .as_ref()
+            .map(ApiError::failure)
+            .unwrap_or_else(ApiError::internal)
+    })?;
+    let json: serde_json::Value = row
+        .try_get("", "jsonb_build_object")
+        .map_err(|_| ApiError::internal())?;
+    let row: Row = serde_json::from_value(json).map_err(|_| ApiError::internal())?;
+    if write.kind != "delete" {
+        super::validation::validate_fields(plan, &schema.fields, &row, "", false)?;
+        super::validation::checks(
+            &schema.checks,
+            &Row::from([("value".into(), Wire::Object(row.clone()))]),
+        )?;
+    }
+    match &write.returning {
+        None => Ok(Wire::Null),
+        Some(selections) => {
+            let mut rows = super::read::render(conn, plan, &[row], selections, &Row::new()).await?;
+            let row = Wire::Object(rows.pop().ok_or_else(ApiError::internal)?);
+            Ok(match &write.envelope {
+                None => row,
+                Some(name) => Wire::Object(Row::from([(name.clone(), row)])),
+            })
+        }
+    }
+}

@@ -1,46 +1,46 @@
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::{Json, http::StatusCode, response::{IntoResponse, Response}};
 use serde::Serialize;
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Issue { pub path: String, pub message: String }
 
 #[derive(Debug)]
 pub struct ApiError {
     pub status: StatusCode,
+    pub code: String,
     pub message: String,
+    pub issues: Vec<Issue>,
+    pub payload: Option<serde_json::Value>,
 }
-
 impl ApiError {
     pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
-        Self {
-            status,
-            message: message.into(),
-        }
+        Self { status, code: format!("http_{}", status.as_u16()), message: message.into(), issues: Vec::new(), payload: None }
     }
-
-    pub fn bad_request(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::BAD_REQUEST, message)
+    pub fn bad_request(message: impl Into<String>) -> Self { Self::new(StatusCode::BAD_REQUEST, message) }
+    pub fn not_implemented(message: impl Into<String>) -> Self { Self::new(StatusCode::NOT_IMPLEMENTED, message) }
+    pub fn internal() -> Self { Self { code: "internal_error".into(), ..Self::new(StatusCode::INTERNAL_SERVER_ERROR, "An unexpected error occurred.") } }
+    pub fn denied() -> Self { Self { code: "access_denied".into(), ..Self::new(StatusCode::FORBIDDEN, "Access denied or trusted context missing.") } }
+    pub fn validation(path: &str, message: &str) -> Self {
+        let mut error = Self { code: "validation_error".into(), ..Self::new(StatusCode::UNPROCESSABLE_ENTITY, "The request failed validation.") };
+        error.issue(path, message); error
     }
-
-    pub fn not_implemented(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::NOT_IMPLEMENTED, message)
+    pub fn issue(&mut self, path: &str, message: &str) { self.issues.push(Issue { path: path.into(), message: message.into() }); }
+{% if pack.inputs.repositories %}
+    pub fn failure(failure: &crate::persistence::Failure) -> Self {
+        Self { code: failure.code.clone(), ..Self::new(StatusCode::from_u16(failure.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR), &failure.message) }
     }
+{% endif %}
 }
-
 #[derive(Serialize)]
 struct ApiErrorBody<'a> {
-    message: &'a str,
+    code: &'a str, message: &'a str,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    issues: &'a Vec<Issue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    payload: &'a Option<serde_json::Value>,
 }
-
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (
-            self.status,
-            Json(ApiErrorBody {
-                message: &self.message,
-            }),
-        )
-            .into_response()
+        (self.status, Json(ApiErrorBody { code: &self.code, message: &self.message, issues: &self.issues, payload: &self.payload })).into_response()
     }
 }

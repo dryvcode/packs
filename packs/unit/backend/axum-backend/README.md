@@ -11,16 +11,16 @@ The generated boundary is intentionally split:
 
 ## HTTP mapping
 
-| Runtime IR binding | Axum mapping |
-| --- | --- |
-| path | `Path<T>` |
-| query | generated `Query<T>` extractor struct |
-| query-object | `Query<Model>` |
-| header | `HeaderMap` + typed parsing |
-| cookie | `HeaderMap` + explicit cookie parsing |
-| body | `Json<T>` |
-| form | `Form<T>` |
-| multipart | explicit `501 Not Implemented` path until semantic file/multipart mapping is designed |
+| Runtime IR binding | Axum mapping                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| path               | `Path<T>`                                                                             |
+| query              | generated `Query<T>` extractor struct                                                 |
+| query-object       | `Query<Model>`                                                                        |
+| header             | `HeaderMap` + typed parsing                                                           |
+| cookie             | `HeaderMap` + explicit cookie parsing                                                 |
+| body               | `Json<T>`                                                                             |
+| form               | `Form<T>`                                                                             |
+| multipart          | explicit `501 Not Implemented` path until semantic file/multipart mapping is designed |
 
 Successful output mappings preserve their declared HTTP status. Handwritten services return `Result<T, ApiError>`. Declared failure-to-status mappings are not yet represented as a generated Rust error enum; the handwritten service chooses the concrete `ApiError` status, which remains an explicit follow-up rather than hidden inference.
 
@@ -30,4 +30,29 @@ Enums use custom serde implementations so string, numeric and boolean canonical 
 
 **Provides:** `schema.types` and `property.enum.types`.
 
-Verification is intentionally deferred while the Dryv Engine is under maintenance.
+Set the `crate_name` input to customize the generated Cargo package name. Implement the generated service trait for your application and pass an `Arc` of that implementation to the generated router builder. The application owns authorization, SQL, transactions, and the conversion from domain failures into `ApiError`.
+
+For the shared fixture, the trait is `CoreUserManagementService` and the router builder is `build_core_user_management_router`. Both are exported from the generated crate's `routers` module.
+
+```sh
+bun scripts/test-pack.ts --keep unit/backend/axum-backend
+```
+
+Set `repositories: true` to generate PostgreSQL execution for operations bound to named queries
+or mutations. `persistence::DatabaseService<P>` implements the generated service traits. Supply a
+SeaORM connection and `PolicyEvaluator`, and install an authenticated `Caller` through Axum
+middleware. Each request obtains trusted policy values, validates input and checks, then executes
+in a transaction. Collections are batch loaded after paging root rows; counts and total matching
+roots use the same snapshot. Write selectors and root reads always include authored trusted scope.
+Writes and returning projections commit together; validation/SQL/decoding failures roll back.
+
+Patch DTOs use `Option<Option<T>>` when a field is optional and nullable. The custom JSON extractor
+validates the original body before serde can erase an explicit null. Failure variants and Python
+SDK error classes share stable authored codes. Responses use `{code, message, issues?, payload?}`;
+SQLSTATE and structured database metadata select explicit declared mappings. Unknown failures
+are logged and return a generic 500. An unbound operation still requires a service implementation.
+The default `repositories: false` retains the existing handwritten-service interface.
+
+The executable proof is `sdk/_examples/proofs/typed-database` in the Dryv repository. Its
+runner contains no SQL/repository implementations. Read that proof's capability limits before
+adopting a generated backend. PostgreSQL migrations retain authority over physical column names.

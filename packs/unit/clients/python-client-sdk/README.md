@@ -8,4 +8,31 @@ Multipart remains unsupported until Dryv has first-class semantic file/multipart
 
 **Provides:** `operation.client`, `schema.types`, `property.enum.types`.
 
-Verification is deferred while the Dryv Engine is under maintenance.
+The `package_name` input sets the installable distribution name (default `dryv-client`). Import from `dryv_client`. Use the client as an async context manager, or pass a caller-owned `httpx.AsyncClient` for shared connection pooling, authentication, or custom transport.
+
+Models accept Python field names and authored JSON names. Requests use authored JSON names and omit fields the caller leaves unset. For the shared fixture, a JSON POST looks like this.
+
+```python
+from uuid import UUID
+
+from dryv_client import CreateUserRequest, DryvClient, core_create_user
+
+
+async def create_user(base_url: str, customer_id: UUID) -> None:
+    request = CreateUserRequest(external_customer_id=customer_id, display_name="New user")
+    async with DryvClient(base_url) as client:
+        user = await core_create_user(client, request)
+        print(user.id)
+```
+
+The shared fixture checks request serialization, response decoding, and HTTP error handling.
+
+```sh
+bun scripts/test-pack.ts --keep unit/clients/python-client-sdk
+```
+
+Declared failures also generate named exception types in `dryv_client.errors`, selected by the
+HTTP body's stable `code`. Each exposes its structured body and authored issue paths; schema and
+primitive payloads expose typed `details`. Unknown error bodies retain the base `ApiError` surface.
+Query-derived response schemas, nested collections and envelopes use the same Pydantic models as
+ordinary operations. Request serialization preserves omission separately from explicit null.

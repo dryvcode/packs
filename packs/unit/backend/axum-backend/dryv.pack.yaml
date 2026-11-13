@@ -22,18 +22,34 @@ plugins:
     extensions: [.j2]
 
 inputs:
+  repositories:
+    type: boolean
+    default: false
+    description: Generate PostgreSQL SeaORM delegation for query and mutation operations.
   crate_name:
     type: string
     default: dryv_axum_backend
     description: Cargo package name for the generated Rust library.
 
 selections:
+  policies:
+    subject: policy
+    scope: all
+  failures:
+    subject: failure
+    scope: all
   enums:
     subject: property.enum
     scope: each
 
   models:
     subject: schema
+    scope: each
+
+  persistence-operations:
+    subject: operation
+    filter:
+      all: { facet: http }
     scope: each
 
   routes:
@@ -43,6 +59,14 @@ selections:
     scope: collects.feature
 
 templates:
+  policies:
+    $ref: "#/selections/policies"
+    imports:
+      - $ref: "#/templates/model"
+  failures:
+    $ref: "#/selections/failures"
+    imports:
+      - $ref: "#/templates/model"
   enum:
     $ref: "#/selections/enums"
     output:
@@ -58,6 +82,11 @@ templates:
       - $ref: "#/templates/enum"
       - $ref: "#/templates/model"
 
+  repository-plan:
+    $ref: "#/selections/persistence-operations"
+    output:
+      name: $(group.name.snake)_$(subject.name.snake)
+
   router:
     $ref: "#/selections/routes"
     output:
@@ -66,6 +95,8 @@ templates:
         service: $(group.name.pascal)$(feature.name.pascal)Service
         router: build_$(group.name.snake)_$(feature.name.snake)_router
     imports:
+      - $ref: "#/templates/repository-plan"
+        members: true
       - $ref: "#/templates/enum"
       - $ref: "#/templates/model"
 

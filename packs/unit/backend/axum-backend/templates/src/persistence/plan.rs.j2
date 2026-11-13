@@ -1,0 +1,177 @@
+use super::wire::Wire;
+use serde::Deserialize;
+use std::collections::BTreeMap;
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Failure {
+    pub code: String,
+    pub message: String,
+    pub status: u16,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Rule {
+    pub kind: String,
+    pub operator: String,
+    pub context: String,
+    pub path: Vec<String>,
+    pub value: Wire,
+    pub children: Vec<Rule>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Check {
+    pub rule: Rule,
+    pub failure: Failure,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Field {
+    pub name: String,
+    pub column: String,
+    pub scalar: String,
+    pub optional: bool,
+    pub nullable: bool,
+    pub array: bool,
+    pub min_items: Option<usize>,
+    pub max_items: Option<usize>,
+    pub schema_id: Option<String>,
+    pub default: Wire,
+    pub min_length: Option<usize>,
+    pub max_length: Option<usize>,
+    pub minimum: Option<f64>,
+    pub maximum: Option<f64>,
+    pub multiple_of: Option<f64>,
+    pub patterns: Vec<String>,
+    pub values: Vec<Wire>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Schema {
+    pub id: String,
+    pub namespace: Option<String>,
+    pub table: Option<String>,
+    pub fields: Vec<Field>,
+    pub checks: Vec<Check>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Step {
+    pub source: String,
+    pub target: String,
+    pub source_field: String,
+    pub target_field: String,
+    pub many: bool,
+    pub nullable: bool,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Column {
+    pub path: Vec<Step>,
+    pub field: String,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Predicate {
+    pub column: Column,
+    pub operator: String,
+    pub parameter: Option<String>,
+    pub is_null: bool,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Order {
+    pub column: Column,
+    pub direction: String,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Selection {
+    pub name: String,
+    pub kind: String,
+    pub column: Option<Column>,
+    pub path: Vec<Step>,
+    pub select: Vec<Selection>,
+    pub order: Vec<Order>,
+    pub r#where: Vec<Predicate>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Source {
+    pub kind: String,
+    pub name: String,
+    pub policy: String,
+    pub value: Wire,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Parameter {
+    pub name: String,
+    pub source: Source,
+    pub optional: bool,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Page {
+    pub limit: String,
+    pub offset: String,
+    pub max_limit: u64,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Read {
+    pub root: String,
+    pub parameters: Vec<Parameter>,
+    pub r#where: Vec<Predicate>,
+    pub select: Vec<Selection>,
+    pub order: Vec<Order>,
+    pub many: bool,
+    pub page: Option<Page>,
+    pub envelope: Option<BTreeMap<String, String>>,
+    pub missing: Option<Failure>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Assignment {
+    pub field: String,
+    pub source: Source,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Write {
+    pub root: String,
+    pub kind: String,
+    pub select: Vec<Assignment>,
+    pub set: Vec<Assignment>,
+    pub returning: Option<Vec<Selection>>,
+    pub envelope: Option<String>,
+    pub missing: Option<Failure>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Scope {
+    pub field: String,
+    pub policy: String,
+    pub name: String,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct DatabaseFailure {
+    pub kind: String,
+    pub failure: Failure,
+    pub field: Option<String>,
+    pub constraint: Option<String>,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct Plan {
+    pub operation: String,
+    pub schemas: Vec<Schema>,
+    pub input: Option<String>,
+    pub input_fields: Vec<Field>,
+    pub read: Option<Read>,
+    pub write: Option<Write>,
+    pub authenticated: bool,
+    pub policies: Vec<String>,
+    pub scope: Vec<Scope>,
+    pub checks: Vec<Check>,
+    pub failures: Vec<DatabaseFailure>,
+}
+impl Plan {
+    pub fn schema(&self, id: &str) -> Result<&Schema, crate::ApiError> {
+        self.schemas
+            .iter()
+            .find(|item| item.id == id)
+            .ok_or_else(crate::ApiError::internal)
+    }
+}
+impl Schema {
+    pub fn field(&self, name: &str) -> Result<&Field, crate::ApiError> {
+        self.fields
+            .iter()
+            .find(|item| item.name == name)
+            .ok_or_else(crate::ApiError::internal)
+    }
+}

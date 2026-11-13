@@ -6,7 +6,7 @@
 {%- endmacro -%}
 {%- macro symbol_for(link) -%}
 {%- for dependency in file.dependencies -%}
-{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- if dependency.target.id == link.id -%}{% if dependency.is_self %}{{ dependency.symbol }}{% else %}crate::models::{{ dependency.symbol }}{% endif %}{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 
@@ -17,7 +17,7 @@
 {%- elif value.is.boolean -%}bool
 {%- elif value.is.integer -%}i64
 {%- elif value.is.number -%}f64
-{%- elif value.is.record -%}HashMap<String, serde_json::Value>
+{%- elif value.is.record -%}std::collections::HashMap<String, serde_json::Value>
 {%- elif value.is.string or value.is.temporal -%}String
 {%- else -%}serde_json::Value
 {%- endif -%}
@@ -27,19 +27,15 @@
 {%- if field.array is not none -%}{% set inner = 'Vec<' ~ base_type(field.value) ~ '>' %}
 {%- else -%}{% set inner = base_type(field.value) %}
 {%- endif -%}
-{%- if field.optional or field.nullable -%}Option<{{ inner }}>{%- else -%}{{ inner }}{%- endif -%}
+{%- if field.optional and field.nullable -%}Option<Option<{{ inner }}>>
+{%- elif field.optional or field.nullable -%}Option<{{ inner }}>{%- else -%}{{ inner }}{%- endif -%}
 {%- endmacro -%}
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
-{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
-use crate::models::{{ dependency.symbol }};
-{%- endif %}{% endfor %}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct {{ file.symbol }} {
 {%- for field in schema.fields %}
-    #[serde(rename = "{{ field.name.raw }}"{% if field.optional %}, default, skip_serializing_if = "Option::is_none"{% endif %})]
+    #[serde(rename = "{{ field.name.raw }}"{% if field.optional %}, default, skip_serializing_if = "Option::is_none"{% if field.nullable %}, deserialize_with = "crate::present_nullable"{% endif %}{% endif %})]
     pub {{ rust_ident(field.name.snake) }}: {{ field_type(field) }},
 {%- endfor %}
 }
