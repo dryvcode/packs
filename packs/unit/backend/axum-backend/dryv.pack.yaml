@@ -26,6 +26,10 @@ inputs:
     type: boolean
     default: false
     description: Generate PostgreSQL SeaORM delegation for query and mutation operations.
+  snake_case_columns:
+    type: boolean
+    default: false
+    description: Use snake-case PostgreSQL field columns while preserving authored API names.
   crate_name:
     type: string
     default: dryv_axum_backend

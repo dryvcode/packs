@@ -39,7 +39,7 @@ impl<P: PolicyEvaluator> DatabaseService<P> {
         input: I,
         caller: Option<Caller>,
     ) -> Result<O, ApiError> {
-        let plan: plan::Plan = serde_json::from_str(document).map_err(|_| ApiError::internal())?;
+        let plan = plan::Plan::parse(document)?;
         if plan.authenticated && caller.is_none() {
             return Err(ApiError::denied());
         }
@@ -169,7 +169,7 @@ impl<S: Send + Sync, T: Send> axum::extract::FromRequest<S> for JsonRequest<T> {
 }
 impl<T: serde::de::DeserializeOwned> JsonRequest<T> {
     pub fn decode(self, document: &str) -> Result<T, ApiError> {
-        let plan: plan::Plan = serde_json::from_str(document).map_err(|_| ApiError::internal())?;
+        let plan = plan::Plan::parse(document)?;
         let Wire::Object(row) = &self.raw else {
             return Err(ApiError::validation("", "Expected an object."));
         };

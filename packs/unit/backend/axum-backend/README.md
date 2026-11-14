@@ -56,3 +56,7 @@ The default `repositories: false` retains the existing handwritten-service inter
 The executable proof is `sdk/_examples/proofs/typed-database` in the Dryv repository. Its
 runner contains no SQL/repository implementations. Read that proof's capability limits before
 adopting a generated backend. PostgreSQL migrations retain authority over physical column names.
+Repository plans use authored column names by default. Set `snake_case_columns: true` when
+your DDL uses the pack's snake-case naming variant. For example, `schemeId` then resolves
+to `scheme_id` in SQL. Query parameters, result aliases, and HTTP names retain their
+authored spelling.

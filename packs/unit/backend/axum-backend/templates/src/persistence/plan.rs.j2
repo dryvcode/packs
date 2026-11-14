@@ -25,7 +25,8 @@ pub struct Check {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Field {
     pub name: String,
-    pub column: String,
+{% if pack.inputs.snake_case_columns %}    #[serde(rename = "column_snake")]
+{% endif %}    pub column: String,
     pub scalar: String,
     pub optional: bool,
     pub nullable: bool,
@@ -160,6 +161,24 @@ pub struct Plan {
     pub failures: Vec<DatabaseFailure>,
 }
 impl Plan {
+    pub fn parse(document: &str) -> Result<Self, crate::ApiError> {
+        let plan: Self = serde_json::from_str(document).map_err(|_| crate::ApiError::internal())?;
+        for schema in plan.schemas.iter().filter(|schema| schema.table.is_some()) {
+            let mut columns = std::collections::BTreeSet::new();
+            for field in &schema.fields {
+                if !columns.insert(&field.column) {
+                    tracing::error!(
+                        schema = %schema.id,
+                        column = %field.column,
+                        "Multiple fields map to the same database column"
+                    );
+                    return Err(crate::ApiError::internal());
+                }
+            }
+        }
+        Ok(plan)
+    }
+
     pub fn schema(&self, id: &str) -> Result<&Schema, crate::ApiError> {
         self.schemas
             .iter()
