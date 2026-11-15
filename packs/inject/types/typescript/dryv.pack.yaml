@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: TypeScript types
-  version: 0.1.0
+  version: 0.2.0
   description: Generates framework-free TypeScript declarations once per IR property and schema, so DTO, entity and server packs import them instead of duplicating them.
   purpose: types
   summary: Shared TypeScript enums, type aliases and schema interfaces for other packs to import.
@@ -45,11 +45,14 @@ selections:
   generics:
     subject: property.generic
     scope: each
+  # Stored entities are not selected: a project's own entity types (for example a type-files pack) own them.
   schemas:
     subject: schema
+    filter:
+      not: { role: entity }
     scope: each
 
-# Every declaration lives under its IR group, so groups may reuse a short name.
+# Every declaration lives under its IR group, in a folder for its kind (enum/, type/, interface/), so groups may reuse a short name.
 templates:
   enum:
     $ref: '#/selections/enums'
@@ -57,6 +60,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - enum
       symbol: $(subject.name.pascal)
   primitive:
     $ref: '#/selections/primitives'
@@ -64,6 +68,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
   temporal:
     $ref: '#/selections/temporals'
@@ -71,6 +76,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
   literal:
     $ref: '#/selections/literals'
@@ -78,6 +84,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
   composite:
     $ref: '#/selections/composites'
@@ -85,6 +92,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -103,6 +111,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -121,6 +130,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -139,6 +149,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -157,6 +168,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -175,6 +187,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
+        - interface
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
