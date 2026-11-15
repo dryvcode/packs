@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Keep each DTO readable: examples go to `<group>/dto/examples/` and specs to `<group>/dto/testing/`, so `<group>/dto/` holds only the DTOs.
+
 ## 0.4.0
 
 - Generate `<name>.dto.example.ts` (provides `schema.examples`) and `<name>.dto.spec.ts` (Vitest: accepts its contract example, rejects unknown properties and every single-constraint violation).

@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: class-validator DTOs
-  version: 0.4.0
+  version: 0.5.0
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
   purpose: validation
   summary: class-validator DTO classes with field limits, formats and invariants.
@@ -40,7 +40,7 @@ templates:
       - $ref: '#/needs/property.types'
       - $ref: '#/templates/dto'
 
-  # <group>/dto/<name>.dto.example.ts: the contract shape of each schema, for generated tests.
+  # <group>/dto/examples/<name>.dto.example.ts: the contract shape of each schema, for generated tests.
   example:
     $ref: '#/selections/schemas'
     output:
@@ -52,7 +52,7 @@ templates:
       - $ref: '#/needs/property.enum.types'
       - $ref: '#/templates/example'
 
-  # <group>/dto/<name>.dto.spec.ts (Vitest): the DTO accepts its example and rejects each violation.
+  # <group>/dto/testing/<name>.dto.spec.ts (Vitest): the DTO accepts its example and rejects each violation.
   spec:
     $ref: '#/selections/schemas'
     output:
