@@ -162,8 +162,13 @@
 {%- macro js_operator(operator) -%}
 {%- if operator == 'equal' -%}==={%- elif operator == 'not-equal' -%}!=={%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
 {%- endmacro -%}
+{#- A test against a null literal uses loose equality, so an omitted optional field (undefined) counts as null. -#}
+{%- macro js_comparison(comparison) -%}
+{%- set nullish = comparison.operator in ['equal', 'not-equal'] and ((comparison.left.is.literal and comparison.left.value is none) or (comparison.right.is.literal and comparison.right.value is none)) -%}
+{{ js_operand(comparison.left) }} {% if nullish %}{{ '==' if comparison.operator == 'equal' else '!=' }}{% else %}{{ js_operator(comparison.operator) }}{% endif %} {{ js_operand(comparison.right) }}
+{%- endmacro -%}
 {%- macro predicate(invariant) -%}
-{%- for comparison in invariant.form.comparisons -%}{{ js_operand(comparison.left) }} {{ js_operator(comparison.operator) }} {{ js_operand(comparison.right) }}{% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}{%- endfor -%}
+{%- for comparison in invariant.form.comparisons -%}{{ js_comparison(comparison) }}{% if not loop.last %}{% if invariant.form.is.all %} && {% else %} || {% endif %}{% endif %}{%- endfor -%}
 {%- endmacro -%}
 
 {#- Invariants attach to the first field their first comparison reads. -#}
