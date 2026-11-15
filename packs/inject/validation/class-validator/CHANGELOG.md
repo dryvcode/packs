@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+
+- Examples, specs and the shared test helper write to a new `test` output slot.
+
 ## 0.6.0
 
 - Output moves under `schema/`: `<group>/schema/dto/` and `common/schema/dto/`.

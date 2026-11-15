@@ -1,6 +1,10 @@
 {%- macro has_slot(slot) -%}
 {%- for dependency in file.dependencies -%}{%- if dependency.slot == slot -%}x{%- endif -%}{%- endfor -%}
 {%- endmacro -%}
+{#- A project may bind its own implementation; otherwise the one in the service file is used. -#}
+{%- macro bound_implementation() -%}
+{%- for dependency in file.dependencies %}{% if dependency.slot == 'operation.implementation' %}{% for operation in operations %}{% if dependency.target.id == operation.id %}{{ dependency.symbol }}{% endif %}{% endfor %}{% endif %}{% endfor -%}
+{%- endmacro -%}
 {%- set persistence = has_slot('schema.persistence') != '' -%}
 import { Module, type Type } from "@nestjs/common";
 {%- if persistence %}
@@ -16,7 +20,7 @@ import { {{ dependency.symbol }} } from "{{ (dependency.path.prefixed or ('./' ~
 {%- endif %}{% endfor %}
 
 import { {{ group.name.pascal }}{{ feature.name.pascal }}Controller } from "./{{ feature.name.kebab }}.controller.ts";
-import { {{ group.name.pascal }}{{ feature.name.pascal }}Service } from "./{{ feature.name.kebab }}.service.ts";
+import { {{ group.name.pascal }}{{ feature.name.pascal }}Service, {{ group.name.pascal }}{{ feature.name.pascal }}ServiceImpl } from "./{{ feature.name.kebab }}.service.ts";
 
 @Module({
 {%- if persistence %}
@@ -30,12 +34,10 @@ import { {{ group.name.pascal }}{{ feature.name.pascal }}Service } from "./{{ fe
 {%- endif %}
   controllers: [{{ group.name.pascal }}{{ feature.name.pascal }}Controller],
   providers: [
-{%- for implementation in file.dependencies %}{% if implementation.slot == 'operation.implementation' and own(implementation) != '' %}
     {
       provide: {{ group.name.pascal }}{{ feature.name.pascal }}Service,
-      useClass: {{ implementation.symbol }} satisfies Type<{{ group.name.pascal }}{{ feature.name.pascal }}Service>,
+      useClass: {{ bound_implementation() or (group.name.pascal ~ feature.name.pascal ~ 'ServiceImpl') }} satisfies Type<{{ group.name.pascal }}{{ feature.name.pascal }}Service>,
     },
-{%- endif %}{% endfor %}
 {%- for usecase in file.dependencies %}{% if usecase.slot == 'operation.usecase' and own(usecase) != '' %}
     {{ usecase.symbol }},
 {%- endif %}{% endfor %}

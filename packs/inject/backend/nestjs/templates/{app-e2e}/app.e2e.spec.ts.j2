@@ -31,7 +31,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { {{ shared('app-module') }} } from "{{ shared_path('app-module') }}";
 {%- if persistence %}
-import { DatabaseModule } from "./database/database.module.ts";
+import { {{ shared('database') }} } from "{{ shared_path('database') }}";
 
 // Stands in for the project's DatabaseModule: repositories resolve without a database.
 @Global()

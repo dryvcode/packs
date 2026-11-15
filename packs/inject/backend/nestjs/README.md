@@ -81,3 +81,5 @@ Vitest specs, regenerated with the contracts:
 `vitest.config.ts` is scaffolded in the app slot; run `vitest run --root <app slot>`. With pnpm, approve esbuild's build script (`pnpm approve-builds`), which Vitest needs.
 
 **Layout.** Each feature is written under `<group>/features/<feature>/` (module, controller, service, use cases), so business logic and HTTP code stay apart from the `schema/` folders other packs write.
+
+**Layout.** The service contract and its implementation share one file (`<feature>.service.ts`): the abstract contract on top, `<Feature>ServiceImpl` below delegating to the use cases. `operation.implementation` is optional; bind it only to replace the generated implementation. Feature barrels (`index.ts`) are no longer generated. Specs go to the `test` slot (`test-app` for the application spec) and the vitest config to the `package` slot; map them with `destinations`.

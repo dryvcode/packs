@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.8.0
+  version: 0.9.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -23,7 +23,7 @@ needs:
   schema.validation: { required: true }
   schema.persistence: { required: false }
   # The project's implementation of each feature service and its per-operation use cases.
-  operation.implementation: { required: true }
+  operation.implementation: { required: false }
   operation.usecase: { required: true }
   # Optional feature-level providers used by operation use cases (for example vault adapters).
   module.provider: { required: false }
@@ -91,6 +91,7 @@ templates:
       symbol: $(group.name.pascal)$(feature.name.pascal)Service
     imports:
       - $ref: '#/needs/schema.validation'
+      - $ref: '#/needs/operation.usecase'
 
   # <group>/<group>.module.ts imports the group's feature modules.
   group-module:
@@ -130,6 +131,7 @@ templates:
   feature-e2e:
     $ref: '#/selections/features'
     output:
+      destination: test
       name: $(feature.name.kebab)
       path:
         - $(group.name.kebab)
@@ -148,9 +150,11 @@ templates:
   app-e2e:
     $ref: '#/selections/application'
     output:
-      destination: app
+      destination: test-app
     imports:
       - $ref: '#/templates/app-module'
+        members: true
+      - $ref: '#/templates/database'
         members: true
       - $ref: '#/needs/schema.validation'
       - $ref: '#/needs/schema.persistence'
@@ -159,28 +163,13 @@ templates:
   # vitest.config.ts: scaffolded once, then owned by the project.
   vitest-config:
     output:
-      destination: app
+      destination: package
 
   # src/database/database.module.ts: scaffolded once, then owned by the project.
   database:
     output:
       destination: app
-
-  feature-index:
-    output:
-      path:
-        - $(group.name.kebab)
-        - features
-        - $(feature.name.kebab)
-    barrel: each
-    exports:
-      - $ref: '#/templates/feature'
-      - $ref: '#/templates/feature-controller'
-      - $ref: '#/templates/feature-service'
-
-  root-index:
-    exports:
-      - $ref: '#/templates/feature-index'
+      symbol: DatabaseModule
 
 provides:
   operation.server:

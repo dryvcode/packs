@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+- Merge the service contract and implementation into one file; drop the feature and root barrels.
+- Write specs to `test`/`test-app` and the vitest config to `package` output slots; `operation.implementation` becomes optional.
+
 ## 0.8.0
 
 - Feature folders move to `<group>/features/<feature>/`.

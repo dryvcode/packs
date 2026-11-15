@@ -36,3 +36,5 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source
 - `testing/<name>.dto.spec.ts` (Vitest): the DTO accepts its contract example, rejects unknown properties and rejects every single-constraint violation (missing, null, wrong type, length, range, format, pattern, enum, array bounds, nested).
 
 **Layout.** DTOs, examples and specs are written under `<group>/schema/dto/` (`examples/`, `testing/`), with shared validators and test helpers under `common/schema/dto/`.
+
+**Tests.** Examples, specs and the shared example helper are written to the `test` output slot, so a project can keep tests outside its source folder. Map it with `destinations.test`.

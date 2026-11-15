@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: class-validator DTOs
-  version: 0.6.0
+  version: 0.7.0
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
   purpose: validation
   summary: class-validator DTO classes with field limits, formats and invariants.
@@ -44,6 +44,7 @@ templates:
   example:
     $ref: '#/selections/schemas'
     output:
+      destination: test
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
@@ -56,6 +57,7 @@ templates:
   spec:
     $ref: '#/selections/schemas'
     output:
+      destination: test
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
@@ -64,6 +66,11 @@ templates:
         members: true
       - $ref: '#/templates/example'
         members: true
+
+  # The shared helper the generated tests use; written with the tests, not the source.
+  testing-support:
+    output:
+      destination: test
 
 provides:
   schema.validation:

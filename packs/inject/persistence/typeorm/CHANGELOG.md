@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- The entity integrity spec writes to a new `test` output slot.
+
 ## 0.5.0
 
 - Output moves under `schema/`: `<group>/schema/entities/` and `common/schema/entities/`.
