@@ -16,6 +16,9 @@ plugins:
   - name: jinja
     extensions: [.j2]
 
+# One store per activation: the engine hands the pack only that store's entities.
+capabilities: { persistence: true, stores: true }
+
 inputs:
   naming_strategy:
     type: string
