@@ -50,7 +50,7 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-      symbol: $(subject.name.pascal)Entity
+      symbol: $(subject.name.scoped)Entity
     imports:
       - $ref: '#/needs/property.enum.types'
       - $ref: '#/needs/property.types'
