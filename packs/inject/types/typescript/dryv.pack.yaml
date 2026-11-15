@@ -60,7 +60,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - enum
       symbol: $(subject.name.pascal)
   primitive:
     $ref: '#/selections/primitives'
@@ -68,7 +67,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
   temporal:
     $ref: '#/selections/temporals'
@@ -76,7 +74,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
   literal:
     $ref: '#/selections/literals'
@@ -84,7 +81,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
   composite:
     $ref: '#/selections/composites'
@@ -92,7 +88,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -111,7 +106,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -130,7 +124,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -149,7 +142,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -168,7 +160,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - type
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
@@ -187,7 +178,6 @@ templates:
       name: $(subject.name.kebab)
       path:
         - $(group.name.kebab)
-        - interface
       symbol: $(subject.name.pascal)
     imports:
       - $ref: '#/templates/enum'
