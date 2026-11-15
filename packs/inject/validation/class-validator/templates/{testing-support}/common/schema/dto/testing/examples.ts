@@ -252,11 +252,34 @@ export function buildExample(example: SchemaExample, depth = 0): Record<string, 
     object[entry.name] = entryValue(entry, depth);
   }
   const specs = new Map(example.fields.map((entry) => [entry.name, entry.spec] as const));
+  const nullable = new Set(example.fields.filter((entry) => entry.nullable).map((entry) => entry.name));
   for (const invariant of example.invariants) {
-    const comparisons = invariant.any ? invariant.comparisons.slice(0, 1) : invariant.comparisons;
+    const comparisons = invariant.any
+      ? achievable(invariant.comparisons, object, nullable)
+      : invariant.comparisons;
     for (const comparison of comparisons) satisfy(comparison, object, specs);
   }
   return object;
+}
+
+/**
+ * The one comparison of an "any" rule an example satisfies: the first that does not need a
+ * non-nullable field to be null (a rule like `from == null OR until == null OR from < until`
+ * has comparisons that can never hold for a required field).
+ */
+function achievable(
+  comparisons: readonly Comparison[],
+  object: Record<string, unknown>,
+  nullable: ReadonlySet<string>,
+): Comparison[] {
+  const choice =
+    comparisons.find((comparison) => {
+      if (!("field" in comparison.left)) return true;
+      const needsNull =
+        comparison.operator === "equal" && operandValue(comparison.right, object) === null;
+      return !needsNull || nullable.has(comparison.left.field);
+    }) ?? comparisons[0];
+  return choice ? [choice] : [];
 }
 
 function without(object: Record<string, unknown>, field: string): Record<string, unknown> {
