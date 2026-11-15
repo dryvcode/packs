@@ -39,4 +39,6 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source
 
 ## Generated tests
 
-`common/entities/testing/entities.integrity.spec.ts` (Vitest) synchronizes every entity into an in-memory Postgres (pg-mem) and checks each against its contract: table, columns with nullability and primary keys, foreign keys, indexes, and rejection of rows missing required columns.
+`common/schema/entities/testing/entities.integrity.spec.ts` (Vitest) synchronizes every entity into an in-memory Postgres (pg-mem) and checks each against its contract: table, columns with nullability and primary keys, foreign keys, indexes, and rejection of rows missing required columns.
+
+**Layout.** Entities are written under `<group>/schema/entities/`, with shared helpers and the integrity spec under `common/schema/entities/`, so schema code stays apart from feature logic.

@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: class-validator DTOs
-  version: 0.5.0
+  version: 0.6.0
   description: Generates DTO classes with class-validator and class-transformer decorators for every schema.
   purpose: validation
   summary: class-validator DTO classes with field limits, formats and invariants.

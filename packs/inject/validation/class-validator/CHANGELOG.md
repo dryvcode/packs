@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- Output moves under `schema/`: `<group>/schema/dto/` and `common/schema/dto/`.
+
 ## 0.5.0
 
 - Keep each DTO readable: examples go to `<group>/dto/examples/` and specs to `<group>/dto/testing/`, so `<group>/dto/` holds only the DTOs.

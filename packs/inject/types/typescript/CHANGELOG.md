@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- Output moves under `schema/`: `<group>/schema/{enum,type,interface}/`.
+
 ## 0.2.0
 
 - Output moves into a folder per kind under the group: `enum/`, `type/` and `interface/`.

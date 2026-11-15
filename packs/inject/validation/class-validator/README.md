@@ -34,3 +34,5 @@ The [executable Usage fixture](tests/fixture/dryv.yaml) shows the current source
 
 - `examples/<name>.dto.example.ts`: the contract shape of each schema; provides `schema.examples` for other packs' tests.
 - `testing/<name>.dto.spec.ts` (Vitest): the DTO accepts its contract example, rejects unknown properties and rejects every single-constraint violation (missing, null, wrong type, length, range, format, pattern, enum, array bounds, nested).
+
+**Layout.** DTOs, examples and specs are written under `<group>/schema/dto/` (`examples/`, `testing/`), with shared validators and test helpers under `common/schema/dto/`.

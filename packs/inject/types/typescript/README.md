@@ -23,3 +23,5 @@ Inline types inside a property definition are rendered to three levels of nestin
 `unknown` fields render `unknown`; `dynamic` fields render `Record<string, unknown>`.
 
 **Test:** `bun scripts/test-pack.ts inject/types/typescript` renders the shared fixture IR, typechecks every declaration and checks representative shapes.
+
+**Layout.** Enums, named types and non-entity interfaces are written under `<group>/schema/enum/`, `schema/type/` and `schema/interface/`.

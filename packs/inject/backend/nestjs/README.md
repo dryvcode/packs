@@ -6,7 +6,7 @@ Injects NestJS 12 modules into a project, following the NestJS module structure.
 <app slot>/app.module.ts                  managed: imports the group modules (and DatabaseModule)
 <app slot>/database/database.module.ts    scaffold: yours (driver, connection, migrations)
 <destination>/<group>/<group>.module.ts   managed: imports the group's feature modules
-<destination>/<group>/<feature>/
+<destination>/<group>/features/<feature>/
   <feature>.controller.ts                 managed: routes each `http` facet, calls the service contract
   <feature>.service.ts                    managed: abstract service contract
   <feature>.module.ts                     managed: binds the contract to your implementation
@@ -79,3 +79,5 @@ Vitest specs, regenerated with the contracts:
 - `app.e2e.spec.ts` (app slot): the assembled AppModule boots and serves every contract route (no 404).
 
 `vitest.config.ts` is scaffolded in the app slot; run `vitest run --root <app slot>`. With pnpm, approve esbuild's build script (`pnpm approve-builds`), which Vitest needs.
+
+**Layout.** Each feature is written under `<group>/features/<feature>/` (module, controller, service, use cases), so business logic and HTTP code stay apart from the `schema/` folders other packs write.

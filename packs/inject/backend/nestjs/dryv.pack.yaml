@@ -5,7 +5,7 @@ source: templates
 
 info:
   title: NestJS Backend Adapter
-  version: 0.7.0
+  version: 0.8.0
   description: Generates NestJS feature controllers, services and modules over bound validation and persistence packs.
   purpose: backend
   summary: NestJS feature controllers, services and modules for HTTP operations.
@@ -48,13 +48,14 @@ selections:
     scope: all
 
 templates:
-  # NestJS feature layout: <group>/<feature>/<feature>.{module,controller,service}.ts
+  # NestJS feature layout: <group>/features/<feature>/<feature>.{module,controller,service}.ts
   feature:
     $ref: '#/selections/features'
     output:
       name: $(feature.name.kebab)
       path:
         - $(group.name.kebab)
+        - features
         - $(feature.name.kebab)
       symbol: $(group.name.pascal)$(feature.name.pascal)Module
     imports:
@@ -73,6 +74,7 @@ templates:
       name: $(feature.name.kebab)
       path:
         - $(group.name.kebab)
+        - features
         - $(feature.name.kebab)
       symbol: $(group.name.pascal)$(feature.name.pascal)Controller
     imports:
@@ -84,6 +86,7 @@ templates:
       name: $(feature.name.kebab)
       path:
         - $(group.name.kebab)
+        - features
         - $(feature.name.kebab)
       symbol: $(group.name.pascal)$(feature.name.pascal)Service
     imports:
@@ -130,6 +133,7 @@ templates:
       name: $(feature.name.kebab)
       path:
         - $(group.name.kebab)
+        - features
         - $(feature.name.kebab)
     imports:
       - $ref: '#/templates/feature'
@@ -166,6 +170,7 @@ templates:
     output:
       path:
         - $(group.name.kebab)
+        - features
         - $(feature.name.kebab)
     barrel: each
     exports:

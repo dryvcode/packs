@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Output moves under `schema/`: `<group>/schema/entities/` and `common/schema/entities/`.
+
 ## 0.4.0
 
 - Generate `common/entities/testing/entities.integrity.spec.ts` (Vitest + pg-mem): schema synchronization plus per-entity table, column, key, index and NOT NULL checks against the contract.

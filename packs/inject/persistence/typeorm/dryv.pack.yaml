@@ -4,7 +4,7 @@ source: templates
 
 info:
   title: TypeORM Entities
-  version: 0.4.0
+  version: 0.5.0
   description: Generates TypeORM entities with typed columns, indexes, checks and relations from entity-role schemas.
   purpose: persistence
   summary: TypeORM entities with typed columns, relations, checks and indexes.
@@ -56,7 +56,7 @@ templates:
       - $ref: '#/needs/property.types'
       - $ref: '#/templates/entity'
 
-  # common/entities/testing/entities.integrity.spec.ts (Vitest + pg-mem): every entity
+  # common/schema/entities/testing/entities.integrity.spec.ts (Vitest + pg-mem): every entity
   # synchronizes into Postgres and maps exactly its contract's tables, keys and constraints.
   integrity:
     $ref: '#/selections/all-entities'

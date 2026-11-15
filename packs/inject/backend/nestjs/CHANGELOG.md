@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Feature folders move to `<group>/features/<feature>/`.
+
 ## 0.7.0
 
 - Add the optional `module.provider` operation slot. Feature modules import and register provider artifacts only for operations belonging to that feature.
