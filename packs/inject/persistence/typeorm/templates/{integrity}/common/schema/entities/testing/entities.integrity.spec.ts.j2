@@ -33,6 +33,12 @@
 {%- macro has_required(schema) -%}
 {%- for field in schema.fields -%}{{ required(schema, field) }}{%- endfor -%}
 {%- endmacro -%}
+{%- set spatial = namespace(enabled=false) -%}
+{%- for schema in schemas if entity_for(schema) -%}
+{%- for field in schema.fields if field.value.is.geometry -%}
+{%- set spatial.enabled = true -%}
+{%- endfor -%}
+{%- endfor -%}
 import "reflect-metadata";
 
 import { randomUUID } from "node:crypto";
@@ -79,8 +85,19 @@ beforeAll(async () => {
 {%- endif %}{% endfor %}
   ]);
   for (const namespace of namespaces) db.createSchema(namespace);
+{%- if spatial.enabled %}
+  db.registerExtension("postgis", (schema) =>
+    schema.registerEquivalentType({ name: "geometry", equivalentTo: DataType.jsonb, isValid: () => true }),
+  );
+{%- endif %}
   dataSource = await db.adapters.createTypeormDataSource({ type: "postgres", entities });
   await dataSource.initialize();
+{%- if spatial.enabled %}
+  // pg-mem can synchronize a geometry stand-in without PostGIS type modifiers.
+  const createFullType = dataSource.driver.createFullType.bind(dataSource.driver);
+  dataSource.driver.createFullType = (column) =>
+    column.type === "geometry" ? "geometry" : createFullType(column);
+{%- endif %}
   await dataSource.synchronize();
 });
 

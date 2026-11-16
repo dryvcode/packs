@@ -9,7 +9,8 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "paths": { "#/*": ["./out/*"] }
   },
   "include": ["out/**/*.ts", "entities.test.ts"]
 }

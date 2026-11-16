@@ -13,7 +13,9 @@
 {#- TypeORM column options for a field that is stored in a column. -#}
 {%- macro column_options(field) -%}
 {%- set value = field.value -%}
-{%- if value.is.geometry -%}type: "geometry", srid: {{ value.geometry.srid }}
+{%- if value.is.geometry -%}
+  {%- set spatial = value.geometry -%}
+  type: "geometry", spatialFeatureType: "{{ 'Geometry' if spatial.shape == 'any' else spatial.shape | capitalize }}{{ (spatial.dimensions | string)[2:] | upper }}", srid: {{ spatial.srid }}
 {%- elif value.is.property and value.is.primitive and field.array is none -%}
   {%- set primitive = value.property.primitive -%}
   {%- if primitive.is.string and primitive.is.uuid -%}type: "uuid"
@@ -43,7 +45,9 @@
 {%- macro ts_type(field) -%}
 {%- set value = field.value -%}
 {#- Named properties use the declarations of the bound types pack; date-like columns are Date. -#}
-{%- if value.is.property and value.is.primitive -%}
+{%- if value.is.geometry -%}
+  {%- set base = 'import("typeorm").Geometry' -%}
+{%- elif value.is.property and value.is.primitive -%}
   {%- set base = symbol_for(value.property.primitive) -%}
 {%- elif value.is.property and value.is.enum -%}
   {%- set base = symbol_for(value.property.enum) -%}
@@ -87,6 +91,23 @@
 
 {%- macro sql_operator(operator) -%}
 {%- if operator == 'equal' -%}={%- elif operator == 'not-equal' -%}<>{%- elif operator == 'less-than' -%}<{%- elif operator == 'less-than-or-equal' -%}<={%- elif operator == 'greater-than' -%}>{%- else -%}>={%- endif -%}
+{%- endmacro -%}
+
+{#- TypeORM takes a SQL predicate, so use the stored column name for a direct null check. -#}
+{%- macro index_predicate(index) -%}
+{%- if index.where is not none and index.where.form.is.comparison -%}
+{%- for comparison in index.where.form.comparisons -%}
+{%- if comparison.operator in ['equal', 'not-equal'] -%}
+{%- set left = comparison.left -%}
+{%- set right = comparison.right -%}
+{%- if left.is.field and right.is.literal and right.value is none -%}
+"{{ column(left.field) | replace('"', '""') }}" IS {% if comparison.operator == 'not-equal' %}NOT {% endif %}NULL
+{%- elif right.is.field and left.is.literal and left.value is none -%}
+"{{ column(right.field) | replace('"', '""') }}" IS {% if comparison.operator == 'not-equal' %}NOT {% endif %}NULL
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
 {%- endmacro -%}
 
 {#- One class member: a column, a relation, or both. Each starts with a blank line. -#}
@@ -156,8 +177,11 @@ import {% if dependency.slot in ['property.types', 'schema.types'] %}type {% end
  */
 @Entity({ {% if storage is not none and storage.namespace is not none %}schema: "{{ storage.namespace }}", {% endif %}name: "{% if storage is not none and storage.name is not none %}{{ storage.name }}{% else %}{{ schema.name.snake }}{% endif %}" })
 {%- if storage is not none %}
-{%- for index in storage.indexes if index.method == "btree" and index.where is none %}
-@Index({% if index.name is not none %}"{{ index.name }}", {% endif %}[{% for item in index.fields %}"{{ item.camel }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% if index.unique %}, { unique: true }{% endif %})
+{%- for index in storage.indexes if index.method == "btree" %}
+{%- set predicate = index_predicate(index) | trim %}
+{%- if index.where is none or predicate %}
+@Index({% if index.name is not none %}{{ index.name | tojson }}, {% endif %}[{% for item in index.fields %}"{{ item.camel }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% if index.unique or predicate %}, { {% if index.unique %}unique: true{% if predicate %}, {% endif %}{% endif %}{% if predicate %}where: {{ predicate | tojson }}{% endif %} }{% endif %})
+{%- endif %}
 {%- endfor %}
 {%- endif %}
 {%- for invariant in schema.invariants %}

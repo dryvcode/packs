@@ -320,6 +320,12 @@ expressions:
       left: { context: value, path: [confirmPassword] }
       right: { context: value, path: [password] }
 
+  commerce.CartItemIsCurrent:
+    group: { $ref: '#/groups/commerce' }
+    value:
+      operator: equal
+      left: { context: value, path: [archivedAt] }
+      right: { value: null }
   commerce.QuantityPositive:
     group: { $ref: '#/groups/commerce' }
     value:
@@ -519,6 +525,8 @@ schemas:
       quantity: { kind: property, $ref: '#/properties/primitives/commerce.Quantity' }
       unitPrice: { kind: property, $ref: '#/properties/primitives/commerce.Cents' }
       totalPrice: { kind: property, $ref: '#/properties/primitives/commerce.Cents' }
+      archivedAt: { kind: property, $ref: '#/properties/temporal/commerce.Timestamp', nullable: true }
+      location: { kind: geometry, geometry: { shape: point, srid: 4326 }, nullable: true }
       metadata:
         kind: property
         $ref: '#/properties/records/commerce.Metadata'
@@ -536,6 +544,7 @@ schemas:
         indexes:
           - { fields: [cartId, title], unique: true, name: cart_items_cart_title }
           - { fields: [cartId] }
+          - { fields: [cartId], unique: true, where: { $ref: '#/expressions/commerce.CartItemIsCurrent' } }
   forms.FormCreateUserRequest:
     group: { $ref: "#/groups/forms" }
     role: request
@@ -1060,3 +1069,6 @@ applications:
       - $ref: '#/groups/administration'
     surfaces:
       - $ref: '#/surfaces/AdminWeb'
+  Commerce:
+    groups:
+      - $ref: '#/groups/commerce'

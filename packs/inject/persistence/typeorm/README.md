@@ -12,13 +12,13 @@ Generates TypeORM entities from schemas with the `entity` role.
 | money in minor units, 64-bit integers, decimals | `bigint` / `numeric` with `ColumnNumericTransformer` (Postgres returns them as strings) |
 | enums | `type: "enum"` with the generated enum |
 | temporal | `date`, `time`, `interval` or `timestamptz` |
-| geometry | PostGIS `geometry` with the declared SRID and an `unknown` TypeScript field |
+| geometry | PostGIS `geometry` with the declared shape, dimensions and SRID, typed as TypeORM’s GeoJSON `Geometry` |
 | stored generated field | read-only TypeScript property excluded from inserts and updates |
 | records, composites, unknown, embedded schemas | `jsonb` |
 | `relation` (many-to-one / one-to-one) | the FK column plus `@ManyToOne`/`@OneToOne` + `@JoinColumn`, with `onDelete`, when the target entity is generated; otherwise the scalar column remains and a source comment says the FK/navigation was omitted |
 | `related` | `@OneToMany(() => Other, (item) => item.<thisSchema>)` |
 
-Manage spatial and partial indexes with PostgreSQL migrations. The TypeORM pack emits decorators for ordinary btree indexes.
+The TypeORM pack maps ordinary btree indexes and partial btree indexes with a direct `IS NULL` or `IS NOT NULL` predicate. PostGIS indexes and more complex partial predicates are managed by PostgreSQL migrations. The generated pg-mem suite uses a test stand-in for PostGIS column types.
 
 Column names follow the `naming_strategy` input (`snake`, the default, or `camel`). Descriptions on primitive properties become column comments.
 
