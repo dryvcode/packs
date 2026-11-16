@@ -13,7 +13,8 @@
 {#- TypeORM column options for a field that is stored in a column. -#}
 {%- macro column_options(field) -%}
 {%- set value = field.value -%}
-{%- if value.is.property and value.is.primitive and field.array is none -%}
+{%- if value.is.geometry -%}type: "geometry", srid: {{ value.geometry.srid }}
+{%- elif value.is.property and value.is.primitive and field.array is none -%}
   {%- set primitive = value.property.primitive -%}
   {%- if primitive.is.string and primitive.is.uuid -%}type: "uuid"
   {%- elif primitive.is.string and primitive.constraints.length is not none and primitive.constraints.length.has_max -%}type: "varchar", length: {{ primitive.constraints.length.max }}
@@ -107,12 +108,12 @@
 {%- elif field.value.is.schema and field.relation is none %}
 
   @Column({ name: "{{ column(field.name) }}", type: "jsonb"{% if field.optional or field.nullable %}, nullable: true{% endif %} })
-  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: unknown{% if field.optional or field.nullable %} | null{% endif %};
+  {% if field.generated is not none %}readonly {% endif %}{{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: unknown{% if field.optional or field.nullable %} | null{% endif %};
 {%- else %}
 {%- set primary = is_primary(storage, field) == 'yes' %}
 
-  {% if primary and field.mutation == 'system' and field.value.is.property and field.value.is.primitive and field.value.property.primitive.is.uuid %}@PrimaryGeneratedColumn("uuid", { name: "{{ column(field.name) }}" }){% elif primary %}@PrimaryColumn({ name: "{{ column(field.name) }}", {{ column_options(field) }} }){% else %}@Column({ name: "{{ column(field.name) }}", {{ column_options(field) }}{% if field.optional or field.nullable %}, nullable: true{% endif %}{% if field.default is not none and field.default.kind == 'value' %}, default: {{ field.default.value | tojson }}{% endif %}{{ comment(field) }} }){% endif %}
-  {{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
+  {% if primary and field.mutation == 'system' and field.value.is.property and field.value.is.primitive and field.value.property.primitive.is.uuid %}@PrimaryGeneratedColumn("uuid", { name: "{{ column(field.name) }}" }){% elif primary %}@PrimaryColumn({ name: "{{ column(field.name) }}", {{ column_options(field) }} }){% else %}@Column({ name: "{{ column(field.name) }}", {{ column_options(field) }}{% if field.optional or field.nullable %}, nullable: true{% endif %}{% if field.default is not none and field.default.kind == 'value' %}, default: {{ field.default.value | tojson }}{% endif %}{% if field.generated is not none %}, insert: false, update: false{% endif %}{{ comment(field) }} }){% endif %}
+  {% if field.generated is not none %}readonly {% endif %}{{ field.name.camel }}{% if field.optional or field.nullable %}?{% else %}!{% endif %}: {{ ts_type(field) }}{% if field.optional or field.nullable %} | null{% endif %};
 {%- if field.relation is not none and symbol_for(field.relation.target.schema) == '' %}
   // Relation target {{ field.relation.target.schema.id }} has no generated entity here; TypeORM FK and navigation are omitted.
 {%- endif %}
@@ -155,7 +156,7 @@ import {% if dependency.slot in ['property.types', 'schema.types'] %}type {% end
  */
 @Entity({ {% if storage is not none and storage.namespace is not none %}schema: "{{ storage.namespace }}", {% endif %}name: "{% if storage is not none and storage.name is not none %}{{ storage.name }}{% else %}{{ schema.name.snake }}{% endif %}" })
 {%- if storage is not none %}
-{%- for index in storage.indexes %}
+{%- for index in storage.indexes if index.method == "btree" and index.where is none %}
 @Index({% if index.name is not none %}"{{ index.name }}", {% endif %}[{% for item in index.fields %}"{{ item.camel }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% if index.unique %}, { unique: true }{% endif %})
 {%- endfor %}
 {%- endif %}

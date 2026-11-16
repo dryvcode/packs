@@ -23,7 +23,7 @@
 {%- endmacro -%}
 {#- "yes" when the column must be supplied on insert (no default, not generated, not nullable). -#}
 {%- macro required(schema, field) -%}
-{%- if field.related is none and not field.optional and not field.nullable and field.default is none -%}
+{%- if field.related is none and field.generated is none and not field.optional and not field.nullable and field.default is none -%}
 {%- if not (is_primary(schema, field) == 'yes' and field.mutation == 'system') -%}yes{%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
@@ -141,7 +141,7 @@ describe("entity schema matches the contract", () => {
         .sort();
       expect(indexes).toEqual(
         expect.arrayContaining([
-{%- for index in storage.indexes %}
+{%- for index in storage.indexes if index.method == "btree" and index.where is none %}
           "{% if index.unique %}unique:{% endif %}{% for item in index.fields %}{% for field in schema.fields %}{% if field.name.raw == item.raw %}{{ column(field.name) }}{% endif %}{% endfor %}{% if not loop.last %},{% endif %}{% endfor %}",
 {%- endfor %}
         ]),

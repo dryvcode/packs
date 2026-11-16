@@ -8,6 +8,11 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     JSON,
     Boolean,
+{%- for field in schema.fields if field.generated is not none %}
+{%- if loop.first %}
+    Computed,
+{%- endif %}
+{%- endfor %}
     Date,
     DateTime,
     Float,
@@ -39,6 +44,7 @@ from .base import Base
 {% macro py_type(field) -%}
 {%- set value = field.value -%}
 {%- if field.array is not none -%}list[Any]
+{%- elif value.is.geometry -%}object
 {%- elif value is none or value.is.schema or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal or value.is.enum -%}Any
 {%- elif value.is.boolean -%}bool
 {%- elif value.is.integer -%}int
@@ -93,7 +99,7 @@ class {{ file.symbol }}(Base):
 {%- if (schema.facets.storage and schema.facets.storage.indexes) or (schema.facets.storage and schema.facets.storage.namespace) %}
     __table_args__ = (
 {%- if schema.facets.storage and schema.facets.storage.indexes %}
-{%- for index in schema.facets.storage.indexes %}
+{%- for index in schema.facets.storage.indexes if index.method == "btree" and index.where is none %}
         Index(
             {% if index.name %}{{ index.name | tojson }}{% else %}"idx_{{ schema.name.snake }}_{{ loop.index }}"{% endif %},
 {%- for field_name in index.fields %}
@@ -113,6 +119,9 @@ class {{ file.symbol }}(Base):
 {%- if field.related is none %}
     {{ field.name.snake }}: Mapped[{{ py_type(field) }}] = mapped_column(
         {{ column_type(field) }},
+{%- if field.generated is not none %}
+        Computed({{ ('ST_' ~ field.generated.function ~ '("' ~ field.generated.field.snake ~ '")') | tojson }}, persisted=True),
+{%- endif %}
         name="{{ field.name.snake }}",
         nullable={% if field.optional or field.nullable %}True{% else %}False{% endif %},
         primary_key={% if field.storage is not none and field.storage.primary_key %}True{% else %}False{% endif %}{% if field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.integer %},
