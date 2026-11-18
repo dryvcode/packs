@@ -1,3 +1,4 @@
+import builtins
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
@@ -15,7 +16,7 @@ class {{ file.symbol }}(BaseModel, Generic[{% for parameter in property.generic.
     model_config = ConfigDict(extra="forbid", validate_default=True)
 
 {% for field in property.generic.value.fields %}
-    {{ field.name.snake }}: {% if field.type.kind == 'array' and field.type.items.kind == 'parameter' %}list[{{ field.type.items.name.raw }}]{% elif field.type.kind == 'reference' %}int{% else %}Any{% endif %}{% if not field.required %} | None = None{% endif %}
+    {{ field.name.snake }}: {% if field.type.kind == 'array' and field.type.items.kind == 'parameter' %}builtins.list[{{ field.type.items.name.raw }}]{% elif field.type.kind == 'reference' %}int{% else %}Any{% endif %}{% if not field.required %} | None = None{% endif %}
 {% endfor %}
 {% else %}
 {{ file.symbol }} = {{ property.generic.target.name.pascal }}[{% for argument in property.generic.arguments %}{% if argument.kind == 'reference' %}{{ argument.target.name.pascal }}{% elif argument.kind == 'primitive' and argument.name == 'string' %}str{% elif argument.kind == 'primitive' and argument.name == 'boolean' %}bool{% else %}Any{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
@@ -57,7 +58,7 @@ if TYPE_CHECKING:
   {%- elif value.property.temporal.is.duration or value.property.temporal.is.interval -%}timedelta
   {%- else -%}datetime
   {%- endif -%}
-{%- elif value.is.record -%}dict[str, Any]
+{%- elif value.is.record -%}builtins.dict[str, Any]
 {%- elif value.is.tuple -%}tuple[Any, ...]
 {%- elif value.is.generic -%}{{ value.property.generic.name.pascal }}
 {%- else -%}Any
@@ -101,7 +102,7 @@ if TYPE_CHECKING:
 {%- endmacro -%}
 
 {%- macro field_type(field) -%}
-{%- if field.array is not none -%}Annotated[list[{{ constrained_type(field.value) }}], Field({% if field.array.has_min %}min_length={{ field.array.min }}, {% endif %}{% if field.array.has_max %}max_length={{ field.array.max }}, {% endif %})]
+{%- if field.array is not none -%}Annotated[builtins.list[{{ constrained_type(field.value) }}], Field({% if field.array.has_min %}min_length={{ field.array.min }}, {% endif %}{% if field.array.has_max %}max_length={{ field.array.max }}, {% endif %})]
 {%- else -%}{{ constrained_type(field.value) }}
 {%- endif -%}
 {%- endmacro -%}
