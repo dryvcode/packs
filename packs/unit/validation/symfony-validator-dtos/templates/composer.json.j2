@@ -1,0 +1,14 @@
+{
+  "name": "dryv/generated-validation",
+  "version": "0.1.0",
+  "type": "library",
+  "require": {
+    "php": ">=8.4.1",
+    "symfony/validator": "8.1.8"
+  },
+  "autoload": {
+    "psr-4": {
+      "{{ pack.inputs.root_namespace | replace('\\', '\\\\') }}\\": "src/"
+    }
+  }
+}

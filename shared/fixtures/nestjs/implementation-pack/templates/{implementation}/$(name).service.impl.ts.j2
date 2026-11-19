@@ -1,0 +1,10 @@
+import { Injectable, NotImplementedException } from "@nestjs/common";
+
+@Injectable()
+export class {{ file.symbol }} {
+{%- for operation in operations %}
+  async {{ operation.name.camel }}(_input?: unknown): Promise<never> {
+    throw new NotImplementedException("{{ operation.name.camel }}");
+  }
+{%- endfor %}
+}

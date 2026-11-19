@@ -1,0 +1,98 @@
+#pragma once
+
+#include <string>
+
+#include <sqlite_orm/sqlite_orm.h>
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+#include "{{ dependency.path.relative | replace('include/', '') }}"
+{%- endif %}{% endfor %}
+
+namespace {{ pack.inputs.namespace }} {
+
+{%- macro cpp_ident(name) -%}
+{%- if name in ['alignas','alignof','and','and_eq','asm','atomic_cancel','atomic_commit','atomic_noexcept','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','reflexpr','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','synchronized','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro entity_symbol(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro action(value) -%}
+{%- if value == 'cascade' -%}cascade()
+{%- elif value == 'restrict' -%}restrict_()
+{%- elif value == 'detach' -%}set_null()
+{%- elif value == 'reset' -%}set_default()
+{%- else -%}no_action()
+{%- endif -%}
+{%- endmacro -%}
+
+inline auto {{ file.symbol }}(const std::string& path) {
+    using namespace sqlite_orm;
+
+    return make_storage(
+        path
+{%- for schema in schemas %}
+{%- if schema.facets.storage is not none %}
+{%- for index in schema.facets.storage.indexes %}
+{%- set entity = entity_symbol(schema) %}
+        , {% if index.unique %}make_unique_index{% else %}make_index{% endif %}(
+            "{% if index.name %}{{ index.name }}{% else %}{% if index.unique %}uniq{% else %}idx{% endif %}_{{ schema.name.snake }}_{{ loop.index }}{% endif %}"
+{%- for field_name in index.fields %}
+            , &{{ entity }}::{{ cpp_ident(field_name.snake) }}
+{%- endfor %}
+        )
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+{%- for schema in schemas %}
+{%- set entity = entity_symbol(schema) %}
+        , make_table(
+            "{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}"
+{%- set pk = namespace(count=0) %}
+{%- for field in schema.fields %}
+{%- if field.storage is not none and field.storage.primary_key %}{% set pk.count = pk.count + 1 %}{% endif %}
+{%- endfor %}
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+            , make_column(
+                "{{ field.name.snake }}",
+                &{{ entity }}::{{ cpp_ident(field.name.snake) }}
+{%- if pk.count == 1 and field.storage is not none and field.storage.primary_key %}
+                , primary_key(){% if field.mutation == 'system' and field.value.is.integer %}.autoincrement(){% endif %}
+{%- endif %}
+{%- if field.relation is not none and field.relation.is.one_to_one %}
+                , unique()
+{%- endif %}
+            )
+{%- endif %}
+{%- endfor %}
+{%- if pk.count > 1 %}
+            , primary_key(
+{%- set key_state = namespace(first=true) %}
+{%- for field in schema.fields %}
+{%- if field.storage is not none and field.storage.primary_key %}
+                {% if not key_state.first %}, {% endif %}&{{ entity }}::{{ cpp_ident(field.name.snake) }}{% set key_state.first=false %}
+{%- endif %}
+{%- endfor %}
+            )
+{%- endif %}
+{%- for field in schema.fields %}
+{%- if field.relation is not none and entity_symbol(field.relation.target.schema) %}
+            , foreign_key(&{{ entity }}::{{ cpp_ident(field.name.snake) }})
+                .references(&{{ entity_symbol(field.relation.target.schema) }}::{{ cpp_ident(field.relation.target.field.snake) }})
+{%- if field.relation.on_update is not none %}
+                .on_update.{{ action(field.relation.on_update) }}
+{%- endif %}
+{%- if field.relation.on_delete is not none %}
+                .on_delete.{{ action(field.relation.on_delete) }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+        )
+{%- endfor %}
+    );
+}
+
+} // namespace {{ pack.inputs.namespace }}

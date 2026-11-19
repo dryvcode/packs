@@ -1,0 +1,140 @@
+use super::plan::Field;
+use crate::ApiError;
+use sea_orm::sea_query::Value;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+/// The typed value tree at the generated SQL/JSON serialization boundary.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Wire {
+    Bool(bool),
+    Number(serde_json::Number),
+    Text(String),
+    Array(Vec<Wire>),
+    Object(BTreeMap<String, Wire>),
+    #[default]
+    Null,
+}
+pub type Row = BTreeMap<String, Wire>;
+pub type Trusted = BTreeMap<String, Row>;
+
+impl Wire {
+    pub fn object(&self) -> Result<&Row, ApiError> {
+        if let Self::Object(value) = self {
+            Ok(value)
+        } else {
+            Err(ApiError::internal())
+        }
+    }
+    pub fn numeric(&self) -> Option<f64> {
+        if let Self::Number(value) = self {
+            value.as_f64()
+        } else {
+            None
+        }
+    }
+    pub fn text(&self) -> Option<&str> {
+        if let Self::Text(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+    pub fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+    pub fn truth(&self) -> bool {
+        matches!(self, Self::Bool(true))
+    }
+    pub fn path(&self, segments: &[String]) -> Option<&Self> {
+        let mut value = self;
+        for segment in segments {
+            value = value.object().ok()?.get(segment)?;
+        }
+        Some(value)
+    }
+    pub fn sql(&self, field: &Field) -> Result<Value, ApiError> {
+        let null = self.is_null();
+        let invalid = || ApiError::validation(&field.name, "The value has an invalid type.");
+        Ok(match field.scalar.as_str() {
+            "uuid" => Value::Uuid(if null {
+                None
+            } else {
+                Some(
+                    self.text()
+                        .ok_or_else(invalid)?
+                        .parse()
+                        .map_err(|_| invalid())?,
+                )
+            }),
+            "instant" => Value::TimeDateTimeWithTimeZone(if null {
+                None
+            } else {
+                Some(
+                    time::OffsetDateTime::parse(
+                        self.text().ok_or_else(invalid)?,
+                        &time::format_description::well_known::Rfc3339,
+                    )
+                    .map_err(|_| invalid())?,
+                )
+            }),
+            "integer" => Value::BigInt(if null {
+                None
+            } else {
+                Some(match self {
+                    Self::Number(value) => value.as_i64().ok_or_else(invalid)?,
+                    _ => return Err(invalid()),
+                })
+            }),
+            "float" => Value::Double(if null {
+                None
+            } else {
+                Some(self.numeric().ok_or_else(invalid)?)
+            }),
+            "decimal" => Value::Decimal(if null {
+                None
+            } else {
+                Some(
+                    match self {
+                        Self::Number(value) => value.to_string(),
+                        Self::Text(value) => value.clone(),
+                        _ => return Err(invalid()),
+                    }
+                    .parse()
+                    .map_err(|_| invalid())?,
+                )
+            }),
+            "boolean" => Value::Bool(if null {
+                None
+            } else {
+                Some(match self {
+                    Self::Bool(value) => *value,
+                    _ => return Err(invalid()),
+                })
+            }),
+            "json" => Value::Json(if null {
+                None
+            } else {
+                Some(Box::new(
+                    serde_json::to_value(self).map_err(|_| ApiError::internal())?,
+                ))
+            }),
+            _ => Value::String(if null {
+                None
+            } else {
+                Some(self.text().ok_or_else(invalid)?.to_owned())
+            }),
+        })
+    }
+}
+impl From<i64> for Wire {
+    fn from(value: i64) -> Self {
+        Self::Number(value.into())
+    }
+}
+impl From<u64> for Wire {
+    fn from(value: u64) -> Self {
+        Self::Number(value.into())
+    }
+}

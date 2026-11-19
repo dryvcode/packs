@@ -1,0 +1,94 @@
+# frozen_string_literal: true
+
+require "json"
+require "net/http"
+require "uri"
+
+module {{ pack.inputs.module_name }}
+  class ApiError < StandardError
+    attr_reader :status, :payload
+
+    def initialize(status, message, payload = nil)
+      super(message)
+      @status = status
+      @payload = payload
+    end
+  end
+
+  class DryvClient
+    def initialize(base_url)
+      @base_url = base_url.sub(%r{/*$}, "")
+    end
+
+    def self.wire(value)
+      return nil if value.nil?
+      return value.to_wire if value.respond_to?(:to_wire)
+      return value.to_h if value.respond_to?(:to_h) && !value.is_a?(Hash)
+
+      case value
+      when Array
+        value.map { |item| wire(item) }
+      when Hash
+        value.transform_values { |item| wire(item) }
+      else
+        value
+      end
+    end
+
+    def self.append_pair(pairs, name, value)
+      wire_value = wire(value)
+      return if wire_value.nil?
+
+      if wire_value.is_a?(Array)
+        wire_value.each { |item| pairs << [name, item] unless item.nil? }
+      else
+        pairs << [name, wire_value]
+      end
+    end
+
+    def request(method, path, headers: {}, cookies: {}, json_body: nil, has_json_body: false, form: nil)
+      uri = URI.parse(@base_url + path)
+      request_headers = headers.dup
+      unless cookies.empty?
+        request_headers["Cookie"] = cookies.map { |name, value| "#{name}=#{URI.encode_www_form_component(value.to_s)}" }.join("; ")
+      end
+
+      body = nil
+      if has_json_body
+        body = JSON.generate(self.class.wire(json_body))
+        request_headers["Content-Type"] = "application/json"
+      elsif form
+        body = URI.encode_www_form(form.map { |name, value| [name, self.class.wire(value)] })
+        request_headers["Content-Type"] = "application/x-www-form-urlencoded"
+      end
+
+      request = Net::HTTPGenericRequest.new(
+        method,
+        !body.nil?,
+        method != "HEAD",
+        uri.request_uri,
+        request_headers,
+      )
+      request.body = body if body
+
+      response = Net::HTTP.start(
+        uri.host,
+        uri.port,
+        use_ssl: uri.scheme == "https",
+      ) { |http| http.request(request) }
+
+      payload = begin
+        response.body.nil? || response.body.empty? ? nil : JSON.parse(response.body)
+      rescue JSON::ParserError
+        nil
+      end
+
+      unless response.is_a?(Net::HTTPSuccess)
+        message = payload.is_a?(Hash) && payload["message"].is_a?(String) ? payload["message"] : response.body.to_s.strip
+        raise ApiError.new(response.code.to_i, message, payload)
+      end
+
+      payload
+    end
+  end
+end

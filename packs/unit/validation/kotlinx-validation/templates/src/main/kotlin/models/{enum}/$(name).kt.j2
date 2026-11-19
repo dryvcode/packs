@@ -1,0 +1,73 @@
+package {{ pack.inputs.package_name }}.models
+
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonPrimitive
+
+{%- macro kotlin_ident(name) -%}
+{%- if name in ['as','break','class','continue','do','else','false','for','fun','if','in','interface','is','null','object','package','return','super','this','throw','true','try','typealias','typeof','val','var','when','while','by','catch','constructor','delegate','dynamic','field','file','finally','get','import','init','param','property','receiver','set','setparam','where','actual','abstract','annotation','companion','const','crossinline','data','enum','expect','external','final','infix','inline','inner','internal','lateinit','noinline','open','operator','out','override','private','protected','public','reified','sealed','suspend','tailrec','vararg','field','it'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro string_expr(value) -%}
+String(
+    byteArrayOf({% for byte in value.encode('utf-8') %}{{ byte if byte < 128 else byte - 256 }}{% if not loop.last %}, {% endif %}{% endfor %}),
+    Charsets.UTF_8,
+)
+{%- endmacro -%}
+
+{%- macro primitive_expr(value) -%}
+{%- if value is boolean -%}JsonPrimitive({% if value %}true{% else %}false{% endif %})
+{%- elif value is integer -%}JsonPrimitive({{ value }}L)
+{%- elif value is float -%}JsonPrimitive({{ value }})
+{%- elif value is string -%}JsonPrimitive({{ string_expr(value) }})
+{%- endif -%}
+{%- endmacro -%}
+
+@Serializable(with = {{ file.symbol }}.Serializer::class)
+data class {{ file.symbol }}(val value: JsonPrimitive) {
+    companion object {
+{%- for item in property.enum.values %}
+        val {{ kotlin_ident(item.name.camel) }} = {{ file.symbol }}(
+            {{ primitive_expr(item.value) }}
+        )
+{%- endfor %}
+
+        val allValues: List<{{ file.symbol }}> = listOf(
+{%- for item in property.enum.values %}
+            {{ kotlin_ident(item.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        )
+
+        fun parseWire(raw: String): {{ file.symbol }}? =
+            allValues.firstOrNull { it.toString() == raw }
+    }
+
+    object Serializer : KSerializer<{{ file.symbol }}> {
+        override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor
+
+        override fun serialize(encoder: Encoder, value: {{ file.symbol }}) {
+            val jsonEncoder = encoder as? JsonEncoder
+                ?: throw SerializationException("{{ file.symbol }} requires JSON encoding")
+            jsonEncoder.encodeJsonElement(value.value)
+        }
+
+        override fun deserialize(decoder: Decoder): {{ file.symbol }} {
+            val jsonDecoder = decoder as? JsonDecoder
+                ?: throw SerializationException("{{ file.symbol }} requires JSON decoding")
+            val primitive = jsonDecoder.decodeJsonElement().jsonPrimitive
+            return allValues.firstOrNull { it.value == primitive }
+                ?: throw SerializationException("Invalid {{ property.enum.name.local }} value")
+        }
+    }
+
+    override fun toString(): String =
+        if (value.isString) value.content else value.toString()
+}

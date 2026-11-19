@@ -1,0 +1,6 @@
+from .base import Base
+{% for item in file.exports %}
+from .{{ item.path.relative | replace('/', '.') | replace('.py', '') }} import {{ item.symbol }} as {{ item.symbol }}
+{%- endfor %}
+
+__all__ = ["Base"{% for item in file.exports %}, "{{ item.symbol }}"{% endfor %}]

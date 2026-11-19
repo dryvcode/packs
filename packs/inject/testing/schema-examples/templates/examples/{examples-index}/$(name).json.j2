@@ -1,0 +1,23 @@
+{
+  "application": {
+    "id": {{ application.id | tojson }},
+    "name": {{ application.name.qualified | tojson }}
+  },
+  "schemas": [
+{%- for schema in schemas %}
+{%- set artifact = namespace(path=null) %}
+{%- for dependency in file.dependencies %}
+{%- if dependency.target.id == schema.id %}
+{%- set artifact.path = dependency.path.relative %}
+{%- endif %}
+{%- endfor %}
+    {
+      "id": {{ schema.id | tojson }},
+      "name": {{ schema.name.qualified | tojson }},
+      "role": {% if schema.role %}{{ schema.role | tojson }}{% else %}null{% endif %},
+      "exampleCount": {{ schema.examples | length }},
+      "file": {% if artifact.path %}{{ artifact.path | tojson }}{% else %}null{% endif %}
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ]
+}

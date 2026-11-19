@@ -1,0 +1,4 @@
+{% for item in file.exports %}
+export '{{ item.path.relative }}';
+{%- endfor %}
+

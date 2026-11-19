@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from typing import ClassVar
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter
+{% for dependency in file.dependencies %}{% if dependency.symbol %}from dryv_client.models.{{ dependency.path.pack | replace('src/dryv_client/models/', '') | replace('.py', '') | replace('/', '.') }} import {{ dependency.symbol }}
+{% endif %}{% endfor %}
+
+class Issue(BaseModel):
+    path: str
+    message: str
+
+class ErrorBody(BaseModel):
+    code: str = "http_error"
+    message: str
+    issues: list[Issue] = Field(default_factory=list)
+    payload: JsonValue = None
+
+class ApiError(RuntimeError):
+    machine_code: ClassVar[str | None] = None
+    def __init__(self, status: int, message: str, payload: JsonValue = None) -> None:
+        super().__init__(message)
+        self.status = status
+        self.payload = payload
+        self.body = ErrorBody.model_validate(payload) if isinstance(payload, dict) and isinstance(payload.get("code"), str) and isinstance(payload.get("message"), str) else ErrorBody(message=message)
+        self.code = self.body.code
+        self.issues = self.body.issues
+
+{% for failure in failures %}
+class {{ failure.group.name.pascal }}{{ failure.name.pascal }}Error(ApiError):
+    machine_code = {{ failure.code | tojson }}
+{% if failure.payload is not none and failure.payload.kind == 'reference' %}{% for dependency in file.dependencies %}{% if dependency.target.id == failure.payload.target.id %}
+    @property
+    def details(self) -> {{ dependency.symbol }} | None:
+        return None if self.body.payload is None else TypeAdapter({{ dependency.symbol }}).validate_python(self.body.payload)
+{% endif %}{% endfor %}{% elif failure.payload is not none and failure.payload.kind == 'primitive' %}
+    @property
+    def details(self) -> {% if failure.payload.name == 'boolean' %}bool{% elif failure.payload.name == 'number' %}float{% else %}str{% endif %} | None:
+        return None if self.body.payload is None else TypeAdapter({% if failure.payload.name == 'boolean' %}bool{% elif failure.payload.name == 'number' %}float{% else %}str{% endif %}).validate_python(self.body.payload)
+{% endif %}
+{% endfor %}
+ERROR_TYPES: dict[str, type[ApiError]] = {
+{% for failure in failures %}    {{ failure.code | tojson }}: {{ failure.group.name.pascal }}{{ failure.name.pascal }}Error,
+{% endfor %}}
+__all__ = ["ApiError", "ErrorBody", "Issue", {% for failure in failures %}"{{ failure.group.name.pascal }}{{ failure.name.pascal }}Error", {% endfor %}]

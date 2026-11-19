@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Models;
+
+final readonly class {{ file.symbol }} implements \JsonSerializable, \Stringable
+{
+{%- for item in property.enum.values %}
+    public const {{ item.name.constant }} = {{ item.value_json }};
+{%- endfor %}
+
+    private function __construct(public string|int|float|bool $value)
+    {
+    }
+
+    public static function from(string|int|float|bool $value): self
+    {
+        foreach (self::values() as $candidate) {
+            if ($candidate === $value) {
+                return new self($value);
+            }
+        }
+
+        throw new \InvalidArgumentException('Invalid {{ property.enum.name.local }} value');
+    }
+
+    /** @return list<string|int|float|bool> */
+    public static function values(): array
+    {
+        return [
+{%- for item in property.enum.values %}
+            self::{{ item.name.constant }},
+{%- endfor %}
+        ];
+    }
+
+    public function jsonSerialize(): string|int|float|bool
+    {
+        return $this->value;
+    }
+
+    public function __toString(): string
+    {
+        return is_string($this->value)
+            ? $this->value
+            : json_encode($this->value, JSON_THROW_ON_ERROR);
+    }
+}

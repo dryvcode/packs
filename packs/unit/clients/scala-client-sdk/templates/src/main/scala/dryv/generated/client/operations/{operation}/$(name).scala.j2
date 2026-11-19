@@ -1,0 +1,154 @@
+package {{ pack.inputs.root_package }}.operations
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ExecutionContext, Future}
+
+import io.circe.{Encoder, Json, JsonObject}
+import io.circe.syntax.*
+
+import {{ pack.inputs.root_package }}.DryvClient
+import {{ pack.inputs.root_package }}.models.*
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro scala_ident(name) -%}
+{%- if name in ['abstract','case','catch','class','def','do','else','enum','export','extends','false','final','finally','for','forSome','given','if','implicit','import','lazy','match','new','null','object','opaque','open','override','package','private','protected','return','sealed','super','then','this','throw','trait','transparent','true','try','type','using','val','var','while','with','yield','end','extension','inline','infix','derives'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}Json
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Json' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Json' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.uuid -%}java.util.UUID
+{%- elif value.is.record -%}Map[String, Json]
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}Json
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro raw_field_type(field) -%}
+{%- if field.array is not none -%}List[{{ base_type(field.value) }}]{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.optional or field.nullable -%}Option[{{ raw_field_type(field) }}]{%- else -%}{{ raw_field_type(field) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input{%- else -%}input.{{ scala_ident(binding.port.field.camel) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+final case class {{ operation.name.pascal }}Input(
+{%- for field in operation.input.fields %}
+  {{ scala_ident(field.name.camel) }}: {{ field_type(field) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+object {{ operation.name.pascal }}Input:
+  given Encoder.AsObject[{{ operation.name.pascal }}Input] =
+    Encoder.AsObject.instance(value =>
+      JsonObject(
+{%- for field in operation.input.fields %}
+        {{ field.name.raw | tojson }} -> value.{{ scala_ident(field.name.camel) }}.asJson{% if not loop.last %},{% endif %}
+{%- endfor %}
+      )
+    )
+
+{%- endif %}
+object {{ file.symbol }}:
+  def execute(
+    client: DryvClient{% if operation.input %},
+    input: {% if operation.input.kind == 'schema' %}{{ base_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %}{% endif %}
+  )(using ExecutionContext): Future[{% if operation.output %}{{ base_type(operation.output.value) }}{% else %}Unit{% endif %}] =
+{%- if http.input_groups.multipart %}
+    Future.failed(
+      new UnsupportedOperationException(
+        "Multipart bindings require an explicit Scala semantic mapping."
+      )
+    )
+{%- else %}
+    var path = {{ http.path.local | tojson }}
+{%- for binding in http.input_groups.path %}
+    path = path.replace(
+      "{" + {{ (binding.name or binding.port.name.raw) | tojson }} + "}",
+      DryvClient.encode(DryvClient.optionalScalar({{ bound(binding) }}).getOrElse("")),
+    )
+{%- endfor %}
+
+    val query = ListBuffer.empty[(String, String)]
+{%- for binding in http.input_groups.query %}
+    DryvClient.appendParam(query, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+    {{ bound(binding) }}.asJson.asObject.foreach { obj =>
+      obj.toMap.foreach((name, value) => DryvClient.appendJsonParam(query, name, value))
+    }
+{%- endfor %}
+    path = DryvClient.appendQuery(path, query)
+
+    val headers = Map.newBuilder[String, String]
+{%- for binding in http.input_groups.header %}
+    DryvClient.optionalScalar({{ bound(binding) }}).foreach(value =>
+      headers += {{ (binding.name or binding.port.name.raw) | tojson }} -> value
+    )
+{%- endfor %}
+
+    val cookies = Map.newBuilder[String, String]
+{%- for binding in http.input_groups.cookie %}
+    DryvClient.optionalScalar({{ bound(binding) }}).foreach(value =>
+      cookies += {{ (binding.name or binding.port.name.raw) | tojson }} -> value
+    )
+{%- endfor %}
+
+    var jsonBody: Option[Json] = None
+{%- for binding in http.input_groups.body %}
+    jsonBody = Some({{ bound(binding) }}.asJson)
+{%- endfor %}
+
+    val form =
+{%- if http.input_groups.form %}
+      val values = ListBuffer.empty[(String, String)]
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+      {{ bound(binding) }}.asJson.asObject.foreach { obj =>
+        obj.toMap.foreach((name, value) => DryvClient.appendJsonParam(values, name, value))
+      }
+{%- else %}
+      DryvClient.appendParam(values, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }})
+{%- endif %}
+{%- endfor %}
+      Some(values.toList)
+{%- else %}
+      None
+{%- endif %}
+
+{%- if operation.output %}
+    client.send[{{ base_type(operation.output.value) }}](
+      {{ http.method | tojson }},
+      path,
+      headers.result(),
+      cookies.result(),
+      jsonBody,
+      form,
+    )
+{%- else %}
+    client.sendUnit(
+      {{ http.method | tojson }},
+      path,
+      headers.result(),
+      cookies.result(),
+      jsonBody,
+      form,
+    )
+{%- endif %}
+{%- endif %}

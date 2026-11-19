@@ -1,0 +1,29 @@
+{
+  "name": "nestjs-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@nestjs/common": "^11",
+    "@nestjs/core": "^11",
+    "@nestjs/platform-express": "^11",
+    "@nestjs/typeorm": "^11",
+    "class-transformer": "^0.5",
+    "class-validator": "^0.14",
+    "reflect-metadata": "^0.2",
+    "rxjs": "^7",
+    "typeorm": "^0.3",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11",
+    "@types/bun": "^1",
+    "typescript": "^5.8",
+    "vitest": "^3",
+    "unplugin-swc": "^1",
+    "@swc/core": "^1",
+    "randexp": "^0.5",
+    "pg": "^8",
+    "pg-mem": "^3",
+    "vite-tsconfig-paths": "^5"
+  }
+}

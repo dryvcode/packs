@@ -1,0 +1,72 @@
+# DESIGN EXAMPLE — tracks the latest Dryv pack architecture.
+version: dryv.pack/v1alpha1
+key: inject.backend.nestjs
+layout: inject
+source: templates
+
+info:
+  title: NestJS
+  version: 0.1.0
+  description: Generates NestJS feature controllers, service boundaries and feature modules.
+  purpose: backend
+  summary: NestJS feature-level HTTP implementation.
+  languages: [typescript]
+  frameworks: [nestjs]
+  tags: [backend, http, controller, module]
+
+needs:
+  schema.validation: required
+  schema.persistence: recommended
+
+selections:
+  http-features:
+    subject: operation
+    filter:
+      all: { facet: http }
+    scope: collects.feature
+
+templates:
+  controller:
+    $ref: "#/selections/http-features"
+    output:
+      name: "$(feature.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Controller"
+    imports:
+      - $ref: "#/needs/schema.validation"
+      - $ref: "#/needs/schema.persistence"
+
+  service:
+    $ref: "#/selections/http-features"
+    output:
+      name: "$(feature.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Service"
+    imports:
+      - $ref: "#/needs/schema.validation"
+      - $ref: "#/needs/schema.persistence"
+
+  module:
+    $ref: "#/selections/http-features"
+    output:
+      name: "$(feature.name.kebab)"
+      path:
+        - "$(group.name.kebab)"
+        - "$(feature.name.kebab)"
+      symbol: "$(feature.name.pascal)Module"
+    imports:
+      - $ref: "#/templates/controller"
+      - $ref: "#/templates/service"
+
+provides:
+  operation.server:
+    $ref: "#/templates/module"
+
+dependencies:
+  runtime:
+    "@nestjs/common": ^11
+    reflect-metadata: ^0.2

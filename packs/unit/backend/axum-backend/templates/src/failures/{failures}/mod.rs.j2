@@ -1,0 +1,25 @@
+{%- macro rust_string(value) -%}"{{ value | replace('\\', '\\\\') | replace('"', '\\"') | replace('\n', '\\n') | replace('\r', '\\r') | replace('\t', '\\t') }}"{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}{%- if dependency.target.id == link.id -%}crate::models::{{ dependency.symbol }}{%- endif -%}{%- endfor -%}
+{%- endmacro -%}
+{%- macro payload_type(payload) -%}
+{%- if payload.kind == 'reference' -%}{{ symbol_for(payload.target) or 'serde_json::Value' }}
+{%- elif payload.kind == 'primitive' -%}{% if payload.name == 'boolean' %}bool{% elif payload.name == 'number' %}f64{% else %}String{% endif %}
+{%- else -%}serde_json::Value{%- endif -%}
+{%- endmacro -%}
+#[derive(Clone, Debug)]
+pub enum DeclaredFailure {
+{% for failure in failures %}    {{ failure.group.name.pascal }}{{ failure.name.pascal }}{% if failure.payload is not none %}({{ payload_type(failure.payload) }}){% endif %},
+{% endfor %}}
+impl DeclaredFailure {
+    pub fn into_api_error(self, _status: axum::http::StatusCode) -> crate::ApiError {
+        match self {
+{% for failure in failures %}            Self::{{ failure.group.name.pascal }}{{ failure.name.pascal }}{% if failure.payload is not none %}(payload){% endif %} => {
+                let mut error = crate::ApiError::new(_status, {{ rust_string(failure.description or failure.code) }});
+                error.code = {{ rust_string(failure.code) }}.into();
+{% if failure.payload is not none %}                error.payload = serde_json::to_value(payload).ok();
+{% endif %}                error
+            },
+{% endfor %}        }
+    }
+}

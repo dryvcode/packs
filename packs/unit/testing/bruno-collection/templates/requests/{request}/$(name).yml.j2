@@ -1,0 +1,156 @@
+{%- macro scalar_example(value) -%}
+{%- if value is none -%}null
+{%- elif value.is.enum and value.property.enum.values -%}{{ value.property.enum.values[0].value_json }}
+{%- elif value.is.boolean -%}false
+{%- elif value.is.integer -%}1
+{%- elif value.is.number -%}1
+{%- elif value.is.uuid -%}"00000000-0000-4000-8000-000000000001"
+{%- elif value.is.email -%}"test@example.com"
+{%- elif value.is.url or value.is.uri -%}"https://example.com"
+{%- elif value.is.date -%}"2026-01-01"
+{%- elif value.is.time -%}"12:00:00"
+{%- elif value.is.temporal -%}"2026-01-01T12:00:00Z"
+{%- elif value.is.record -%}{}
+{%- else -%}"example"
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_example(field) -%}
+{%- if field.default is not none and field.default.kind == 'value' -%}{{ field.default.value_json }}
+{%- elif field.array is not none -%}[{{ scalar_example(field.value) }}]
+{%- else -%}{{ scalar_example(field.value) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro text_example(field) -%}
+{{- (field_example(field) | trim) | replace('"','') -}}
+{%- endmacro -%}
+
+{%- macro binding_field(operation, binding, mode) -%}
+{%- set state = namespace(value='example') -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw -%}
+{%- if mode == 'json' -%}{%- set state.value = field_example(field) | trim -%}{%- else -%}{%- set state.value = text_example(field) | trim -%}{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{{- state.value -}}
+{%- endmacro -%}
+
+{%- macro body_json(operation) -%}
+{
+{%- set first = namespace(value=true) -%}
+{%- for binding in operation.facets.http.input_groups.body -%}
+{%- if binding.port.field is none -%}
+{%- for field in operation.input.fields %}
+  {% if not first.value %},{% endif %}{{ field.name.raw | tojson }}: {{ field_example(field) }}{% set first.value=false %}
+{%- endfor -%}
+{%- else -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw %}
+  {% if not first.value %},{% endif %}{{ field.name.raw | tojson }}: {{ field_example(field) }}{% set first.value=false %}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endfor %}
+}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- set url = namespace(value=http.path.effective) -%}
+{%- for binding in http.input_groups.path -%}
+{%- set name = binding.name or binding.port.name.raw -%}
+{%- set url.value = url.value | replace('{' ~ name ~ '}', ':' ~ name) -%}
+{%- endfor -%}
+info:
+  name: {{ operation.name.title | tojson }}
+  type: http
+  seq: 1
+  tags:
+    - dryv
+    - smoke
+
+http:
+  method: {{ http.method }}
+  url: {{ ('{{baseUrl}}' ~ url.value) | tojson }}
+{%- if http.input_groups.path or http.input_groups.query or http.input_groups.query_object %}
+  params:
+{%- for binding in http.input_groups.path %}
+    - name: {{ (binding.name or binding.port.name.raw) | tojson }}
+      value: {{ (binding_field(operation, binding, 'text') | trim) | tojson }}
+      type: path
+{%- endfor %}
+{%- for binding in http.input_groups.query %}
+    - name: {{ (binding.name or binding.port.name.raw) | tojson }}
+      value: {{ (binding_field(operation, binding, 'text') | trim) | tojson }}
+      type: query
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+{%- if binding.port.field is none %}
+{%- for field in operation.input.fields %}
+    - name: {{ field.name.raw | tojson }}
+      value: {{ (text_example(field) | trim) | tojson }}
+      type: query
+{%- endfor %}
+{%- else %}
+    - name: {{ (binding.name or binding.port.name.raw) | tojson }}
+      value: {{ (binding_field(operation, binding, 'text') | trim) | tojson }}
+      type: query
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- if http.input_groups.header or http.input_groups.cookie %}
+  headers:
+{%- for binding in http.input_groups.header %}
+    - name: {{ (binding.name or binding.port.name.raw) | tojson }}
+      value: {{ (binding_field(operation, binding, 'text') | trim) | tojson }}
+{%- endfor %}
+{%- if http.input_groups.cookie %}
+    - name: Cookie
+      value: "{% for binding in http.input_groups.cookie %}{{ binding.name or binding.port.name.raw }}={{ binding_field(operation, binding, 'text') | trim }}{% if not loop.last %}; {% endif %}{% endfor %}"
+{%- endif %}
+{%- endif %}
+{%- if http.input_groups.body %}
+  body:
+    type: json
+    data: |-
+{{ (body_json(operation) | trim) | indent(6, true) }}
+{%- elif http.input_groups.form %}
+  body:
+    type: form-urlencoded
+    data:
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+{%- for field in operation.input.fields %}
+      - name: {{ field.name.raw | tojson }}
+        value: {{ (text_example(field) | trim) | tojson }}
+{%- endfor %}
+{%- else %}
+      - name: {{ (binding.name or binding.port.name.raw) | tojson }}
+        value: {{ (binding_field(operation, binding, 'text') | trim) | tojson }}
+{%- endif %}
+{%- endfor %}
+{%- elif http.input_groups.multipart %}
+  body:
+    type: multipart-form
+    data:
+      - name: _dryv_notice
+        type: text
+        value: Multipart file-part semantics are not yet represented by Dryv Runtime IR.
+        disabled: true
+{%- endif %}
+  auth: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const expected = [{% if http.outputs %}{% for output in http.outputs %}{{ output.status }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}200{% endif %}];
+        test("declared success status", function () {
+          expect(expected).to.include(res.status);
+        });
+
+docs: |-
+  Generated by Dryv from canonical Runtime IR.
+  Placeholder request values are deterministic testing scaffolding only.

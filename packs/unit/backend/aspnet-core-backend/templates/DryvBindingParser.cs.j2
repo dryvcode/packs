@@ -1,0 +1,62 @@
+using System.Globalization;
+using System.Reflection;
+using Microsoft.Extensions.Primitives;
+
+namespace {{ pack.inputs.root_namespace }};
+
+internal static class DryvBindingParser
+{
+    public static bool TryParse<T>(string? raw, out T? value)
+    {
+        value = default;
+        if (raw is null) return false;
+
+        var target = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        if (target == typeof(string))
+        {
+            value = (T?)(object?)raw;
+            return true;
+        }
+
+        var tryParse = target.GetMethod(
+            "TryParse",
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(string), typeof(IFormatProvider), target.MakeByRefType()],
+            modifiers: null);
+
+        if (tryParse is not null)
+        {
+            object?[] arguments = [raw, CultureInfo.InvariantCulture, null];
+            if (tryParse.Invoke(null, arguments) is true)
+            {
+                value = (T?)arguments[2];
+                return true;
+            }
+        }
+
+        try
+        {
+            value = (T?)Convert.ChangeType(raw, target, CultureInfo.InvariantCulture);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool TryParseMany<T>(StringValues values, out List<T> result)
+    {
+        result = [];
+        foreach (var raw in values)
+        {
+            if (!TryParse<T>(raw, out var value) || value is null)
+            {
+                return false;
+            }
+            result.Add(value);
+        }
+        return true;
+    }
+}

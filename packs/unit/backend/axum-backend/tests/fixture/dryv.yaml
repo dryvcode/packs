@@ -1,0 +1,14 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main: { type: ir, path: dryv.ir.yaml }
+  packs:
+    local: { path: packs }
+destinations:
+  out: { path: server }
+authoring:
+  source: { $ref: "#/sources/authoring/main" }
+packs:
+  axum:
+    source: { $ref: "#/sources/packs/local", path: unit/backend/axum-backend }
+    destination: { $ref: "#/destinations/out" }

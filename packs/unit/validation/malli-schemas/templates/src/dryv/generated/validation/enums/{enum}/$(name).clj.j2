@@ -1,0 +1,24 @@
+{%- macro clj_json(text) -%}
+{%- if text == 'true' -%}true
+{%- elif text == 'false' -%}false
+{%- elif text == 'null' -%}nil
+{%- else -%}{{ text }}
+{%- endif -%}
+{%- endmacro -%}
+(ns dryv.generated.validation.enums.{{ group.name.snake }}.{{ property.enum.name.snake }}
+  (:require [malli.core :as m]))
+
+(def {{ file.symbol }}
+  [:enum
+{%- for item in property.enum.values %}
+   {{ clj_json(item.value_json) }}
+{%- endfor %}
+   ])
+
+(defn valid?
+  [value]
+  (m/validate {{ file.symbol }} value))
+
+(defn explain
+  [value]
+  (m/explain {{ file.symbol }} value))

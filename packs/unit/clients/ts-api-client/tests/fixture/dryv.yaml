@@ -1,0 +1,25 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  out:
+    path: out
+    choose:
+      js.package_manager: bun
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  api:
+    source: { $ref: "#/sources/packs/local", path: unit/clients/ts-api-client }
+    destination:
+      $ref: "#/destinations/out"
+    inputs:
+      package_name: "@fixture/api-client"
+      package_private: true

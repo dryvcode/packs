@@ -1,0 +1,32 @@
+defmodule {{ pack.inputs.module_prefix }}.DryvJSON do
+  @moduledoc false
+
+  use Ecto.Type
+
+  def type, do: :string
+
+  def cast(value) do
+    case Jason.encode(value) do
+      {:ok, _json} -> {:ok, value}
+      {:error, _reason} -> :error
+    end
+  end
+
+  def dump(value) do
+    case Jason.encode(value) do
+      {:ok, json} -> {:ok, json}
+      {:error, _reason} -> :error
+    end
+  end
+
+  def load(value) when is_binary(value) do
+    case Jason.decode(value) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, _reason} -> :error
+    end
+  end
+
+  def load(_value), do: :error
+
+  def equal?(left, right), do: left == right
+end

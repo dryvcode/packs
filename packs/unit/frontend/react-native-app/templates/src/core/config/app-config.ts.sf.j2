@@ -1,0 +1,6 @@
+import { configureApi } from "{{ application.name.kebab }}-api";
+
+/** App configuration. Scaffolded by Dryv once; this file belongs to the app. */
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+
+configureApi({ baseUrl: API_URL });

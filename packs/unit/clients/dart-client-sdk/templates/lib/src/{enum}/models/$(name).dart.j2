@@ -1,0 +1,15 @@
+enum {{ file.symbol }} {
+{%- for item in property.enum.values %}
+  {{ item.name.camel }}({{ item.value | tojson }}){% if loop.last %};{% else %},{% endif %}
+{%- endfor %}
+
+  const {{ file.symbol }}(this.value);
+
+  final String value;
+
+  static {{ file.symbol }} fromJson(String value) =>
+      values.firstWhere((item) => item.value == value);
+
+  String toJson() => value;
+}
+

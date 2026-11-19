@@ -1,0 +1,174 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Operations;
+
+use {{ pack.inputs.root_namespace }}\DryvClient;
+{%- for dependency in file.dependencies %}{% if dependency.symbol %}
+use {{ pack.inputs.root_namespace }}\Models\{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro php_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}mixed
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'mixed' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'mixed' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.decimal or value.is.money -%}string
+{%- elif value.is.record -%}array
+{%- elif value.is.string or value.is.temporal -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}array{%- else -%}{{ php_type(field.value) }}{%- endif -%}
+{%- if field.optional or field.nullable -%}
+{%- if field.array is not none or php_type(field.value) != 'mixed' -%}|null{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}$input{%- else -%}$input->{{ binding.port.field.camel }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_output(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}::fromArray({{ expression }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}::from({{ expression }})
+{%- elif value.is.boolean -%}(bool) {{ expression }}
+{%- elif value.is.integer -%}(int) {{ expression }}
+{%- elif value.is.number -%}(float) {{ expression }}
+{%- elif value.is.string or value.is.temporal or value.is.decimal or value.is.money -%}(string) {{ expression }}
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+{%- if operation.input and operation.input.kind != 'schema' %}
+final class {{ operation.name.pascal }}Input implements \JsonSerializable
+{
+    public function __construct(
+{%- for field in operation.input.fields %}
+        public {{ field_type(field) }} \${{ field.name.camel }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+
+    /** @return array<string, mixed> */
+    public function jsonSerialize(): array
+    {
+        $result = [];
+{%- for field in operation.input.fields %}
+{%- if field.optional %}
+        if ($this->{{ field.name.camel }} !== null) {
+            $result[{{ field.name.raw | tojson }}] = DryvClient::wire($this->{{ field.name.camel }});
+        }
+{%- else %}
+        $result[{{ field.name.raw | tojson }}] = DryvClient::wire($this->{{ field.name.camel }});
+{%- endif %}
+{%- endfor %}
+        return $result;
+    }
+}
+
+{%- endif %}
+final class {{ file.symbol }}
+{
+    public static function execute(
+        DryvClient $client{% if operation.input %},
+        {% if operation.input.kind == 'schema' %}{{ php_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %} $input{% endif %}
+    ): {% if operation.output %}{{ php_type(operation.output.value) }}{% else %}void{% endif %} {
+{%- if http.input_groups.multipart %}
+        throw new \LogicException('Multipart bindings require an explicit PHP semantic mapping.');
+{%- else %}
+        $path = {{ http.path.local | tojson }};
+{%- for binding in http.input_groups.path %}
+        $path = str_replace(
+            '{' . {{ (binding.name or binding.port.name.raw) | tojson }} . '}',
+            rawurlencode((string) DryvClient::wire({{ bound(binding) }})),
+            $path,
+        );
+{%- endfor %}
+
+        $query = [];
+{%- for binding in http.input_groups.query %}
+        DryvClient::appendPair($query, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endfor %}
+{%- for binding in http.input_groups.query_object %}
+        $queryObject = DryvClient::wire({{ bound(binding) }});
+        if (is_array($queryObject)) {
+            foreach ($queryObject as $name => $value) {
+                DryvClient::appendPair($query, (string) $name, $value);
+            }
+        }
+{%- endfor %}
+        $path = DryvClient::appendQuery($path, $query);
+
+        $headers = [];
+{%- for binding in http.input_groups.header %}
+        if ({{ bound(binding) }} !== null) {
+            $headers[{{ (binding.name or binding.port.name.raw) | tojson }}] = (string) DryvClient::wire({{ bound(binding) }});
+        }
+{%- endfor %}
+
+        $cookies = [];
+{%- for binding in http.input_groups.cookie %}
+        if ({{ bound(binding) }} !== null) {
+            $cookies[{{ (binding.name or binding.port.name.raw) | tojson }}] = (string) DryvClient::wire({{ bound(binding) }});
+        }
+{%- endfor %}
+
+        $hasJsonBody = false;
+        $jsonBody = null;
+{%- for binding in http.input_groups.body %}
+        $hasJsonBody = true;
+        $jsonBody = {{ bound(binding) }};
+{%- endfor %}
+
+        $form = null;
+{%- if http.input_groups.form %}
+        $form = [];
+{%- for binding in http.input_groups.form %}
+{%- if binding.port.field is none %}
+        $formObject = DryvClient::wire({{ bound(binding) }});
+        if (is_array($formObject)) {
+            foreach ($formObject as $name => $value) {
+                DryvClient::appendPair($form, (string) $name, $value);
+            }
+        }
+{%- else %}
+        DryvClient::appendPair($form, {{ (binding.name or binding.port.name.raw) | tojson }}, {{ bound(binding) }});
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+        $payload = $client->send(
+            {{ http.method | tojson }},
+            $path,
+            $headers,
+            $cookies,
+            $jsonBody,
+            $hasJsonBody,
+            $form,
+        );
+{%- if operation.output %}
+{%- if operation.output.value.is.schema %}
+        if (!is_array($payload)) {
+            throw new \UnexpectedValueException('Expected object response payload.');
+        }
+{%- endif %}
+        return {{ decode_output(operation.output.value, '$payload') }};
+{%- else %}
+        return;
+{%- endif %}
+{%- endif %}
+    }
+}

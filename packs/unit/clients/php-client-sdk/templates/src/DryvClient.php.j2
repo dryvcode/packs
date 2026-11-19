@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }};
+
+use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+
+final class DryvClient
+{
+    private ClientInterface $http;
+
+    public function __construct(
+        private readonly string $baseUrl,
+        ?ClientInterface $http = null,
+    ) {
+        $this->http = $http ?? new Client();
+    }
+
+    public static function wire(mixed $value): mixed
+    {
+        if ($value instanceof \JsonSerializable) {
+            return self::wire($value->jsonSerialize());
+        }
+
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $key => $item) {
+                $result[$key] = self::wire($item);
+            }
+
+            return $result;
+        }
+
+        return $value;
+    }
+
+    /** @param list<array{0: string, 1: mixed}> $pairs */
+    public static function appendPair(array &$pairs, string $name, mixed $value): void
+    {
+        $wire = self::wire($value);
+        if ($wire === null) {
+            return;
+        }
+
+        if (is_array($wire) && array_is_list($wire)) {
+            foreach ($wire as $item) {
+                if ($item !== null) {
+                    $pairs[] = [$name, $item];
+                }
+            }
+
+            return;
+        }
+
+        $pairs[] = [$name, $wire];
+    }
+
+    /** @param list<array{0: string, 1: mixed}> $pairs */
+    public static function appendQuery(string $path, array $pairs): string
+    {
+        if ($pairs === []) {
+            return $path;
+        }
+
+        $parts = [];
+        foreach ($pairs as [$name, $value]) {
+            $parts[] = rawurlencode($name) . '=' . rawurlencode((string) $value);
+        }
+
+        return $path . (str_contains($path, '?') ? '&' : '?') . implode('&', $parts);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, string> $cookies
+     * @param list<array{0: string, 1: mixed}>|null $form
+     */
+    public function send(
+        string $method,
+        string $path,
+        array $headers = [],
+        array $cookies = [],
+        mixed $jsonBody = null,
+        bool $hasJsonBody = false,
+        ?array $form = null,
+    ): mixed {
+        if ($cookies !== []) {
+            $parts = [];
+            foreach ($cookies as $name => $value) {
+                $parts[] = $name . '=' . rawurlencode($value);
+            }
+            $headers['Cookie'] = implode('; ', $parts);
+        }
+
+        $options = [
+            'headers' => $headers,
+            'http_errors' => false,
+        ];
+
+        if ($hasJsonBody) {
+            $options['json'] = self::wire($jsonBody);
+        }
+
+        if ($form !== null) {
+            $parts = [];
+            foreach ($form as [$name, $value]) {
+                $parts[] = rawurlencode($name) . '=' . rawurlencode((string) self::wire($value));
+            }
+            $options['body'] = implode('&', $parts);
+            $options['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+        }
+
+        $response = $this->http->request(
+            $method,
+            rtrim($this->baseUrl, '/') . $path,
+            $options,
+        );
+
+        $body = (string) $response->getBody();
+        $status = $response->getStatusCode();
+        $payload = null;
+
+        if ($body !== '') {
+            try {
+                $payload = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                $payload = null;
+            }
+        }
+
+        if ($status < 200 || $status >= 300) {
+            $message = trim($body);
+            if (is_array($payload) && is_string($payload['message'] ?? null)) {
+                $message = $payload['message'];
+            }
+
+            throw new ApiError($status, $message, $payload);
+        }
+
+        return $payload;
+    }
+}

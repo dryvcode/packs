@@ -1,0 +1,117 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+
+namespace {{ pack.inputs.root_namespace }};
+
+public sealed class DryvClient
+{
+    private readonly HttpClient _http;
+
+    public DryvClient(string baseUrl, HttpClient? httpClient = null, JsonSerializerOptions? jsonOptions = null)
+    {
+        _http = httpClient ?? new HttpClient();
+        BaseUrl = baseUrl.TrimEnd('/');
+        JsonOptions = jsonOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    }
+
+    public string BaseUrl { get; }
+    public JsonSerializerOptions JsonOptions { get; }
+
+    public HttpRequestMessage Request(HttpMethod method, string path)
+        => new(method, BaseUrl + path);
+
+    public async Task<T> SendAsync<T>(HttpRequestMessage request, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw CreateException(response.StatusCode, body);
+        }
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return default!;
+        }
+        return JsonSerializer.Deserialize<T>(body, JsonOptions)
+            ?? throw new JsonException("Response JSON deserialized to null.");
+    }
+
+    public async Task SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw CreateException(response.StatusCode, body);
+        }
+    }
+
+    public StringContent JsonBody(object value)
+        => new(JsonSerializer.Serialize(value, JsonOptions), Encoding.UTF8, "application/json");
+
+    public static string ReplacePath(string path, string name, object value)
+        => path.Replace("{" + name + "}", Uri.EscapeDataString(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty));
+
+    public static string AppendQuery(string path, IEnumerable<KeyValuePair<string, object?>> values)
+    {
+        var parts = new List<string>();
+        foreach (var (name, value) in values)
+        {
+            if (value is null) continue;
+            if (value is System.Collections.IEnumerable enumerable and not string)
+            {
+                foreach (var item in enumerable)
+                {
+                    if (item is not null) parts.Add(QueryPart(name, item));
+                }
+            }
+            else
+            {
+                parts.Add(QueryPart(name, value));
+            }
+        }
+        if (parts.Count == 0) return path;
+        return path + (path.Contains('?') ? "&" : "?") + string.Join("&", parts);
+    }
+
+    public static FormUrlEncodedContent Form(IEnumerable<KeyValuePair<string, object?>> values)
+        => new(values
+            .Where(pair => pair.Value is not null)
+            .SelectMany(pair => pair.Value is System.Collections.IEnumerable enumerable and not string
+                ? enumerable.Cast<object?>().Where(item => item is not null).Select(item => new KeyValuePair<string, string>(pair.Key, Convert.ToString(item, System.Globalization.CultureInfo.InvariantCulture)!))
+                : [new KeyValuePair<string, string>(pair.Key, Convert.ToString(pair.Value, System.Globalization.CultureInfo.InvariantCulture)!)])));
+
+    public Dictionary<string, object?> ToDictionary(object value)
+        => JsonSerializer.Deserialize<Dictionary<string, object?>>(JsonSerializer.Serialize(value, JsonOptions), JsonOptions)
+            ?? new Dictionary<string, object?>();
+
+    private static string QueryPart(string name, object value)
+        => Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
+
+    private static ApiException CreateException(HttpStatusCode status, string body)
+    {
+        JsonElement? payload = null;
+        var message = body.Trim();
+        if (!string.IsNullOrEmpty(body))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(body);
+                payload = document.RootElement.Clone();
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty("message", out var property)
+                    && property.ValueKind == JsonValueKind.String)
+                {
+                    message = property.GetString() ?? message;
+                }
+            }
+            catch (JsonException)
+            {
+                // Raw body remains the message.
+            }
+        }
+        return new ApiException(status, message, payload);
+    }
+}

@@ -1,0 +1,158 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
+{%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro rust_type(value) -%}
+{%- if value is none -%}serde_json::Value
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'serde_json::Value' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'serde_json::Value' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}i64
+{%- elif value.is.number -%}f64
+{%- elif value.is.record -%}std::collections::HashMap<String, serde_json::Value>
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}serde_json::Value
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro input_type(field) -%}
+{%- if field.optional -%}Option<{{ rust_type(field.value) }}>{%- else -%}{{ rust_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro bound(binding) -%}
+{%- if binding.port.field is none -%}input
+{%- else -%}input.{{ rust_ident(binding.port.field.snake) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro binding_optional(operation, binding) -%}
+{%- if binding.port.field is not none -%}
+{%- for field in operation.input.fields -%}
+{%- if field.name.raw == binding.port.field.raw and field.optional -%}x{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set http = operation.facets.http -%}
+use reqwest::Method;
+use serde::Serialize;
+
+use crate::{
+    ApiError, Client,
+    client::{add_cookie, add_header, append_query, replace_path},
+};
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+use crate::models::{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+{%- if operation.input and operation.input.kind != 'schema' %}
+#[derive(Clone, Debug, Serialize)]
+pub struct {{ operation.name.pascal }}Input {
+{%- for field in operation.input.fields %}
+    #[serde(rename = "{{ field.name.raw }}"{% if field.optional %}, skip_serializing_if = "Option::is_none"{% endif %})]
+    pub {{ rust_ident(field.name.snake) }}: {{ input_type(field) }},
+{%- endfor %}
+}
+
+{%- endif %}
+{%- if http.input_groups.query %}
+#[derive(Serialize)]
+struct {{ operation.name.pascal }}Query<'a> {
+{%- for binding in http.input_groups.query %}
+    #[serde(rename = "{{ binding.name or binding.port.name.raw }}"{% if binding_optional(operation, binding) %}, skip_serializing_if = "Option::is_none"{% endif %})]
+    {{ rust_ident(binding.port.name.snake) }}: {% if binding_optional(operation, binding) %}Option<&'a {{ rust_type(binding.port.value) }}>{% else %}&'a {{ rust_type(binding.port.value) }}{% endif %},
+{%- endfor %}
+}
+
+{%- endif %}
+{%- if http.input_groups.form and operation.input and operation.input.kind != 'schema' %}
+#[derive(Serialize)]
+struct {{ operation.name.pascal }}Form<'a> {
+{%- for binding in http.input_groups.form %}
+    #[serde(rename = "{{ binding.name or binding.port.name.raw }}"{% if binding_optional(operation, binding) %}, skip_serializing_if = "Option::is_none"{% endif %})]
+    {{ rust_ident(binding.port.name.snake) }}: {% if binding_optional(operation, binding) %}Option<&'a {{ rust_type(binding.port.value) }}>{% else %}&'a {{ rust_type(binding.port.value) }}{% endif %},
+{%- endfor %}
+}
+
+{%- endif %}
+pub async fn {{ file.symbol }}(
+    client: &Client
+{%- if operation.input %},
+    input: {% if operation.input.kind == 'schema' %}{{ rust_type(operation.input.value) }}{% else %}{{ operation.name.pascal }}Input{% endif %}
+{%- endif %}
+) -> Result<{% if operation.output %}{{ rust_type(operation.output.value) }}{% else %}(){% endif %}, ApiError> {
+{%- if http.input_groups.multipart %}
+    return Err(ApiError::unsupported(
+        "multipart bindings require an explicit Rust semantic mapping",
+    ));
+{%- else %}
+    let mut path = "{{ http.path.local }}".to_owned();
+{%- for binding in http.input_groups.path %}
+    path = replace_path(&path, "{{ binding.name or binding.port.name.raw }}", &{{ bound(binding) }});
+{%- endfor %}
+
+{%- if http.input_groups.query %}
+    let query = {{ operation.name.pascal }}Query {
+{%- for binding in http.input_groups.query %}
+        {{ rust_ident(binding.port.name.snake) }}: {% if binding_optional(operation, binding) %}{{ bound(binding) }}.as_ref(){% else %}&{{ bound(binding) }}{% endif %},
+{%- endfor %}
+    };
+    path = append_query(&path, &query)?;
+{%- endif %}
+{%- for binding in http.input_groups.query_object %}
+    path = append_query(&path, &{{ bound(binding) }})?;
+{%- endfor %}
+
+    let mut request = client.request(Method::{{ http.method }}, &path);
+{%- for binding in http.input_groups.header %}
+{%- if binding_optional(operation, binding) %}
+    if let Some(value) = {{ bound(binding) }}.as_ref() {
+        request = add_header(request, "{{ binding.name or binding.port.name.raw }}", value)?;
+    }
+{%- else %}
+    request = add_header(request, "{{ binding.name or binding.port.name.raw }}", &{{ bound(binding) }})?;
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.cookie %}
+{%- if binding_optional(operation, binding) %}
+    if let Some(value) = {{ bound(binding) }}.as_ref() {
+        request = add_cookie(request, "{{ binding.name or binding.port.name.raw }}", value)?;
+    }
+{%- else %}
+    request = add_cookie(request, "{{ binding.name or binding.port.name.raw }}", &{{ bound(binding) }})?;
+{%- endif %}
+{%- endfor %}
+{%- for binding in http.input_groups.body %}
+    request = request.json(&{{ bound(binding) }});
+{%- endfor %}
+{%- if http.input_groups.form %}
+{%- if operation.input.kind == 'schema' %}
+{%- for binding in http.input_groups.form %}
+    request = request.form(&{{ bound(binding) }});
+{%- endfor %}
+{%- else %}
+    let form = {{ operation.name.pascal }}Form {
+{%- for binding in http.input_groups.form %}
+        {{ rust_ident(binding.port.name.snake) }}: {% if binding_optional(operation, binding) %}{{ bound(binding) }}.as_ref(){% else %}&{{ bound(binding) }}{% endif %},
+{%- endfor %}
+    };
+    request = request.form(&form);
+{%- endif %}
+{%- endif %}
+
+{%- if operation.output %}
+    client.execute(request).await
+{%- else %}
+    client.execute_empty(request).await
+{%- endif %}
+{%- endif %}
+}

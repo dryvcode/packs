@@ -1,0 +1,131 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ pack.inputs.root_namespace }}\Models;
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro php_type(value) -%}
+{%- if value is none or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}mixed
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'mixed' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'mixed' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}int
+{%- elif value.is.number -%}float
+{%- elif value.is.decimal or value.is.money -%}string
+{%- elif value.is.record -%}array
+{%- elif value.is.string or value.is.temporal -%}string
+{%- else -%}mixed
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}array
+{%- else -%}{{ php_type(field.value) }}
+{%- endif -%}
+{%- if field.optional or field.nullable -%}
+{%- if field.array is not none or php_type(field.value) != 'mixed' -%}|null{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro decode_value(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}::fromArray({{ expression }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}::from({{ expression }})
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro encode_value(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ expression }}->toArray()
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ expression }}->jsonSerialize()
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+final class {{ file.symbol }} implements \JsonSerializable
+{
+    public function __construct(
+{%- for field in schema.fields %}
+        public {{ field_type(field) }} \${{ field.name.camel }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function fromArray(array $data): self
+    {
+{%- for field in schema.fields %}
+{%- if not field.optional %}
+        if (!array_key_exists({{ field.name.raw | tojson }}, $data)) {
+            throw new \InvalidArgumentException('Missing required field {{ field.name.raw }}');
+        }
+{%- endif %}
+{%- endfor %}
+
+        return new self(
+{%- for field in schema.fields %}
+            {{ field.name.camel }}:
+{%- if field.optional %}
+                array_key_exists({{ field.name.raw | tojson }}, $data)
+                    ? (
+{%- endif %}
+{%- if field.array is not none %}
+                        $data[{{ field.name.raw | tojson }}] === null
+                            ? null
+                            : array_map(
+                                static fn (mixed $item): mixed => {{ decode_value(field.value, '$item') }},
+                                $data[{{ field.name.raw | tojson }}],
+                            )
+{%- else %}
+                        $data[{{ field.name.raw | tojson }}] === null
+                            ? null
+                            : {{ decode_value(field.value, '$data[' ~ (field.name.raw | tojson) ~ ']') }}
+{%- endif %}
+{%- if field.optional %}
+                    )
+                    : null
+{%- endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        );
+    }
+
+    /** @return array<string, mixed> */
+    public function toArray(): array
+    {
+        $result = [];
+{%- for field in schema.fields %}
+
+{%- if field.optional %}
+        if ($this->{{ field.name.camel }} !== null) {
+{%- endif %}
+{%- if field.array is not none %}
+        {% if field.optional %}    {% endif %}$result[{{ field.name.raw | tojson }}] = $this->{{ field.name.camel }} === null
+            ? null
+            : array_map(
+                static fn (mixed $item): mixed => {{ encode_value(field.value, '$item') }},
+                $this->{{ field.name.camel }},
+            );
+{%- else %}
+        {% if field.optional %}    {% endif %}$result[{{ field.name.raw | tojson }}] = $this->{{ field.name.camel }} === null
+            ? null
+            : {{ encode_value(field.value, '$this->' ~ field.name.camel) }};
+{%- endif %}
+{%- if field.optional %}
+        }
+{%- endif %}
+{%- endfor %}
+
+        return $result;
+    }
+
+    /** @return array<string, mixed> */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
+    }
+}

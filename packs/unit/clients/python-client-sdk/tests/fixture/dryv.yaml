@@ -1,0 +1,14 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main: { type: ir, path: dryv.ir.yaml }
+  packs:
+    local: { path: packs }
+destinations:
+  out: { path: sdk }
+authoring:
+  source: { $ref: "#/sources/authoring/main" }
+packs:
+  python:
+    source: { $ref: "#/sources/packs/local", path: unit/clients/python-client-sdk }
+    destination: { $ref: "#/destinations/out" }

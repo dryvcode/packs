@@ -1,0 +1,22 @@
+from typing import Any, Generic, TypeVar
+
+from pydantic import BaseModel, ConfigDict
+
+{% for dependency in file.dependencies %}
+{% if dependency.symbol and dependency.symbol != file.symbol %}from .{{ dependency.path.relative | replace('/', '.') | replace('.py', '') }} import {{ dependency.symbol }}
+{% endif %}
+{% endfor %}
+
+{% if property.generic.kind == 'definition' %}
+{% for parameter in property.generic.parameters %}{{ parameter.name.raw }} = TypeVar("{{ parameter.name.raw }}")
+{% endfor %}
+
+class {{ file.symbol }}(BaseModel, Generic[{% for parameter in property.generic.parameters %}{{ parameter.name.raw }}{% if not loop.last %}, {% endif %}{% endfor %}]):
+    model_config = ConfigDict(extra="forbid", validate_default=True)
+
+{% for field in property.generic.value.fields %}
+    {{ field.name.snake }}: {% if field.type.kind == 'array' and field.type.items.kind == 'parameter' %}list[{{ field.type.items.name.raw }}]{% elif field.type.kind == 'reference' %}int{% else %}Any{% endif %}{% if not field.required %} | None = None{% endif %}
+{% endfor %}
+{% else %}
+{{ file.symbol }} = {{ property.generic.target.name.pascal }}[{% for argument in property.generic.arguments %}{% if argument.kind == 'reference' %}{{ argument.target.name.pascal }}{% elif argument.kind == 'primitive' and argument.name == 'string' %}str{% elif argument.kind == 'primitive' and argument.name == 'boolean' %}bool{% else %}Any{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}

@@ -1,0 +1,84 @@
+# frozen_string_literal: true
+
+module {{ pack.inputs.module_name }}
+{%- macro ruby_ident(name) -%}
+{%- if name in ['BEGIN','END','alias','and','begin','break','case','class','def','defined','do','else','elsif','end','ensure','false','for','if','in','module','next','nil','not','or','redo','rescue','retry','return','self','super','then','true','undef','unless','until','when','while','yield'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro decode(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ symbol_for(value.schema) }}.from_h({{ expression }})
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ symbol_for(value.property.enum) }}.parse({{ expression }})
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro encode(value, expression) -%}
+{%- if value.is.schema and symbol_for(value.schema) -%}{{ expression }}.to_h
+{%- elif value.is.enum and symbol_for(value.property.enum) -%}{{ expression }}.to_wire
+{%- else -%}{{ expression }}
+{%- endif -%}
+{%- endmacro -%}
+
+  class {{ file.symbol }}
+    attr_accessor {% for field in schema.fields %}:{{ ruby_ident(field.name.snake) }}{% if not loop.last %}, {% endif %}{% endfor %}
+
+    def initialize(
+{%- for field in schema.fields %}
+      {{ ruby_ident(field.name.snake) }}:{% if field.optional %} nil{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    )
+{%- for field in schema.fields %}
+      @{{ ruby_ident(field.name.snake) }} = {{ ruby_ident(field.name.snake) }}
+{%- endfor %}
+    end
+
+    def self.from_h(data)
+      data = data.transform_keys(&:to_s)
+{%- for field in schema.fields %}
+{%- if not field.optional %}
+      raise ArgumentError, "missing required field {{ field.name.raw }}" unless data.key?({{ field.name.raw | tojson }})
+{%- endif %}
+{%- endfor %}
+
+      new(
+{%- for field in schema.fields %}
+        {{ ruby_ident(field.name.snake) }}: {% if field.optional %}data.key?({{ field.name.raw | tojson }}) ? {% endif %}
+          if data[{{ field.name.raw | tojson }}].nil?
+            nil
+{%- if field.array is not none %}
+          else
+            Array(data[{{ field.name.raw | tojson }}]).map { |item| {{ decode(field.value, 'item') }} }
+{%- else %}
+          else
+            {{ decode(field.value, 'data[' ~ (field.name.raw | tojson) ~ ']') }}
+{%- endif %}
+          end{% if field.optional %} : nil{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+      )
+    end
+
+    def to_h
+      result = {}
+{%- for field in schema.fields %}
+{%- if field.optional %}
+      unless @{{ ruby_ident(field.name.snake) }}.nil?
+{%- endif %}
+{%- if field.array is not none %}
+      {% if field.optional %}  {% endif %}result[{{ field.name.raw | tojson }}] = @{{ ruby_ident(field.name.snake) }}&.map { |item| {{ encode(field.value, 'item') }} }
+{%- else %}
+      {% if field.optional %}  {% endif %}result[{{ field.name.raw | tojson }}] = @{{ ruby_ident(field.name.snake) }}.nil? ? nil : {{ encode(field.value, '@' ~ ruby_ident(field.name.snake)) }}
+{%- endif %}
+{%- if field.optional %}
+      end
+{%- endif %}
+{%- endfor %}
+      result
+    end
+  end
+end

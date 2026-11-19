@@ -1,0 +1,20 @@
+// swift-tools-version: 6.4
+import PackageDescription
+
+let package = Package(
+    name: "DryvPersistence",
+    products: [
+        .library(name: "DryvPersistence", targets: ["DryvPersistence"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/vapor/fluent.git", exact: "4.13.0"),
+    ],
+    targets: [
+        .target(
+            name: "DryvPersistence",
+            dependencies: [
+                .product(name: "Fluent", package: "fluent"),
+            ]
+        ),
+    ]
+)

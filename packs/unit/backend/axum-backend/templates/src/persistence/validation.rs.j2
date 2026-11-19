@@ -1,0 +1,206 @@
+use super::{
+    plan::{Check, Field, Plan, Rule},
+    wire::{Row, Wire},
+};
+use crate::ApiError;
+use std::collections::BTreeMap;
+
+pub fn validate_fields(
+    plan: &Plan,
+    fields: &[Field],
+    value: &Row,
+    path: &str,
+    partial: bool,
+) -> Result<(), ApiError> {
+    for name in value.keys() {
+        if !fields.iter().any(|field| &field.name == name) {
+            return Err(ApiError::validation(name, "Unknown field."));
+        }
+    }
+    for field in fields {
+        let name = if path.is_empty() {
+            field.name.clone()
+        } else {
+            format!("{path}.{}", field.name)
+        };
+        let Some(item) = value.get(&field.name) else {
+            if !partial && !field.optional && field.default.is_null() {
+                return Err(ApiError::validation(&name, "A required field is missing."));
+            }
+            continue;
+        };
+        if item.is_null() {
+            if !field.nullable {
+                return Err(ApiError::validation(&name, "This field cannot be null."));
+            }
+            continue;
+        }
+        if field.array {
+            let Wire::Array(values) = item else {
+                return Err(ApiError::validation(&name, "Expected an array."));
+            };
+            if field.min_items.is_some_and(|min| values.len() < min)
+                || field.max_items.is_some_and(|max| values.len() > max)
+            {
+                return Err(ApiError::validation(
+                    &name,
+                    "The array length is outside its allowed range.",
+                ));
+            }
+            let mut element = field.clone();
+            element.array = false;
+            for (index, child) in values.iter().enumerate() {
+                let name = format!("{name}[{index}]");
+                if child.is_null() {
+                    return Err(ApiError::validation(&name, "Array members cannot be null."));
+                }
+                validate_value(plan, &element, child, &name)?;
+            }
+        } else {
+            validate_value(plan, field, item, &name)?;
+        }
+    }
+    Ok(())
+}
+fn validate_value(plan: &Plan, field: &Field, item: &Wire, name: &str) -> Result<(), ApiError> {
+    if let Some(id) = &field.schema_id {
+        let schema = plan.schema(id)?;
+        let Wire::Object(object) = item else {
+            return Err(ApiError::validation(name, "Expected an object."));
+        };
+        validate_fields(plan, &schema.fields, object, name, false)?;
+        checks(
+            &schema.checks,
+            &BTreeMap::from([("value".into(), item.clone())]),
+        )?;
+        return Ok(());
+    }
+    item.sql(field)
+        .map_err(|_| ApiError::validation(name, "The value has an invalid type."))?;
+    if !field.values.is_empty() && !field.values.contains(item) {
+        return Err(ApiError::validation(
+            name,
+            "The value is not an allowed member.",
+        ));
+    }
+    if let Some(text) = item.text() {
+        let length = text.chars().count();
+        if field.min_length.is_some_and(|min| length < min)
+            || field.max_length.is_some_and(|max| length > max)
+        {
+            return Err(ApiError::validation(
+                name,
+                "The text length is outside its allowed range.",
+            ));
+        }
+        for pattern in &field.patterns {
+            if !regex::Regex::new(pattern)
+                .map_err(|_| ApiError::internal())?
+                .is_match(text)
+            {
+                return Err(ApiError::validation(
+                    name,
+                    "The text does not match the required format.",
+                ));
+            }
+        }
+    }
+    if let Some(number) = item.numeric() {
+        if field.minimum.is_some_and(|min| number < min)
+            || field.maximum.is_some_and(|max| number > max)
+            || field.multiple_of.is_some_and(|multiple| {
+                (number / multiple - (number / multiple).round()).abs() > 1e-9
+            })
+        {
+            return Err(ApiError::validation(
+                name,
+                "The number is outside its allowed range.",
+            ));
+        }
+    }
+    Ok(())
+}
+pub fn checks(checks: &[Check], contexts: &Row) -> Result<(), ApiError> {
+    for check in checks {
+        if !evaluate(&check.rule, contexts)?.truth() {
+            return Err(ApiError::failure(&check.failure));
+        }
+    }
+    Ok(())
+}
+pub fn evaluate(rule: &Rule, contexts: &Row) -> Result<Wire, ApiError> {
+    let child = |index: usize| {
+        rule.children
+            .get(index)
+            .ok_or_else(ApiError::internal)
+            .and_then(|item| evaluate(item, contexts))
+    };
+    Ok(match rule.kind.as_str() {
+        "literal" => rule.value.clone(),
+        "context" => contexts
+            .get(&rule.context)
+            .and_then(|value| value.path(&rule.path))
+            .cloned()
+            .unwrap_or(Wire::Null),
+        "not" => Wire::Bool(!child(0)?.truth()),
+        "logical" => {
+            let values: Result<Vec<_>, _> = rule
+                .children
+                .iter()
+                .map(|item| evaluate(item, contexts))
+                .collect();
+            let values = values?;
+            Wire::Bool(if rule.operator == "and" {
+                values.iter().all(Wire::truth)
+            } else {
+                values.iter().any(Wire::truth)
+            })
+        }
+        "compare" => {
+            let left = child(0)?;
+            let right = child(1)?;
+            let ordering = match (left.numeric(), right.numeric()) {
+                (Some(a), Some(b)) => a.partial_cmp(&b),
+                _ => left.text().zip(right.text()).map(|(a, b)| a.cmp(b)),
+            };
+            Wire::Bool(match rule.operator.as_str() {
+                "equal" => left == right,
+                "not-equal" => left != right,
+                "less-than" => ordering.is_some_and(|o| o.is_lt()),
+                "less-than-or-equal" => ordering.is_some_and(|o| o.is_le()),
+                "greater-than" => ordering.is_some_and(|o| o.is_gt()),
+                "greater-than-or-equal" => ordering.is_some_and(|o| o.is_ge()),
+                _ => return Err(ApiError::internal()),
+            })
+        }
+        "arithmetic" => {
+            let values: Result<Vec<f64>, _> = rule
+                .children
+                .iter()
+                .map(|item| {
+                    evaluate(item, contexts)?
+                        .numeric()
+                        .ok_or_else(ApiError::internal)
+                })
+                .collect();
+            let values = values?;
+            let mut value = *values.first().ok_or_else(ApiError::internal)?;
+            for next in &values[1..] {
+                value = match rule.operator.as_str() {
+                    "add" => value + next,
+                    "subtract" => value - next,
+                    "multiply" => value * next,
+                    "divide" if *next != 0.0 => value / next,
+                    _ => return Err(ApiError::internal()),
+                };
+            }
+            Wire::Number(serde_json::Number::from_f64(value).ok_or_else(ApiError::internal)?)
+        }
+        "now" => Wire::Text(
+            time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)
+                .map_err(|_| ApiError::internal())?,
+        ),
+        _ => return Err(ApiError::internal()),
+    })
+}

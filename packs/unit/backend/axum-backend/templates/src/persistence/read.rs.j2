@@ -1,0 +1,256 @@
+use super::{
+    database,
+    plan::{Order, Plan, Read, Selection, Step},
+    wire::{Row, Trusted, Wire},
+};
+use crate::ApiError;
+use sea_orm::sea_query::{Alias, Expr, ExprTrait, Func, Order as SqlOrder};
+use sea_orm::{ConnectionTrait, DatabaseTransaction};
+
+fn order(
+    plan: &Plan,
+    root: &str,
+    query: &mut sea_orm::sea_query::SelectStatement,
+    orders: &[Order],
+    sequence: &mut usize,
+) -> Result<(), ApiError> {
+    for item in orders {
+        let (column, _) = database::column(plan, root, query, &item.column, sequence)?;
+        query.order_by_expr(
+            column,
+            if item.direction == "asc" {
+                SqlOrder::Asc
+            } else {
+                SqlOrder::Desc
+            },
+        );
+    }
+    Ok(())
+}
+async fn related(
+    conn: &DatabaseTransaction,
+    plan: &Plan,
+    rows: &[Row],
+    path: &[Step],
+    orders: &[Order],
+    predicates: &[super::plan::Predicate],
+    params: &Row,
+) -> Result<Vec<Vec<Row>>, ApiError> {
+    let mut groups: Vec<Vec<Row>> = rows.iter().map(|row| vec![row.clone()]).collect();
+    for (index, step) in path.iter().enumerate() {
+        let values: Vec<Wire> = groups
+            .iter()
+            .flatten()
+            .filter_map(|row| row.get(&step.source_field))
+            .filter(|value| !value.is_null())
+            .cloned()
+            .collect();
+        if values.is_empty() {
+            return Ok(rows.iter().map(|_| Vec::new()).collect());
+        }
+        let target = plan.schema(&step.target)?;
+        let field = target.field(&step.target_field)?;
+        let mut query = database::select(target)?;
+        let values: Result<Vec<_>, _> = values.iter().map(|value| value.sql(field)).collect();
+        query.and_where(Expr::col((Alias::new("t0"), Alias::new(&field.column))).is_in(values?));
+        let mut sequence = 0;
+        if index + 1 == path.len() {
+            database::filters(
+                plan,
+                &step.target,
+                &mut query,
+                predicates,
+                params,
+                &mut sequence,
+            )?;
+            order(plan, &step.target, &mut query, orders, &mut sequence)?;
+        }
+        let targets = database::fetch(conn, &query, plan).await?;
+        groups = groups
+            .iter()
+            .map(|group| {
+                targets
+                    .iter()
+                    .filter(|target| {
+                        group.iter().any(|source| {
+                            source.get(&step.source_field) == target.get(&step.target_field)
+                        })
+                    })
+                    .cloned()
+                    .collect()
+            })
+            .collect();
+    }
+    Ok(groups)
+}
+#[async_recursion::async_recursion]
+pub async fn render(
+    conn: &DatabaseTransaction,
+    plan: &Plan,
+    rows: &[Row],
+    selections: &[Selection],
+    params: &Row,
+) -> Result<Vec<Row>, ApiError> {
+    let mut output: Vec<Row> = rows.iter().map(|_| Row::new()).collect();
+    for selection in selections {
+        if selection.kind == "field" {
+            let column = selection.column.as_ref().ok_or_else(ApiError::internal)?;
+            let values = if column.path.is_empty() {
+                rows.iter()
+                    .map(|row| row.get(&column.field).cloned().unwrap_or_default())
+                    .collect::<Vec<_>>()
+            } else {
+                related(conn, plan, rows, &column.path, &[], &[], params)
+                    .await?
+                    .into_iter()
+                    .map(|group| {
+                        group
+                            .first()
+                            .and_then(|row| row.get(&column.field))
+                            .cloned()
+                            .unwrap_or_default()
+                    })
+                    .collect()
+            };
+            for (row, value) in output.iter_mut().zip(values) {
+                row.insert(selection.name.clone(), value);
+            }
+            continue;
+        }
+        let groups = related(
+            conn,
+            plan,
+            rows,
+            &selection.path,
+            &selection.order,
+            &selection.r#where,
+            params,
+        )
+        .await?;
+        if selection.kind == "count" {
+            for (row, group) in output.iter_mut().zip(groups) {
+                row.insert(selection.name.clone(), Wire::from(group.len() as u64));
+            }
+            continue;
+        }
+        let flattened = groups.iter().flatten().cloned().collect::<Vec<_>>();
+        let rendered = render(conn, plan, &flattened, &selection.select, params).await?;
+        let mut rendered = rendered.into_iter();
+        let many = selection.path.iter().any(|step| step.many);
+        for (row, group) in output.iter_mut().zip(groups) {
+            let children: Vec<Wire> = rendered
+                .by_ref()
+                .take(group.len())
+                .map(Wire::Object)
+                .collect();
+            let value = if many {
+                Wire::Array(children)
+            } else {
+                if children.is_empty() && !selection.path.iter().any(|step| step.nullable) {
+                    return Err(ApiError::internal());
+                }
+                if children.len() > 1 {
+                    return Err(ApiError::internal());
+                }
+                children.into_iter().next().unwrap_or_default()
+            };
+            row.insert(selection.name.clone(), value);
+        }
+    }
+    Ok(output)
+}
+pub async fn execute(
+    conn: &DatabaseTransaction,
+    plan: &Plan,
+    read: &Read,
+    input: &Row,
+    trusted: &Trusted,
+) -> Result<Wire, ApiError> {
+    let mut params = Row::new();
+    for parameter in &read.parameters {
+        if let Some(value) = super::source(&parameter.source, input, trusted)? {
+            params.insert(parameter.name.clone(), value);
+        } else if !parameter.optional {
+            return Err(ApiError::validation(
+                &parameter.name,
+                "A required query argument is missing.",
+            ));
+        }
+    }
+    let schema = plan.schema(&read.root)?;
+    let mut query = database::select(schema)?;
+    let mut sequence = 0;
+    database::filters(
+        plan,
+        &read.root,
+        &mut query,
+        &read.r#where,
+        &params,
+        &mut sequence,
+    )?;
+    super::scope(plan, schema, &mut query, trusted)?;
+    let mut total = 0_i64;
+    let mut limit = 0_u64;
+    let mut offset = 0_u64;
+    if let Some(page) = &read.page {
+        let integer = |name: &str| -> Result<i64, ApiError> {
+            match params.get(name) {
+                Some(Wire::Number(value)) => value.as_i64().ok_or_else(ApiError::internal),
+                _ => Err(ApiError::validation(name, "Expected an integer.")),
+            }
+        };
+        limit = integer(&page.limit)?.clamp(1, page.max_limit as i64) as u64;
+        offset = std::cmp::max(integer(&page.offset)?, 0) as u64;
+        let mut count = query.clone();
+        count
+            .clear_selects()
+            .expr_as(Func::count(Expr::val(1)), Alias::new("total"));
+        total = conn
+            .query_one(&count)
+            .await
+            .map_err(|error| database::error_for(plan, error))?
+            .ok_or_else(ApiError::internal)?
+            .try_get("", "total")
+            .map_err(|_| ApiError::internal())?;
+        query.limit(limit).offset(offset);
+    }
+    order(plan, &read.root, &mut query, &read.order, &mut sequence)?;
+    if !read.many {
+        query.limit(2);
+    }
+    let rows = database::fetch(conn, &query, plan).await?;
+    if !read.many && rows.len() > 1 {
+        return Err(ApiError::internal());
+    }
+    let output = render(conn, plan, &rows, &read.select, &params).await?;
+    let rows = if read.many {
+        Wire::Array(output.into_iter().map(Wire::Object).collect())
+    } else {
+        Wire::Object(output.into_iter().next().ok_or_else(|| {
+            read.missing
+                .as_ref()
+                .map(ApiError::failure)
+                .unwrap_or_else(ApiError::internal)
+        })?)
+    };
+    match &read.envelope {
+        None => Ok(rows),
+        Some(bindings) => Ok(Wire::Object(
+            bindings
+                .iter()
+                .map(|(name, member)| {
+                    (
+                        name.clone(),
+                        match member.as_str() {
+                            "rows" => rows.clone(),
+                            "total" => Wire::from(total),
+                            "limit" => Wire::from(limit),
+                            "offset" => Wire::from(offset),
+                            _ => Wire::Null,
+                        },
+                    )
+                })
+                .collect(),
+        )),
+    }
+}

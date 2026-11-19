@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+module {{ pack.inputs.module_name }}
+  class {{ file.symbol }}
+    VALUES = [
+{%- for item in property.enum.values %}
+      {{ item.value_json }},
+{%- endfor %}
+    ].freeze
+
+    attr_reader :value
+
+    def initialize(value)
+      raise ArgumentError, "invalid {{ property.enum.name.local }} value" unless VALUES.include?(value)
+
+      @value = value
+      freeze
+    end
+
+    def self.parse(value)
+      new(value)
+    end
+
+    def to_wire
+      value
+    end
+
+    def ==(other)
+      other.is_a?(self.class) && other.value == value
+    end
+
+    alias eql? ==
+
+    def hash
+      [self.class, value].hash
+    end
+
+    def to_s
+      value.is_a?(String) ? value : JSON.generate(value)
+    end
+  end
+end

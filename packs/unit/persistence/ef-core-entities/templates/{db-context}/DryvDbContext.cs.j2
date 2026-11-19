@@ -1,0 +1,24 @@
+using Microsoft.EntityFrameworkCore;
+using {{ pack.inputs.root_namespace }}.Entities;
+
+namespace {{ pack.inputs.root_namespace }};
+
+public class {{ file.symbol }} : DbContext
+{
+    public {{ file.symbol }}(DbContextOptions<{{ file.symbol }}> options)
+        : base(options)
+    {
+    }
+
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+    public DbSet<{{ dependency.symbol }}> {{ dependency.symbol }}Set => Set<{{ dependency.symbol }}>();
+{%- endif %}{% endfor %}
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+        modelBuilder.ApplyConfiguration(new {{ dependency.symbol }}Configuration());
+{%- endif %}{% endfor %}
+    }
+}

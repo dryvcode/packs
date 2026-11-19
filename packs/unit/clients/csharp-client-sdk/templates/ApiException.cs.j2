@@ -1,0 +1,17 @@
+using System.Net;
+using System.Text.Json;
+
+namespace {{ pack.inputs.root_namespace }};
+
+public sealed class ApiException : Exception
+{
+    public ApiException(HttpStatusCode statusCode, string message, JsonElement? payload = null)
+        : base(message)
+    {
+        StatusCode = statusCode;
+        Payload = payload;
+    }
+
+    public HttpStatusCode StatusCode { get; }
+    public JsonElement? Payload { get; }
+}

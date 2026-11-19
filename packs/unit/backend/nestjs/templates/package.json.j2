@@ -1,0 +1,14 @@
+{
+  "name": "{{ pack.inputs.package_name }}",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bunx --bun nest build",
+    "start": "bun --watch src/main.ts",
+    "start:prod": "bun run dist/main.js",
+    "typecheck": "bunx --bun tsc --noEmit -p tsconfig.json",
+    "test": "bunx --bun vitest run",
+    "test:e2e": "bunx --bun vitest run test"
+  }
+}

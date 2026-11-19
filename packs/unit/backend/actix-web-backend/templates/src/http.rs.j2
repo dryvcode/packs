@@ -1,0 +1,66 @@
+use std::{fmt::Display, str::FromStr};
+
+use actix_web::HttpRequest;
+
+use crate::ApiError;
+
+pub fn required_header<T>(request: &HttpRequest, name: &str) -> Result<T, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    let raw = request
+        .headers()
+        .get(name)
+        .ok_or_else(|| ApiError::bad_request(format!("missing required header {name}")))?
+        .to_str()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))?;
+
+    raw.parse::<T>()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))
+}
+
+pub fn optional_header<T>(request: &HttpRequest, name: &str) -> Result<Option<T>, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    let Some(value) = request.headers().get(name) else {
+        return Ok(None);
+    };
+    let raw = value
+        .to_str()
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))?;
+    raw.parse::<T>()
+        .map(Some)
+        .map_err(|error| ApiError::bad_request(format!("invalid header {name}: {error}")))
+}
+
+pub fn required_cookie<T>(request: &HttpRequest, name: &str) -> Result<T, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    request
+        .cookie(name)
+        .ok_or_else(|| ApiError::bad_request(format!("missing required cookie {name}")))?
+        .value()
+        .parse::<T>()
+        .map_err(|error| ApiError::bad_request(format!("invalid cookie {name}: {error}")))
+}
+
+pub fn optional_cookie<T>(request: &HttpRequest, name: &str) -> Result<Option<T>, ApiError>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    request
+        .cookie(name)
+        .map(|cookie| {
+            cookie
+                .value()
+                .parse::<T>()
+                .map_err(|error| ApiError::bad_request(format!("invalid cookie {name}: {error}")))
+        })
+        .transpose()
+}

@@ -1,0 +1,22 @@
+version: dryv/v1alpha1
+sources:
+  authoring:
+    main:
+      type: ir
+      path: dryv.ir.yaml
+  packs:
+    local:
+      path: packs
+destinations:
+  reference:
+    path: generated/reference
+authoring:
+  source:
+    $ref: "#/sources/authoring/main"
+packs:
+  reference:
+    source:
+      $ref: "#/sources/packs/local"
+      path: inject/documentation/markdown-reference
+    destination:
+      $ref: "#/destinations/reference"

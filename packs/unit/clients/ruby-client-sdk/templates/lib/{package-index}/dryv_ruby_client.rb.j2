@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+require "json"
+require_relative "dryv_client"
+{% for item in file.exports %}
+require_relative {{ item.path.relative | replace('.rb', '') | tojson }}
+{%- endfor %}

@@ -1,0 +1,150 @@
+{%- macro kotlin_ident(name) -%}
+{%- if name in ['as','break','class','continue','do','else','false','for','fun','if','in','interface','is','null','object','package','return','super','this','throw','true','try','typealias','typeof','val','var','when','while','by','catch','constructor','delegate','dynamic','field','file','finally','get','import','init','param','property','receiver','set','setparam','where','actual','abstract','annotation','companion','const','crossinline','data','enum','expect','external','final','infix','inline','inner','internal','lateinit','noinline','open','operator','out','override','private','protected','public','reified','sealed','suspend','tailrec','vararg','field','it'] -%}`{{ name }}`{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro reference_option(value) -%}
+{%- if value == 'cascade' -%}ReferenceOption.CASCADE
+{%- elif value == 'restrict' -%}ReferenceOption.RESTRICT
+{%- elif value == 'detach' -%}ReferenceOption.SET_NULL
+{%- elif value == 'reset' -%}ReferenceOption.SET_DEFAULT
+{%- else -%}ReferenceOption.NO_ACTION
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro normal_column(field) -%}
+{%- set value = field.value -%}
+{%- if field.array is not none or value is none or value.is.schema or value.is.enum or value.is.record or value.is.unknown or value.is.dynamic or value.is.generic or value.is.composite or value.is.union or value.is.tuple or value.is.literal -%}
+json<JsonElement>({{ field.name.snake | tojson }}, DryvExposed.json)
+{%- elif value.is.boolean -%}
+bool({{ field.name.snake | tojson }})
+{%- elif value.is.integer -%}
+long({{ field.name.snake | tojson }})
+{%- elif value.is.decimal or value.is.money -%}
+{%- set constraints = value.property.primitive.constraints -%}
+{%- if constraints.has_precision and constraints.has_scale -%}
+decimal({{ field.name.snake | tojson }}, {{ constraints.precision }}, {{ constraints.scale }})
+{%- else -%}
+text({{ field.name.snake | tojson }})
+{%- endif -%}
+{%- elif value.is.number -%}
+double({{ field.name.snake | tojson }})
+{%- elif value.is.uuid -%}
+uuid({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and value.is.date -%}
+date({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and value.is.time -%}
+time({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and value.is.date_time -%}
+datetime({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and value.is.instant -%}
+timestamp({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and value.is.zoned_date_time -%}
+timestampWithTimeZone({{ field.name.snake | tojson }})
+{%- elif value.is.temporal and (value.is.duration or value.is.interval) -%}
+duration({{ field.name.snake | tojson }})
+{%- elif value.is.temporal -%}
+text({{ field.name.snake | tojson }})
+{%- elif value.is.string -%}
+{%- set length = value.property.primitive.constraints.length -%}
+{%- if length is not none and length.has_exact -%}
+varchar({{ field.name.snake | tojson }}, {{ length.exact }})
+{%- elif length is not none and length.has_max -%}
+varchar({{ field.name.snake | tojson }}, {{ length.max }})
+{%- else -%}
+text({{ field.name.snake | tojson }})
+{%- endif -%}
+{%- else -%}
+json<JsonElement>({{ field.name.snake | tojson }}, DryvExposed.json)
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro column_expression(field) -%}
+{%- if field.relation is not none and symbol_for(field.relation.target.schema) -%}
+{%- if field.optional or field.nullable -%}
+optReference(
+    {{ field.name.snake | tojson }},
+    {{ symbol_for(field.relation.target.schema) }}.{{ kotlin_ident(field.relation.target.field.camel) }}{% if field.relation.on_delete is not none %},
+    onDelete = {{ reference_option(field.relation.on_delete) }}{% endif %}{% if field.relation.on_update is not none %},
+    onUpdate = {{ reference_option(field.relation.on_update) }}{% endif %}
+)
+{%- else -%}
+reference(
+    {{ field.name.snake | tojson }},
+    {{ symbol_for(field.relation.target.schema) }}.{{ kotlin_ident(field.relation.target.field.camel) }}{% if field.relation.on_delete is not none %},
+    onDelete = {{ reference_option(field.relation.on_delete) }}{% endif %}{% if field.relation.on_update is not none %},
+    onUpdate = {{ reference_option(field.relation.on_update) }}{% endif %}
+)
+{%- endif -%}
+{%- else -%}
+{{ normal_column(field) }}
+{%- if field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.integer -%}.autoIncrement()
+{%- elif field.storage is not none and field.storage.primary_key and field.mutation == 'system' and field.value.is.uuid -%}.clientDefault { Uuid.random() }
+{%- endif -%}
+{%- if (field.optional or field.nullable) and field.relation is none -%}.nullable()
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+package {{ pack.inputs.package_name }}.tables
+
+import kotlin.uuid.Uuid
+import kotlinx.serialization.json.JsonElement
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.datetime.date
+import org.jetbrains.exposed.v1.datetime.datetime
+import org.jetbrains.exposed.v1.datetime.duration
+import org.jetbrains.exposed.v1.datetime.time
+import org.jetbrains.exposed.v1.datetime.timestamp
+import org.jetbrains.exposed.v1.datetime.timestampWithTimeZone
+import org.jetbrains.exposed.v1.json.json
+import {{ pack.inputs.package_name }}.DryvExposed
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+import {{ pack.inputs.package_name }}.tables.{{ dependency.symbol }}
+{%- endif %}{% endfor %}
+
+object {{ file.symbol }} : Table(
+    "{% if schema.facets.storage and schema.facets.storage.namespace %}{{ schema.facets.storage.namespace }}.{% endif %}{% if schema.facets.storage and schema.facets.storage.name %}{{ schema.facets.storage.name }}{% else %}{{ schema.name.snake }}{% endif %}",
+) {
+{%- for field in schema.fields %}
+{%- if field.related is none %}
+    val {{ kotlin_ident(field.name.camel) }} = {{ column_expression(field) }}
+{%- else %}
+    // Inverse relation "{{ field.name.raw }}" is navigation-only and does not create a second column.
+{%- endif %}
+{%- endfor %}
+
+{%- set pk = namespace(fields=[]) %}
+{%- for field in schema.fields %}
+{%- if field.related is none and field.storage is not none and field.storage.primary_key %}
+{%- set pk.fields = pk.fields + [field] %}
+{%- endif %}
+{%- endfor %}
+{%- if pk.fields %}
+    override val primaryKey = PrimaryKey(
+{%- for field in pk.fields %}
+        {{ kotlin_ident(field.name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    )
+{%- endif %}
+
+{%- if schema.facets.storage is not none and schema.facets.storage.indexes %}
+    init {
+{%- for index in schema.facets.storage.indexes %}
+        index(
+            {% if index.name %}{{ index.name | tojson }}{% else %}null{% endif %},
+            {% if index.unique %}true{% else %}false{% endif %},
+{%- for field_name in index.fields %}
+            {{ kotlin_ident(field_name.camel) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        )
+{%- endfor %}
+    }
+{%- endif %}
+}

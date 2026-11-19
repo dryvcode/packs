@@ -1,0 +1,238 @@
+# Ecosystem coverage audit
+
+Status: living coverage audit.
+
+This document records the public-pack coverage visible on `develop`. The numbered ecosystem documents are navigation aids, not implementation priority.
+
+## Current catalog
+
+The repository currently contains **92 active pack manifests** under `packs/`.
+
+### Inject
+
+Backend:
+
+- [x] `inject/backend/nestjs`
+
+Frontend:
+
+- [x] `inject/frontend/react-crud-forms`
+
+Persistence:
+
+- [x] `inject/persistence/typeorm`
+- [x] `inject/persistence/mongoose`
+
+Validation:
+
+- [x] `inject/validation/class-validator`
+- [x] `inject/validation/zod`
+- [x] `inject/validation/joi`
+
+Documentation:
+
+- [x] `inject/documentation/markdown-reference`
+- [x] `inject/documentation/http-examples`
+- [x] `inject/documentation/persistence-reference`
+
+Testing:
+
+- [x] `inject/testing/schema-examples`
+- [x] `inject/testing/http-contract-cases`
+- [x] `inject/testing/schema-contract-cases`
+- [x] `inject/testing/persistence-contract-cases`
+
+### Unit
+
+Backend:
+
+- [x] `unit/backend/actix-web-backend`
+- [x] `unit/backend/aspnet-core-backend`
+- [x] `unit/backend/axum-backend`
+- [x] `unit/backend/cohttp-backend`
+- [x] `unit/backend/crow-backend`
+- [x] `unit/backend/fastapi-backend`
+- [x] `unit/backend/gin-backend`
+- [x] `unit/backend/go-net-http-backend`
+- [x] `unit/backend/http4s-backend`
+- [x] `unit/backend/jakarta-rest-backend`
+- [x] `unit/backend/ktor-backend`
+- [x] `unit/backend/nestjs`
+- [x] `unit/backend/phoenix-backend`
+- [x] `unit/backend/reitit-backend`
+- [x] `unit/backend/scotty-backend`
+- [x] `unit/backend/sinatra-backend`
+- [x] `unit/backend/spring-boot-backend`
+- [x] `unit/backend/symfony-backend`
+- [x] `unit/backend/vapor-backend`
+
+Clients:
+
+- [x] `unit/clients/clojure-client-sdk`
+- [x] `unit/clients/cpp-client-sdk`
+- [x] `unit/clients/csharp-client-sdk`
+- [x] `unit/clients/dart-client-sdk`
+- [x] `unit/clients/elixir-client-sdk`
+- [x] `unit/clients/flutter-api-bridge`
+- [x] `unit/clients/go-client-sdk`
+- [x] `unit/clients/haskell-client-sdk`
+- [x] `unit/clients/java-client-sdk`
+- [x] `unit/clients/kotlin-client-sdk`
+- [x] `unit/clients/next-api-bridge`
+- [x] `unit/clients/ocaml-client-sdk`
+- [x] `unit/clients/php-client-sdk`
+- [x] `unit/clients/python-client-sdk`
+- [x] `unit/clients/ruby-client-sdk`
+- [x] `unit/clients/rust-client-sdk`
+- [x] `unit/clients/scala-client-sdk`
+- [x] `unit/clients/swift-client-sdk`
+- [x] `unit/clients/ts-api-client`
+
+Persistence:
+
+- [x] `unit/persistence/active-record-models`
+- [x] `unit/persistence/doctrine-orm-entities`
+- [x] `unit/persistence/ecto-schemas`
+- [x] `unit/persistence/ef-core-entities`
+- [x] `unit/persistence/exposed-tables`
+- [x] `unit/persistence/fluent-models`
+- [x] `unit/persistence/gorm-entities`
+- [x] `unit/persistence/jpa-entities`
+- [x] `unit/persistence/next-jdbc-models`
+- [x] `unit/persistence/persistent-models`
+- [x] `unit/persistence/seaorm-entities`
+- [x] `unit/persistence/sequel-models`
+- [x] `unit/persistence/slick-tables`
+- [x] `unit/persistence/sqlalchemy-models`
+- [x] `unit/persistence/sqlite-orm-models`
+
+Validation:
+
+- [x] `unit/validation/aeson-validation`
+- [x] `unit/validation/cpp-validation`
+- [x] `unit/validation/dry-validation-contracts`
+- [x] `unit/validation/ecto-changesets`
+- [x] `unit/validation/fluentvalidation-dtos`
+- [x] `unit/validation/go-validator-dtos`
+- [x] `unit/validation/haskell-validation`
+- [x] `unit/validation/jakarta-validation-dtos`
+- [x] `unit/validation/json-schema`
+- [x] `unit/validation/kotlinx-validation`
+- [x] `unit/validation/malli-schemas`
+- [x] `unit/validation/pydantic-models`
+- [x] `unit/validation/scala-circe-validation`
+- [x] `unit/validation/swift-codable-validation`
+- [x] `unit/validation/symfony-validator-dtos`
+- [x] `unit/validation/validator-dtos`
+- [x] `unit/validation/yojson-validation`
+
+Documentation:
+
+- [x] `unit/documentation/openapi`
+
+Testing:
+
+- [x] `unit/testing/postman-collection`
+- [x] `unit/testing/bruno-collection`
+- [x] `unit/testing/http-smoke-tests`
+- [x] `unit/testing/k6-smoke-tests`
+
+Frontend:
+
+- [x] `unit/frontend/nextjs-app`
+- [x] `unit/frontend/flutter-app`
+- [x] `unit/frontend/react-native-app`
+
+## Language-family baseline coverage
+
+A baseline means backend + API client + persistence + validation are represented, not that every framework or project type is covered.
+
+- [x] TypeScript / JavaScript — mature multi-purpose coverage plus frontend projects
+- [x] Python — FastAPI, HTTPX, SQLAlchemy, Pydantic
+- [x] Go — net/http, client SDK, GORM, validator
+- [x] Rust — Axum, reqwest, SeaORM, validator
+- [x] Java / JVM — Jakarta REST, HttpClient, JPA, Jakarta Validation
+- [x] .NET / C# — ASP.NET Core, HttpClient, EF Core, FluentValidation
+- [x] PHP — Symfony, Guzzle, Doctrine ORM, Symfony Validator
+- [x] Swift — Vapor, URLSession, Fluent, Codable validation
+- [x] Kotlin — Ktor, Ktor Client, Exposed, generated validation
+- [x] Ruby — Sinatra, Net::HTTP, Active Record, dry-validation
+- [x] Elixir — Phoenix, Req, Ecto schemas, Ecto changesets
+- [x] C++ — Crow, cpr, sqlite_orm, generated validation
+- [x] Scala — http4s, sttp, Slick, Circe validation
+- [x] Clojure — Reitit/Ring, JDK HttpClient, next.jdbc, Malli
+- [ ] Plain C — research only
+
+Dart/Flutter is represented strongly for clients and frontend projects, but is not treated as a server/persistence baseline.
+
+## Proven pack patterns to reuse
+
+- SQL persistence → `typeorm`, `seaorm-entities`, `jpa-entities`, `gorm-entities`, `ef-core-entities`, `sqlalchemy-models`, `doctrine-orm-entities`, `fluent-models`, `exposed-tables`, `active-record-models`, `ecto-schemas`, `sqlite-orm-models`
+- document persistence → `mongoose`
+- validation DTOs/models → `class-validator`, `jakarta-validation-dtos`, `validator-dtos`, `go-validator-dtos`, `fluentvalidation-dtos`, `pydantic-models`, `symfony-validator-dtos`, `swift-codable-validation`, `kotlinx-validation`, `dry-validation-contracts`, `ecto-changesets`, `cpp-validation`
+- schema validation → `zod`, `joi`
+- HTTP backends → `fastapi-backend`, `nestjs`, `axum-backend`, `jakarta-rest-backend`, `go-net-http-backend`, `aspnet-core-backend`, `symfony-backend`, `vapor-backend`, `ktor-backend`, `sinatra-backend`, `phoenix-backend`, `crow-backend`, `http4s-backend`, `reitit-backend`
+- HTTP SDKs → `ts-api-client`, `dart-client-sdk`, `go-client-sdk`, `rust-client-sdk`, `java-client-sdk`, `csharp-client-sdk`, `python-client-sdk`, `php-client-sdk`, `swift-client-sdk`, `kotlin-client-sdk`, `ruby-client-sdk`, `elixir-client-sdk`, `cpp-client-sdk`, `scala-client-sdk`, `clojure-client-sdk`
+- existing-project UI → `react-crud-forms`
+- complete frontend app → `nextjs-app`, `flutter-app`, `react-native-app`
+- framework bridge client → `next-api-bridge`, `flutter-api-bridge`
+- documentation/reference → `markdown-reference`, `http-examples`, `persistence-reference`, `openapi`
+- testing/fixtures and contract suites → `schema-examples`, `http-contract-cases`, `schema-contract-cases`, `persistence-contract-cases`, `postman-collection`, `bruno-collection`, `http-smoke-tests`, `k6-smoke-tests`
+- backend project composition → `nestjs`
+
+## Current thin areas
+
+- Plain C feasibility and ABI/ownership research
+- additional backend/project application packs beyond the first NestJS composition baseline
+- pack-level/root-file binding context for project files that need provider metadata
+- multipart/file semantics
+- streaming semantics
+- auth/security generation contracts
+- cross-language contract output beyond Markdown Reference, OpenAPI and HTTP testing collections
+- additional UI ecosystems and native/mobile application packs
+- portable JSON Schema 2020-12 is now represented by `unit/validation/json-schema`
+- database migration/schema packs for defaults, checks and target-specific DDL semantics that ORMs cannot express portably
+
+## Audit checklist for future candidates
+
+Before implementation:
+
+- [ ] identify the closest existing Dryv pack
+- [ ] decide `inject` or `unit`
+- [ ] define purpose, language and framework/library
+- [ ] define realistic generated artifacts
+- [ ] define selections
+- [ ] define `provides`
+- [ ] define `needs`
+- [ ] confirm imports/exports relationships
+- [ ] choose the simplest adequate renderer
+- [ ] list real runtime/dev dependencies
+- [ ] design a realistic shared-fixture/toolchain check
+- [ ] inspect whether current derived context is sufficient
+- [ ] record any context/Engine gap separately
+- [ ] confirm no framework-specific meaning is being pushed into Runtime IR
+- [ ] confirm no hidden coupling by folder name, pack name, install order or generated path
+- [ ] keep reusable exact assets under `shared/`
+
+## Context already proven useful
+
+Existing packs consume semantic facts for:
+
+- schemas, fields and schema roles
+- primitives, enums, temporals, records and nested schemas
+- optionality, nullability and arrays
+- ranges, lengths, patterns, numeric precision and formats
+- defaults and generated values
+- storage names, namespaces, primary keys and indexes
+- relations and delete/update behavior
+- invariants
+- HTTP methods and paths
+- path/query/query-object/header/cookie/body/form bindings
+- operation inputs and outputs
+- response status information
+- groups and features
+- generated symbols
+- file dependencies and dependency groups
+- capability bindings
+
+Future packs should translate these semantic facts into target-library syntax rather than request target-specific Runtime IR fields.

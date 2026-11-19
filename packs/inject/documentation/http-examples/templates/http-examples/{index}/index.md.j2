@@ -1,0 +1,11 @@
+# HTTP Examples
+
+Generated request examples derived from Dryv HTTP operations.
+
+> Example values are deterministic documentation scaffolding. They are not authored Runtime IR examples.
+
+| Operation | Method | Effective path | File |
+| --- | --- | --- | --- |
+{% for dependency in file.dependencies %}{% if dependency.symbol or dependency.target %}
+| `{{ dependency.target.id }}` | — | — | `{{ dependency.path.relative }}` |
+{% endif %}{% endfor %}

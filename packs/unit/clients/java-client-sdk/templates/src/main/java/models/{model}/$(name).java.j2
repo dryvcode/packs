@@ -1,0 +1,54 @@
+{%- macro java_ident(name) -%}
+{%- if name in ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'record', 'sealed', 'permits', 'yield', 'var'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro base_type(value) -%}
+{%- if value is none -%}Object
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'Object' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'Object' }}
+{%- elif value.is.boolean -%}Boolean
+{%- elif value.is.integer -%}Long
+{%- elif value.is.decimal or value.is.money -%}BigDecimal
+{%- elif value.is.number -%}Double
+{%- elif value.is.temporal and value.is.date -%}LocalDate
+{%- elif value.is.temporal and value.is.time -%}LocalTime
+{%- elif value.is.temporal and value.is.date_time -%}LocalDateTime
+{%- elif value.is.temporal and value.is.instant -%}Instant
+{%- elif value.is.temporal and value.is.zoned_date_time -%}ZonedDateTime
+{%- elif value.is.temporal and value.is.duration -%}Duration
+{%- elif value.is.temporal and value.is.year_month -%}YearMonth
+{%- elif value.is.temporal and value.is.month_day -%}MonthDay
+{%- elif value.is.record -%}Map<String, Object>
+{%- elif value.is.string -%}String
+{%- else -%}Object
+{%- endif -%}
+{%- endmacro -%}
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}List<{{ base_type(field.value) }}>{%- else -%}{{ base_type(field.value) }}{%- endif -%}
+{%- endmacro -%}
+package {{ pack.inputs.java_package }}.models;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.YearMonth;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
+
+public class {{ file.symbol }} {
+{%- for field in schema.fields %}
+    @JsonProperty("{{ field.name.raw }}")
+    public {{ field_type(field) }} {{ java_ident(field.name.camel) }};
+{%- endfor %}
+}

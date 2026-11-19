@@ -1,0 +1,167 @@
+# frozen_string_literal: true
+
+require "dry/validation"
+require "uri"
+
+module {{ pack.inputs.module_name }}
+{%- macro ruby_ident(name) -%}
+{%- if name in ['BEGIN','END','alias','and','begin','break','case','class','def','defined','do','else','elsif','end','ensure','false','for','if','in','module','next','nil','not','or','redo','rescue','retry','return','self','super','then','true','undef','unless','until','when','while','yield'] -%}{{ name }}_{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro contract_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-8:] == 'Contract' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro enum_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id and dependency.symbol and dependency.symbol[-8:] != 'Contract' and dependency.symbol[-3:] != 'Dto' -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro format_regex(value) -%}
+{%- if value.is.uuid -%}\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z
+{%- elif value.is.ulid -%}\A[0-9A-HJKMNP-TV-Z]{26}\z
+{%- elif value.is.e164 -%}\A\+[1-9][0-9]{1,14}\z
+{%- elif value.is.phone -%}\A\+?[0-9 ().-]{7,20}\z
+{%- elif value.is.slug -%}\A[a-z0-9]+(?:-[a-z0-9]+)*\z
+{%- elif value.is.hex_color -%}\A#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\z
+{%- elif value.is.hex -%}\A[0-9a-fA-F]+\z
+{%- elif value.is.country_code -%}\A[A-Z]{2}\z
+{%- elif value.is.currency_code -%}\A[A-Z]{3}\z
+{%- endif -%}
+{%- endmacro -%}
+
+  class {{ file.symbol }} < Dry::Validation::Contract
+    params do
+{%- for field in schema.fields %}
+      {% if field.optional %}optional{% else %}required{% endif %}(:{{ ruby_ident(field.name.snake) }}).value
+{%- endfor %}
+    end
+
+{%- for field in schema.fields %}
+    rule(:{{ ruby_ident(field.name.snake) }}) do
+      next unless key?
+{%- if field.nullable %}
+      next if value.nil?
+{%- else %}
+      key.failure("must not be null") if value.nil?
+      next if value.nil?
+{%- endif %}
+
+{%- if field.array is not none %}
+      unless value.is_a?(Array)
+        key.failure("must be an array")
+        next
+      end
+{%- if field.array.has_min %}
+      key.failure("must contain at least {{ field.array.min }} item(s)") if value.length < {{ field.array.min }}
+{%- endif %}
+{%- if field.array.has_max %}
+      key.failure("must contain at most {{ field.array.max }} item(s)") if value.length > {{ field.array.max }}
+{%- endif %}
+      value.each do |item|
+{%- if field.value.is.schema and contract_for(field.value.schema) %}
+        nested = {{ contract_for(field.value.schema) }}.new.call(item)
+        key.failure("contains an invalid nested value") unless nested.success?
+{%- elif field.value.is.enum and enum_for(field.value.property.enum) %}
+        key.failure("contains an invalid enum value") unless {{ enum_for(field.value.property.enum) }}::VALUES.include?(item)
+{%- elif field.value.is.primitive and field.value.property.primitive.is.string %}
+        unless item.is_a?(String)
+          key.failure("contains a non-string value")
+          next
+        end
+{%- set length = field.value.property.primitive.constraints.length %}
+{%- if length is not none and length.has_exact %}
+        key.failure("contains a value with invalid length") unless item.length == {{ length.exact }}
+{%- else %}
+{%- if length is not none and length.has_min %}
+        key.failure("contains a value shorter than {{ length.min }}") if item.length < {{ length.min }}
+{%- endif %}
+{%- if length is not none and length.has_max %}
+        key.failure("contains a value longer than {{ length.max }}") if item.length > {{ length.max }}
+{%- endif %}
+{%- endif %}
+{%- if format_regex(field.value) %}
+        key.failure("contains a value with invalid format") unless Regexp.new({{ format_regex(field.value) | tojson }}).match?(item)
+{%- endif %}
+{%- if field.value.property.primitive.constraints.pattern is not none %}
+{%- for expression in field.value.property.primitive.constraints.pattern.match %}
+        key.failure("contains a value that does not match pattern {{ loop.index }}") unless Regexp.new({{ expression | tojson }}).match?(item)
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+      end
+{%- else %}
+{%- if field.value.is.schema and contract_for(field.value.schema) %}
+      unless value.is_a?(Hash)
+        key.failure("must be an object")
+        next
+      end
+      key.failure("contains an invalid nested value") unless {{ contract_for(field.value.schema) }}.new.call(value).success?
+{%- elif field.value.is.enum and enum_for(field.value.property.enum) %}
+      key.failure("has an invalid enum value") unless {{ enum_for(field.value.property.enum) }}::VALUES.include?(value)
+{%- elif field.value.is.boolean %}
+      key.failure("must be a boolean") unless value == true || value == false
+{%- elif field.value.is.integer %}
+      key.failure("must be an integer") unless value.is_a?(Integer)
+{%- elif field.value.is.decimal or field.value.is.money %}
+      key.failure("must be an exact decimal string") unless value.is_a?(String) && /\A-?\d+(?:\.\d+)?\z/.match?(value)
+{%- elif field.value.is.number %}
+      key.failure("must be numeric") unless value.is_a?(Numeric)
+{%- elif field.value.is.record %}
+      key.failure("must be an object") unless value.is_a?(Hash)
+{%- elif field.value.is.string or field.value.is.temporal %}
+      unless value.is_a?(String)
+        key.failure("must be a string")
+        next
+      end
+{%- if field.value.is.string %}
+{%- set length = field.value.property.primitive.constraints.length %}
+{%- if length is not none and length.has_exact %}
+      key.failure("must have length {{ length.exact }}") unless value.length == {{ length.exact }}
+{%- else %}
+{%- if length is not none and length.has_min %}
+      key.failure("must have length >= {{ length.min }}") if value.length < {{ length.min }}
+{%- endif %}
+{%- if length is not none and length.has_max %}
+      key.failure("must have length <= {{ length.max }}") if value.length > {{ length.max }}
+{%- endif %}
+{%- endif %}
+{%- if field.value.property.primitive.is.email %}
+      key.failure("must be a valid email") unless /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/.match?(value)
+{%- elif field.value.property.primitive.is.url or field.value.property.primitive.is.uri %}
+      key.failure("must be a valid URL") unless begin
+        uri = URI.parse(value)
+        uri.absolute?
+      rescue URI::InvalidURIError
+        false
+      end
+{%- endif %}
+{%- if format_regex(field.value) %}
+      key.failure("has invalid format") unless Regexp.new({{ format_regex(field.value) | tojson }}).match?(value)
+{%- endif %}
+{%- if field.value.property.primitive.constraints.pattern is not none %}
+{%- for expression in field.value.property.primitive.constraints.pattern.match %}
+      key.failure("does not match pattern {{ loop.index }}") unless Regexp.new({{ expression | tojson }}).match?(value)
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+
+{%- if field.value.is.primitive and field.value.property.primitive.is.number %}
+{%- set range = field.value.property.primitive.constraints.range %}
+{%- if range is not none and range.has_min %}
+      key.failure("must be >= {{ range.min }}") if value.to_f < {{ range.min }}
+{%- endif %}
+{%- if range is not none and range.has_max %}
+      key.failure("must be <= {{ range.max }}") if value.to_f > {{ range.max }}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+    end
+
+{%- endfor %}
+  end
+end

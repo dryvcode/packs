@@ -1,0 +1,15 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "{{ pack.inputs.module_name }}",
+    products: [
+        .library(name: "{{ pack.inputs.module_name }}", targets: ["{{ pack.inputs.module_name }}"]),
+    ],
+    targets: [
+        .target(
+            name: "{{ pack.inputs.module_name }}",
+            path: "Sources/DryvClient"
+        ),
+    ]
+)

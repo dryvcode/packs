@@ -1,0 +1,46 @@
+{%- macro value_type(value) -%}
+{%- if value is none -%}none
+{%- elif value.is.schema -%}{{ value.schema.name.qualified }}
+{%- elif value.is.enum -%}{{ value.property.enum.name.qualified }}
+{%- elif value.is.boolean -%}boolean
+{%- elif value.is.integer -%}integer
+{%- elif value.is.decimal -%}decimal
+{%- elif value.is.money -%}money
+{%- elif value.is.number -%}number
+{%- elif value.is.temporal -%}{{ value.property.temporal.kind }}
+{%- elif value.is.record -%}record
+{%- elif value.is.tuple -%}tuple
+{%- elif value.is.union -%}union
+{%- elif value.is.composite -%}object
+{%- elif value.is.literal -%}literal
+{%- elif value.is.generic -%}{{ value.property.generic.name.qualified }}
+{%- elif value.is.string -%}string
+{%- elif value.is.dynamic -%}dynamic
+{%- else -%}unknown
+{%- endif -%}
+{%- endmacro -%}
+
+# Event Catalogue
+
+{% for event in events %}
+## {{ event.name.title }}
+
+{% if event.description %}{{ event.description }}
+
+{% endif %}- **ID:** `{{ event.id }}`
+- **Qualified name:** `{{ event.name.qualified }}`
+- **Group:** {% if event.group %}`{{ event.group.name.qualified }}`{% else %}—{% endif %}
+- **Feature:** {% if event.feature %}`{{ event.feature.name.qualified }}`{% else %}—{% endif %}
+- **Payload:** `{{ value_type(event.payload) }}`
+{% if event.tags %}- **Tags:** {% for tag in event.tags %}`{{ tag }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% if event.listeners %}
+### Listeners
+
+| Kind | Target |
+| --- | --- |
+{% for listener in event.listeners %}| `{{ listener.kind }}` | `{{ listener.target.name.qualified }}` |
+{% endfor %}
+{% endif %}
+---
+{% endfor %}

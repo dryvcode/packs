@@ -1,0 +1,9 @@
+# Persistence Reference
+
+Persistent Dryv schemas projected as storage-focused documentation.
+
+> This is documentation only. It does not own migrations or DDL.
+
+{% for dependency in file.dependencies %}
+- `{{ dependency.target.id }}` → `{{ dependency.path.relative }}`
+{% endfor %}

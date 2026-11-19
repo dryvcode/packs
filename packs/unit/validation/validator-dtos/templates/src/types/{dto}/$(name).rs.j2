@@ -1,0 +1,117 @@
+{%- macro rust_ident(name) -%}
+{%- if name in ['self', 'super', 'crate'] -%}{{ name }}_
+{%- elif name in ['as', 'break', 'const', 'continue', 'else', 'enum', 'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod', 'move', 'mut', 'pub', 'ref', 'return', 'static', 'struct', 'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while', 'async', 'await', 'dyn', 'abstract', 'become', 'box', 'do', 'final', 'macro', 'override', 'priv', 'typeof', 'unsized', 'virtual', 'yield', 'try', 'gen'] -%}r#{{ name }}
+{%- else -%}{{ name }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro symbol_for(link) -%}
+{%- for dependency in file.dependencies -%}
+{%- if dependency.target.id == link.id -%}{{ dependency.symbol }}{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro base_type(value) -%}
+{%- if value is none -%}serde_json::Value
+{%- elif value.is.schema -%}{{ symbol_for(value.schema) or 'serde_json::Value' }}
+{%- elif value.is.enum -%}{{ symbol_for(value.property.enum) or 'serde_json::Value' }}
+{%- elif value.is.boolean -%}bool
+{%- elif value.is.integer -%}i64
+{%- elif value.is.number -%}f64
+{%- elif value.is.record -%}HashMap<String, serde_json::Value>
+{%- elif value.is.string or value.is.temporal -%}String
+{%- else -%}serde_json::Value
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro field_type(field) -%}
+{%- if field.array is not none -%}{% set inner = 'Vec<' ~ base_type(field.value) ~ '>' %}
+{%- else -%}{% set inner = base_type(field.value) %}
+{%- endif -%}
+{%- if field.optional or field.nullable -%}Option<{{ inner }}>{%- else -%}{{ inner }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro format_regex(field) -%}
+{%- if field.value.is.uuid -%}^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+{%- elif field.value.is.ulid -%}^[0-9A-HJKMNP-TV-Z]{26}$
+{%- elif field.value.is.e164 -%}^\+[1-9][0-9]{1,14}$
+{%- elif field.value.is.phone -%}^\+?[0-9 ().-]{7,20}$
+{%- elif field.value.is.slug -%}^[a-z0-9]+(?:-[a-z0-9]+)*$
+{%- elif field.value.is.hex_color -%}^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$
+{%- elif field.value.is.hex -%}^[0-9a-fA-F]+$
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro has_format_regex(field) -%}
+{%- if field.array is none and (field.value.is.uuid or field.value.is.ulid or field.value.is.e164 or field.value.is.phone or field.value.is.slug or field.value.is.hex_color or field.value.is.hex) -%}x{%- endif -%}
+{%- endmacro -%}
+
+{%- macro validators(field) -%}
+{%- if field.value.is.schema %}
+    #[validate(nested)]
+{%- endif %}
+{%- if field.array is not none %}
+{%- if field.array.has_min or field.array.has_max %}
+    #[validate(length({% if field.array.has_min %}min = {{ field.array.min }}{% if field.array.has_max %}, {% endif %}{% endif %}{% if field.array.has_max %}max = {{ field.array.max }}{% endif %}))]
+{%- endif %}
+{%- elif field.value.is.primitive %}
+{%- set primitive = field.value.property.primitive %}
+{%- if primitive.is.string %}
+{%- set length = primitive.constraints.length %}
+{%- if length is not none and length.has_exact %}
+    #[validate(length(equal = {{ length.exact }}))]
+{%- elif length is not none and (length.has_min or length.has_max) %}
+    #[validate(length({% if length.has_min %}min = {{ length.min }}{% if length.has_max %}, {% endif %}{% endif %}{% if length.has_max %}max = {{ length.max }}{% endif %}))]
+{%- endif %}
+{%- if primitive.is.email %}
+    #[validate(email)]
+{%- elif primitive.is.url or primitive.is.uri %}
+    #[validate(url)]
+{%- endif %}
+{%- if has_format_regex(field) %}
+    #[validate(regex(path = *RE_{{ field.name.constant }}_FORMAT))]
+{%- endif %}
+{%- if primitive.constraints.pattern is not none %}
+{%- for expression in primitive.constraints.pattern.match %}
+    #[validate(regex(path = *RE_{{ field.name.constant }}_PATTERN_{{ loop.index }}))]
+{%- endfor %}
+{%- endif %}
+{%- elif primitive.is.number %}
+{%- set range = primitive.constraints.range %}
+{%- if range is not none and (range.has_min or range.has_max) %}
+    #[validate(range({% if range.has_min %}min = {{ range.min }}{% if range.has_max %}, {% endif %}{% endif %}{% if range.has_max %}max = {{ range.max }}{% endif %}))]
+{%- endif %}
+{%- endif %}
+{%- endif %}
+{%- endmacro -%}
+
+use std::{collections::HashMap, sync::LazyLock};
+
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
+{%- for dependency in file.dependencies %}{% if dependency.symbol and not dependency.is_self %}
+use super::{{ dependency.symbol }};
+{%- endif %}{% endfor %}
+
+{%- for field in schema.fields %}
+{%- if has_format_regex(field) %}
+static RE_{{ field.name.constant }}_FORMAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"{{ format_regex(field) }}").expect("generated Dryv format regex"));
+{%- endif %}
+{%- if field.array is none and field.value.is.primitive and field.value.property.primitive.is.string and field.value.property.primitive.constraints.pattern is not none %}
+{%- for expression in field.value.property.primitive.constraints.pattern.match %}
+static RE_{{ field.name.constant }}_PATTERN_{{ loop.index }}: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new({{ expression | tojson }}).expect("generated Dryv pattern"));
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Validate)]
+pub struct {{ file.symbol }} {
+{%- for field in schema.fields %}
+{{ validators(field) }}
+    #[serde(rename = "{{ field.name.raw }}"{% if field.optional or field.nullable %}, default, skip_serializing_if = "Option::is_none"{% endif %})]
+    pub {{ rust_ident(field.name.snake) }}: {{ field_type(field) }},
+{%- endfor %}
+}

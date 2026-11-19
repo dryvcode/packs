@@ -1,0 +1,136 @@
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include <crow.h>
+#include <nlohmann/json.hpp>
+
+namespace {{ pack.inputs.namespace }} {
+
+template <typename T>
+T parse_wire_value(const std::string& raw) {
+    if constexpr (std::is_same_v<T, std::string>) {
+        return raw;
+    } else if constexpr (std::is_same_v<T, bool>) {
+        if (raw == "true" || raw == "1") return true;
+        if (raw == "false" || raw == "0") return false;
+        throw std::invalid_argument("invalid boolean value");
+    } else if constexpr (std::is_integral_v<T>) {
+        std::size_t consumed = 0;
+        const auto value = std::stoll(raw, &consumed);
+        if (consumed != raw.size()) {
+            throw std::invalid_argument("invalid integer value");
+        }
+        return static_cast<T>(value);
+    } else if constexpr (std::is_floating_point_v<T>) {
+        std::size_t consumed = 0;
+        const auto value = std::stod(raw, &consumed);
+        if (consumed != raw.size()) {
+            throw std::invalid_argument("invalid numeric value");
+        }
+        return static_cast<T>(value);
+    } else {
+        auto json = nlohmann::json::parse(raw, nullptr, false);
+        if (json.is_discarded()) {
+            json = raw;
+        }
+        return json.get<T>();
+    }
+}
+
+inline std::vector<std::string> query_values(const crow::request& request, const std::string& name) {
+    std::vector<std::string> result;
+    for (const auto* value : request.url_params.get_list(name, false)) {
+        if (value != nullptr) {
+            result.emplace_back(value);
+        }
+    }
+    return result;
+}
+
+inline std::optional<std::string> first_query_value(const crow::request& request, const std::string& name) {
+    const auto* value = request.url_params.get(name);
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return std::string{value};
+}
+
+inline std::optional<std::string> header_value(const crow::request& request, const std::string& name) {
+    const auto value = request.get_header_value(name);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+inline std::optional<std::string> cookie_value(const crow::request& request, const std::string& name) {
+    const auto header = request.get_header_value("Cookie");
+    std::size_t offset = 0;
+    while (offset < header.size()) {
+        auto end = header.find(';', offset);
+        if (end == std::string::npos) {
+            end = header.size();
+        }
+        auto part = header.substr(offset, end - offset);
+        while (!part.empty() && part.front() == ' ') {
+            part.erase(part.begin());
+        }
+        const auto separator = part.find('=');
+        if (separator != std::string::npos && part.substr(0, separator) == name) {
+            return part.substr(separator + 1);
+        }
+        offset = end + 1;
+    }
+    return std::nullopt;
+}
+
+inline crow::query_string form_values(const crow::request& request) {
+    return crow::query_string{request.body, false};
+}
+
+inline std::vector<std::string> form_list(const crow::query_string& form, const std::string& name) {
+    std::vector<std::string> result;
+    for (const auto* value : form.get_list(name, false)) {
+        if (value != nullptr) {
+            result.emplace_back(value);
+        }
+    }
+    return result;
+}
+
+inline std::optional<std::string> form_value(const crow::query_string& form, const std::string& name) {
+    const auto* value = form.get(name);
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return std::string{value};
+}
+
+inline nlohmann::json parse_json_body(const crow::request& request) {
+    auto json = nlohmann::json::parse(request.body, nullptr, false);
+    if (json.is_discarded()) {
+        throw std::invalid_argument("invalid JSON request body");
+    }
+    return json;
+}
+
+inline crow::response json_response(int status, const nlohmann::json& payload) {
+    crow::response response{status, payload.dump()};
+    response.set_header("Content-Type", "application/json");
+    return response;
+}
+
+inline crow::response bad_request(const std::exception& error) {
+    return json_response(400, nlohmann::json{{"message", error.what()}});
+}
+
+} // namespace {{ pack.inputs.namespace }}

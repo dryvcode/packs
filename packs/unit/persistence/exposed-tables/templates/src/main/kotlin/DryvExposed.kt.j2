@@ -1,0 +1,10 @@
+package {{ pack.inputs.package_name }}
+
+import kotlinx.serialization.json.Json
+
+object DryvExposed {
+    val json: Json = Json {
+        ignoreUnknownKeys = false
+        explicitNulls = true
+    }
+}

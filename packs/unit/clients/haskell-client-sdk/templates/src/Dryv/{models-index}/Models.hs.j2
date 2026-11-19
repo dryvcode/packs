@@ -1,0 +1,10 @@
+module {{ file.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }}
+  (
+{%- for item in file.exports %}
+    module {{ item.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ) where
+
+{%- for item in file.exports %}
+import {{ item.path.relative | replace('src/', '') | replace('/', '.') | replace('.hs', '') }}
+{%- endfor %}
